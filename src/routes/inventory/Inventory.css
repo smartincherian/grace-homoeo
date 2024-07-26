@@ -1,0 +1,112 @@
+.flex-container {
+    display: flex;
+    flex-direction: row;
+    /* row | row-reverse | column | column-reverse; */
+    justify-content: space-around;
+    /* justify-content: flex-start | flex-end | center | space-between | space-around | space-evenly */
+    align-items: baseline;
+    /* align-items: stretch | flex-start | flex-end | center | baseline | first baseline | last baseline | start | end | self-start | self-end  */
+    flex-wrap: wrap;
+    /* flex-wrap: nowrap | wrap | wrap-reverse; */
+
+    align-content: space-around;
+    /* align-content: flex-start | flex-end | center | space-between | space-around | space-evenly | stretch | start | end | baseline | first baseline | last baseline + ... safe | unsafe; */
+
+    gap: 5px;
+}
+
+.flex-item {
+    background: tomato;
+    width: 200px;
+    height: 100;
+    padding: 5px;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    line-height: 100px;
+    color: white;
+    font-weight: bold;
+    font-size: 3em;
+
+    flex-grow: 1;
+    /* flex-shrink: 1; */
+
+}
+
+.flex-item-12 {
+    flex-grow: 3;
+    align-self: center;
+    /* align-self: auto | flex-start | flex-end | center | baseline | stretch; */
+}
+
+.wrapper {
+    display: flex;
+    flex-flow: row wrap;
+    font-weight: bold;
+    text-align: center;
+    /* flex: 1 100% */
+}
+
+
+.wrapper>* {
+    flex: 1 100%;
+    padding: 10px;
+}
+
+.header {
+    background-color: tomato;
+    flex-grow: 3;
+}
+
+.main {
+    background-color: aqua;
+}
+
+/* flex: flex-grow, flex-shrink and flex-basis  */
+/* The flex-basis CSS property sets the initial main size of a flex item */
+.aside {
+    flex-basis: 0;
+}
+
+@media all and (min-width: 600px) {
+    .aside {
+        flex: 1 0 0;
+    }
+}
+
+@media all and (min-width: 800px) {
+    .main {
+        flex: 3;
+        /* flex-grow: 3; */
+        /* flex-basis: 0; */
+    }
+
+    .aside-1 {
+        order: 1;
+    }
+
+    .main {
+        order: 2;
+    }
+
+    .aside-2 {
+        order: 3;
+    }
+
+    .footer {
+        order: 4;
+    }
+}
+
+.aside-1 {
+    background-color: yellow;
+}
+
+.aside-2 {
+    background-color: pink;
+}
+
+.footer {
+    background-color: greenyellow;
+
+}
