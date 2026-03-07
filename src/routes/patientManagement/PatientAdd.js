@@ -1,21 +1,39 @@
 import React, { useState, useEffect, useContext } from "react";
 import Header from "../Header";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableRow from "@mui/material/TableRow";
-import Paper from "@mui/material/Paper";
-import { Button, FormHelperText, MenuItem } from "@mui/material";
-import TextField from "@mui/material/TextField";
-import Select from "@mui/material/Select";
-import Box from "@mui/material/Box";
+import { useTheme, useMediaQuery } from "@mui/material";
+import {
+  Paper,
+  Button,
+  FormHelperText,
+  MenuItem,
+  TextField,
+  Select,
+  Box,
+  Radio,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  Typography,
+  Container,
+  Grid,
+  Card,
+  CardContent,
+  Divider,
+  Stack,
+  InputAdornment,
+  Chip,
+  IconButton,
+} from "@mui/material";
+import PersonAddIcon from "@mui/icons-material/PersonAdd";
+import PhoneIcon from "@mui/icons-material/Phone";
+import LocationOnIcon from "@mui/icons-material/LocationOn";
+import BadgeIcon from "@mui/icons-material/Badge";
+import CakeIcon from "@mui/icons-material/Cake";
+import SaveIcon from "@mui/icons-material/Save";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import WcIcon from "@mui/icons-material/Wc";
 import "./PatientsManagement.css";
-import Radio from "@mui/material/Radio";
-import FormControlLabel from "@mui/material/FormControlLabel";
-import FormControl from "@mui/material/FormControl";
-import FormLabel from "@mui/material/FormLabel";
-import RadioGroup from "@mui/material/RadioGroup";
 import moment from "moment";
 import {
   addPatient,
@@ -36,6 +54,9 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 
 function PatientAdd() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const isTablet = useMediaQuery(theme.breakpoints.between("sm", "md"));
   const [isLoading, setIsLoading] = useState(false);
   const { showSnackbar } = useContext(SnackbarContext);
   const navigate = useNavigate();
@@ -82,701 +103,333 @@ function PatientAdd() {
   return (
     <div>
       <Header page={"Patient Management - Add New Patient"} />
-      <div className="mt-16 text-center">
-        <Box
-          className="ptmgt-boxes"
+      <Container
+        maxWidth="lg"
+        sx={{
+          mt: isMobile ? 8 : 10,
+          mb: 4,
+          pt: isMobile ? 1 : 2,
+        }}
+      >
+        <Card
+          elevation={3}
           sx={{
-            bgcolor: "white",
-            width: "40vw",
-            mt: "4vh",
-            ml: "30vw",
-            mr: "30vw",
+            borderRadius: 2,
+            overflow: "visible",
+            position: "relative",
+            bgcolor: "#ffffff",
+            border: "1px solid #e0e0e0",
           }}
         >
-          <h2 className="subHeader">Please Enter the Details of Patient</h2>
-          <form onSubmit={handleSubmit(saveButtonHandler)}>
-            <TableContainer component={Paper}>
-              <Table aria-label="simple table">
-                <TableBody>
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
+          {/* Header chip */}
+          <Box
+            sx={{
+              position: "absolute",
+              top: -20,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 10,
+            }}
+          >
+            <Chip
+              icon={<PersonAddIcon />}
+              label="New Patient Registration"
+              color="primary"
+              sx={{
+                fontWeight: "bold",
+                fontSize: isMobile ? "0.9rem" : "1rem",
+                py: 2.5,
+                boxShadow: 2,
+              }}
+            />
+          </Box>
+
+          <CardContent sx={{ p: isMobile ? 2 : 4, pt: 4, mt: 1 }}>
+            <Typography
+              variant={isMobile ? "h6" : "h5"}
+              align="center"
+              color="primary.dark"
+              sx={{
+                fontWeight: 600,
+                mb: 3,
+                mt: 1,
+              }}
+            >
+              Patient Information
+            </Typography>
+
+            <Divider sx={{ mb: 4 }} />
+
+            <form onSubmit={handleSubmit(saveButtonHandler)}>
+              <Grid container spacing={isMobile ? 2 : 3}>
+                {/* Patient ID */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
+                      sx={{ mb: 1, display: "flex", alignItems: "center" }}
                     >
-                      Patient ID
-                    </TableCell>
+                      <BadgeIcon fontSize="small" sx={{ mr: 1 }} /> Patient ID
+                    </FormLabel>
                     <Controller
                       control={control}
                       name={"ID"}
                       render={({ field: { onChange, value } }) => (
-                        <TableCell
-                          sx={{
-                            width: "10rem",
-                            fontSize: "16px",
-                            justifyContent: "center",
-                            textAlign: "center",
-                            align: "center",
-                            pt: "5px",
-                            pb: "5px",
-                            fontWeight: "bold",
-                            color: "#3F497F",
-                            backgroundColor: "#FFEBB4",
-                            border: "1px solid #C8B6A6",
+                        <TextField
+                          fullWidth
+                          disabled
+                          value={value}
+                          variant="outlined"
+                          InputProps={{
+                            readOnly: true,
+                            sx: {
+                              bgcolor: "rgba(255, 235, 180, 0.5)",
+                              fontWeight: "bold",
+                              color: theme.palette.primary.dark,
+                              "& .MuiOutlinedInput-notchedOutline": {
+                                borderColor: theme.palette.primary.main,
+                              },
+                            },
                           }}
-                          align="right"
-                        >
-                          {value}
-                        </TableCell>
+                        />
                       )}
                     />
-                  </TableRow>
+                  </Box>
+                </Grid>
 
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Name of the Patient*
-                    </TableCell>
-
-                    <TableCell
+                {/* Name */}
+                <Grid item xs={12} sm={6} md={8}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
                       sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        color: errors?.name ? "error.main" : "inherit",
                       }}
-                      align="right"
                     >
-                      <Controller
-                        control={control}
-                        name={"name"}
-                        rules={{
-                          required: VALIDATION_ERRORS.REQUIRED,
-                        }}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.name}
-                            helperText={errors?.name?.message}
-                            sx={{
-                              width: "10rem",
-                              fontSize: "13px",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            value={value}
-                            variant="standard"
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Age*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
+                      <PersonAddIcon fontSize="small" sx={{ mr: 1 }} /> Name of
+                      the Patient*
+                    </FormLabel>
+                    <Controller
+                      control={control}
+                      name={"name"}
+                      rules={{
+                        required: VALIDATION_ERRORS.REQUIRED,
                       }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"age"}
-                        rules={{
-                          required: VALIDATION_ERRORS.REQUIRED,
-                        }}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.age}
-                            helperText={errors?.age?.message}
-                            sx={{
-                              width: "10rem",
-                              fontSize: "13px",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            value={value}
-                            variant="standard"
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Gender*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <FormControl
-                        component="fieldset"
-                        style={{
-                          justifyContent: "center",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Controller
-                          control={control}
-                          name={"gender"}
-                          rules={{
-                            required: VALIDATION_ERRORS.REQUIRED,
-                          }}
-                          render={({ field: { onChange, value } }) => (
-                            <RadioGroup
-                              aria-labelledby="demo-radio-buttons-group-label"
-                              defaultValue="female"
-                              name="radio-buttons-group"
-                              onChange={onChange}
-                              value={value}
-                            >
-                              <FormControlLabel
-                                value="F"
-                                control={<Radio />}
-                                label="Female"
-                              />
-                              <FormControlLabel
-                                value="M"
-                                control={<Radio />}
-                                label="Male"
-                              />
-                              <FormControlLabel
-                                value="O"
-                                control={<Radio />}
-                                label="Other"
-                              />
-                            </RadioGroup>
-                          )}
+                      render={({ field: { onChange, value } }) => (
+                        <TextField
+                          fullWidth
+                          error={Boolean(errors?.name)}
+                          helperText={errors?.name?.message}
+                          value={value || ""}
+                          variant="outlined"
+                          placeholder="Enter patient's full name"
+                          onChange={onChange}
                         />
-                        <FormHelperText error>
-                          {errors?.gender?.message}
-                        </FormHelperText>
-                      </FormControl>
-                    </TableCell>
-                  </TableRow>
+                      )}
+                    />
+                  </Box>
+                </Grid>
 
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Placename
-                    </TableCell>
-                    <TableCell
+                {/* Age */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
                       sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        color: errors?.age ? "error.main" : "inherit",
                       }}
-                      defaultValue={"Manjapra"}
-                      align="right"
                     >
+                      <CakeIcon fontSize="small" sx={{ mr: 1 }} /> Age*
+                    </FormLabel>
+                    <Controller
+                      control={control}
+                      name={"age"}
+                      rules={{
+                        required: VALIDATION_ERRORS.REQUIRED,
+                      }}
+                      render={({ field: { onChange, value } }) => (
+                        <TextField
+                          fullWidth
+                          error={Boolean(errors?.age)}
+                          helperText={errors?.age?.message}
+                          value={value || ""}
+                          variant="outlined"
+                          placeholder="Enter age"
+                          onChange={onChange}
+                          type="number"
+                          InputProps={{
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                years
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      )}
+                    />
+                  </Box>
+                </Grid>
+
+                {/* Gender */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
+                      sx={{
+                        mb: 1,
+                        display: "flex",
+                        alignItems: "center",
+                        color: errors?.gender ? "error.main" : "inherit",
+                      }}
+                    >
+                      <WcIcon fontSize="small" sx={{ mr: 1 }} /> Gender*
+                    </FormLabel>
+                    <FormControl fullWidth error={Boolean(errors?.gender)}>
                       <Controller
                         control={control}
-                        name={"place"}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.place}
-                            helperText={errors?.place?.message}
-                            sx={{
-                              width: "10rem",
-                              fontSize: "13px",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            value={value}
-                            variant="standard"
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Conact Number
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"phone_number"}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.phone_number}
-                            helperText={errors?.phone_number?.message}
-                            sx={{
-                              width: "10rem",
-                              fontSize: "13px",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            value={value}
-                            variant="standard"
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Present Complaint*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"complaint"}
+                        name={"gender"}
                         rules={{
                           required: VALIDATION_ERRORS.REQUIRED,
                         }}
                         render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.complaint}
-                            helperText={errors?.complaint?.message}
-                            multiline
-                            InputProps={{
-                              style: { fontSize: 13 },
-                            }}
-                            sx={{
-                              width: "20rem",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            variant="outlined"
-                            value={value}
+                          <RadioGroup
+                            row
                             onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Generals
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"generals"}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.generals}
-                            helperText={errors?.generals?.message}
-                            multiline
-                            InputProps={{
-                              style: { fontSize: 13 },
-                            }}
-                            sx={{
-                              width: "20rem",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            variant="outlined"
-                            value={value}
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Allergy
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"allergy"}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.allergy}
-                            helperText={errors?.allergy?.message}
-                            multiline
-                            InputProps={{
-                              style: { fontSize: 13 },
-                            }}
-                            sx={{
-                              width: "20rem",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            variant="outlined"
-                            value={value}
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      History
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"history"}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            multiline
-                            error={errors?.history}
-                            helperText={errors?.history?.message}
-                            InputProps={{
-                              style: { fontSize: 13 },
-                            }}
-                            sx={{
-                              width: "20rem",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            variant="outlined"
-                            value={value}
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Prescribed Remedy*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"remedy"}
-                        rules={{
-                          required: VALIDATION_ERRORS.REQUIRED,
-                        }}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.remedy}
-                            helperText={errors?.remedy?.message}
-                            multiline
-                            InputProps={{
-                              style: { fontSize: 13 },
-                            }}
-                            sx={{
-                              width: "20rem",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            variant="outlined"
-                            value={value}
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Remarks
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"remarks"}
-                        render={({ field: { onChange, value } }) => (
-                          <>
-                            <TextField
-                              error={errors?.remarks}
-                              helperText={errors?.remarks?.message}
-                              multiline
-                              InputProps={{
-                                style: { fontSize: 13 },
-                              }}
-                              sx={{
-                                width: "20rem",
-                                justifyContent: "center",
-                                align: "center",
-                              }}
-                              variant="outlined"
-                              value={value}
-                              onChange={onChange}
+                            value={value || ""}
+                            sx={{ justifyContent: "space-around" }}
+                          >
+                            <FormControlLabel
+                              value="F"
+                              control={<Radio color="primary" />}
+                              label="Female"
                             />
-
-                            {errors.remarks && (
-                              <FormHelperText sx={{ color: "red", m: 0 }}>
-                                {errors.remarks.message}
-                              </FormHelperText>
-                            )}
-                          </>
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
-                    >
-                      Date of Consultation*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"date"}
-                        rules={{
-                          required: VALIDATION_ERRORS.REQUIRED,
-                        }}
-                        render={({ field: { onChange, value } }) => (
-                          <LocalizationProvider dateAdapter={AdapterDayjs}>
-                            <DatePicker
-                              slotProps={{ textField: { size: "small" } }}
-                              format="DD-MM-YYYY"
-                              // minDate={Date.now()}
-                              value={value}
-                              onChange={onChange}
-                              renderInput={(inputProps) => (
-                                <TextField
-                                  error={errors?.date}
-                                  helperText={errors?.date?.message}
-                                  sx={{
-                                    width: "10rem",
-                                    fontSize: "13px",
-                                    justifyContent: "center",
-                                    align: "center",
-                                  }}
-                                  value={value}
-                                  variant="standard"
-                                  onChange={onChange}
-                                />
-                              )}
+                            <FormControlLabel
+                              value="M"
+                              control={<Radio color="primary" />}
+                              label="Male"
                             />
-                          </LocalizationProvider>
+                            <FormControlLabel
+                              value="O"
+                              control={<Radio color="primary" />}
+                              label="Other"
+                            />
+                          </RadioGroup>
                         )}
                       />
-                      <Box ml={15}>
-                        <FormHelperText error>
-                          {errors?.date?.message}
-                        </FormHelperText>
-                      </Box>
-                    </TableCell>
-                  </TableRow>
+                      <FormHelperText>{errors?.gender?.message}</FormHelperText>
+                    </FormControl>
+                  </Box>
+                </Grid>
 
-                  <TableRow>
-                    <TableCell
-                      component="th"
-                      scope="row"
-                      sx={{ pt: "5px", pb: "5px", fontSize: "13px" }}
+                {/* Place */}
+                <Grid item xs={12} sm={6} md={4}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
+                      sx={{ mb: 1, display: "flex", alignItems: "center" }}
                     >
-                      Amount Collected*
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        width: "10rem",
-                        fontSize: "13px",
-                        justifyContent: "center",
-                        align: "center",
-                        pt: "5px",
-                        pb: "5px",
-                      }}
-                      align="right"
-                    >
-                      <Controller
-                        control={control}
-                        name={"amount"}
-                        rules={{
-                          required: VALIDATION_ERRORS.REQUIRED,
-                        }}
-                        render={({ field: { onChange, value } }) => (
-                          <TextField
-                            error={errors?.amount}
-                            helperText={errors?.amount?.message}
-                            sx={{
-                              width: "10rem",
-                              fontSize: "13px",
-                              justifyContent: "center",
-                              align: "center",
-                            }}
-                            value={value}
-                            variant="standard"
-                            onChange={onChange}
-                          />
-                        )}
-                      />
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-              <div className="footerButton">
-                {/* <Button
-                  onClick={() => navigate(-1)}
-                  display="inline-block"
-                  variant="contained"
-                  color="primary"
-                  sx={{ mt: 1.5, ml: 15, mb: 1.5, height: "3.5vh" }}
-                >
-                  Back
-                </Button> */}
+                      <LocationOnIcon fontSize="small" sx={{ mr: 1 }} /> Place
+                    </FormLabel>
+                    <Controller
+                      control={control}
+                      name={"place"}
+                      render={({ field: { onChange, value } }) => (
+                        <TextField
+                          fullWidth
+                          error={Boolean(errors?.place)}
+                          helperText={errors?.place?.message}
+                          value={value || ""}
+                          variant="outlined"
+                          placeholder="Enter place name"
+                          onChange={onChange}
+                        />
+                      )}
+                    />
+                  </Box>
+                </Grid>
 
-                <Button
-                  variant="contained"
-                  display="inline-block"
-                  color="primary"
-                  disabled={isLoading}
-                  type="submit"
-                  sx={{ mt: 1.5, ml: 22, mb: 1.5, height: "3.5vh" }}
-                >
-                  {isLoading ? <Loader /> : "Save"}
-                </Button>
-              </div>
-            </TableContainer>
-          </form>
-        </Box>
-      </div>
+                {/* Phone Number */}
+                <Grid item xs={12} sm={6} md={6}>
+                  <Box sx={{ mb: 2 }}>
+                    <FormLabel
+                      component="legend"
+                      sx={{ mb: 1, display: "flex", alignItems: "center" }}
+                    >
+                      <PhoneIcon fontSize="small" sx={{ mr: 1 }} /> Contact
+                      Number
+                    </FormLabel>
+                    <Controller
+                      control={control}
+                      name={"phone_number"}
+                      render={({ field: { onChange, value } }) => (
+                        <TextField
+                          fullWidth
+                          error={Boolean(errors?.phone_number)}
+                          helperText={errors?.phone_number?.message}
+                          value={value || ""}
+                          variant="outlined"
+                          placeholder="Enter contact number"
+                          onChange={onChange}
+                          InputProps={{
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                +91
+                              </InputAdornment>
+                            ),
+                          }}
+                        />
+                      )}
+                    />
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Divider sx={{ my: 4 }} />
+
+              {/* Action Buttons */}
+              <Grid
+                container
+                justifyContent="center"
+                spacing={2}
+                sx={{ mt: 2 }}
+              >
+                <Grid item xs={12} sm={6} md={3}>
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => navigate(-1)}
+                    startIcon={<ArrowBackIcon />}
+                    size={isMobile ? "medium" : "large"}
+                    sx={{ py: 1.2 }}
+                  >
+                    Back
+                  </Button>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    color="primary"
+                    disabled={isLoading}
+                    type="submit"
+                    startIcon={isLoading ? <Loader /> : <SaveIcon />}
+                    size={isMobile ? "medium" : "large"}
+                    sx={{ py: 1.2 }}
+                  >
+                    {isLoading ? "Saving..." : "Save Patient"}
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          </CardContent>
+        </Card>
+      </Container>
     </div>
   );
 }

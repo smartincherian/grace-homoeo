@@ -1,111 +1,3 @@
-// import Box from "@mui/material/Box";
-// import { DataGrid } from "@mui/x-data-grid";
-// import dayjs from "dayjs";
-// import React, { useEffect, useState } from "react";
-// import { fetchPatients } from "../../firestore/patient";
-// import Header from "../Header";
-// import "./PatientsManagement.css";
-// import GraceDrawer from "../../components/Drawer/Drawer";
-// import { THEME } from "../../theme";
-
-// function PatientSearch() {
-//   const [allPatients, setAllPatients] = useState([]);
-//   const [openDrawer, setOpenDrawer] = useState(false);
-//   const [patient, setPatient] = useState({});
-
-//   console.log({ allPatients });
-
-//   useEffect(() => {
-//     fetchAllPatients();
-//   }, []);
-
-//   const fetchAllPatients = async () => {
-//     const response = await fetchPatients();
-//     setAllPatients(response);
-//   };
-
-//   const handleRowClick = (params) => {
-//     setPatient(params.row);
-//     setOpenDrawer(true);
-//   };
-
-//   const handleCloseDrawer = () => {
-//     setOpenDrawer(false);
-//     setPatient({});
-//   };
-
-//   const columns = [
-//     { field: "ID", headerName: "ID", width: 30 },
-//     {
-//       field: "name",
-//       headerName: "Patient Name",
-//       width: 150,
-//       renderCell: (params) => (
-//         <span
-//           style={{
-//             fontWeight: "bold",
-//             cursor: "pointer",
-//             color: THEME.COLOR_PRIMARY,
-//           }}
-//           onClick={() => handleRowClick(params)}
-//         >
-//           {params.value}
-//         </span>
-//       ),
-//     },
-//     { field: "age", headerName: "Age", width: 120 },
-//     { field: "gender", headerName: "Gender", width: 60 },
-//     { field: "place", headerName: "Place", width: 200 },
-//     { field: "phone_number", headerName: "Contact", width: 200 },
-//   ];
-
-//   return (
-//     <div>
-//       <Header page={"Patient Management - Search Patient"} />
-//       <div className="mt-16 text-center">
-//         <Box
-//           className="ptmgt-boxes"
-//           sx={{
-//             bgcolor: "white",
-//             // width: "75vw",
-//             mt: "4vh",
-//             ml: "20vw",
-//             mr: "30vw",
-//           }}
-//         >
-//           <div>
-//             <DataGrid
-//               rows={allPatients}
-//               columns={columns}
-//               disableSelectionOnClick
-//               showCellRightBorder
-//               autoHeight
-//               sx={{
-//                 fontFamily: "Plus Jakarta Sans, sans-serif",
-//                 fontSize: 14,
-//                 textAlign: "center",
-//               }}
-//               getRowId={(row) => row.id}
-//               hideFooterPagination
-//               hideFooter
-//               keepNonExistentRowsSelected
-//             />
-
-//             <br></br>
-//             <GraceDrawer
-//               open={openDrawer}
-//               patient={patient}
-//               onClose={handleCloseDrawer}
-//             />
-//           </div>
-//         </Box>
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default PatientSearch;
-
 import React, { useEffect, useState } from "react";
 import {
   Box,
@@ -128,7 +20,7 @@ import {
   startAt,
   endAt,
 } from "firebase/firestore";
-import { db } from "../../firestore/config";
+import { db } from "../../firebase/config"; // Adjust this import based on your Firebase config location
 
 function PatientSearch() {
   const [patients, setPatients] = useState([]);
@@ -172,25 +64,44 @@ function PatientSearch() {
     setLoading(true);
     try {
       const searchTermLower = searchTerm.toLowerCase();
-      const searchTermUpper = searchTerm.toLowerCase() + "\uf8ff";
-      console.log({ searchTerm });
 
+      // Method 1: Using client-side filtering (works with existing data)
       const patientsCollection = collection(db, "patients");
-      const q = query(
-        patientsCollection,
-        orderBy("name"),
-        startAt(searchTermLower),
-        endAt(searchTermUpper)
-      );
-
+      const q = query(patientsCollection);
       const querySnapshot = await getDocs(q);
 
       const patientsData = [];
       querySnapshot.forEach((doc) => {
-        patientsData.push({ id: doc.id, ...doc.data() });
+        const patient = { id: doc.id, ...doc.data() };
+        // Check if the name contains the search term (case insensitive)
+        if (
+          patient.name &&
+          patient.name.toLowerCase().includes(searchTermLower)
+        ) {
+          patientsData.push(patient);
+        }
       });
 
       setPatients(patientsData);
+
+      // Method 2 (commented): If you've implemented nameTokens in your database
+      // This approach requires setting up nameTokens array in each patient document
+      /*
+      const patientsCollection = collection(db, "patients");
+      const q = query(
+        patientsCollection,
+        where("nameTokens", "array-contains", searchTermLower)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      
+      const patientsData = [];
+      querySnapshot.forEach((doc) => {
+        patientsData.push({ id: doc.id, ...doc.data() });
+      });
+      
+      setPatients(patientsData);
+      */
     } catch (error) {
       console.error("Error searching patients:", error);
     } finally {

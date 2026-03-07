@@ -6,6 +6,8 @@ import PatientManagement from "./routes/patientManagement/PatientManagement";
 import PatientAdd from "./routes/patientManagement/PatientAdd";
 import PatientSearch from "./routes/patientManagement/PatientSearch";
 import { SnackbarProvider } from "./components/Snackbar";
+import ConsultationAdd from "./routes/patientManagement/ConsultationAdd";
+import BibleReadingPlan from "./routes/biy-helper";
 
 function App() {
   return (
@@ -17,7 +19,10 @@ function App() {
 
             <Route path="/patientsManagement" element={<PatientManagement />} />
             <Route path="/patientsAdd" element={<PatientAdd />} />
+            <Route path="/consultationAdd" element={<ConsultationAdd />} />
             <Route path="/patientsSearch" element={<PatientSearch />} />
+
+            <Route path="/biy-helper" element={<BibleReadingPlan />} />
 
             <Route
               path="/inventoryManagement"
