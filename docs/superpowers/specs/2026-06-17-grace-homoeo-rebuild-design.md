@@ -28,7 +28,7 @@ driving problems:
 |---|---|
 | App type | Installable **PWA** (web app), not native mobile |
 | Stack | **Vite + React + TypeScript + MUI v6 + Firebase** |
-| Backend | Firebase **Auth** + **Firestore** + **Hosting** (existing `grace-homoeo` project) |
+| Backend | Firebase **Auth** + **Firestore** + **Hosting** — **reuses the existing `grace-homoeo` project; no new Firebase project, account, or infra**. Auth is newly wired up (was dormant); existing Firestore data stays put and can be imported later. |
 | Users | **Single doctor** account now; role-extensible later |
 | Primary device | **Phone-first**, but desktop is fully first-class (no feature cuts on either) |
 | Existing data | New clean model; old data can be imported later but is not required |
