@@ -1004,55 +1004,68 @@ git add -A && git commit -m "Add role-aware Firestore rules and emulator config"
 
 ---
 
-### Task 8: Atomic patient serial counter (TDD against emulator)
+### Task 8: Atomic patient serial counter (TDD, mocked Firestore)
 
 **Files:**
 - Create: `src/lib/serial.ts`, `src/lib/serial.test.ts`
 
 **Interfaces:**
-- Consumes: `db` from `src/lib/firebase.ts`; emulator from Task 7.
-- Produces: `nextPatientSerial(): Promise<number>` — atomically increments `counters/patients.lastSerial` in a transaction and returns the new value. First call returns `1`. Consumed by the Patients module (Plan 2).
+- Consumes: `db` from `src/lib/firebase.ts`.
+- Produces: `nextPatientSerial(): Promise<number>` — atomically increments `counters/patients.lastSerial` inside a Firestore transaction and returns the new value. First call (no counter doc) returns `1`. Consumed by the Patients module (Plan 2).
 
-- [ ] **Step 1: Write failing test (emulator-backed)**
+Tests mock `firebase/firestore` (no emulator needed — `npm test` stays green standalone). The transaction body is exercised by invoking the callback passed to the mocked `runTransaction` with a fake `tx`.
+
+- [ ] **Step 1: Write failing test (mocked transaction)**
 
 `src/lib/serial.test.ts`:
 ```ts
-import { beforeAll, afterAll, expect, it } from "vitest";
-import { initializeApp, deleteApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator, type Firestore } from "firebase/firestore";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 
-let app: FirebaseApp;
-let testDb: Firestore;
+const runTransaction = vi.fn();
+const doc = vi.fn(() => ({ id: "patients" }));
+vi.mock("firebase/firestore", () => ({
+  runTransaction: (...a: unknown[]) => runTransaction(...a),
+  doc: (...a: unknown[]) => doc(...a),
+}));
+vi.mock("./firebase", () => ({ db: {} }));
 
-beforeAll(() => {
-  app = initializeApp({ projectId: "grace-homoeo-test" }, "serial-test");
-  testDb = getFirestore(app);
-  connectFirestoreEmulator(testDb, "127.0.0.1", 8080);
-});
-afterAll(() => deleteApp(app));
+import { nextPatientSerial } from "./serial";
 
-it("returns sequential serials starting at 1", async () => {
-  const { nextPatientSerialWith } = await import("./serial");
-  const a = await nextPatientSerialWith(testDb);
-  const b = await nextPatientSerialWith(testDb);
-  expect(b).toBe(a + 1);
+describe("nextPatientSerial", () => {
+  beforeEach(() => runTransaction.mockReset());
+
+  it("returns 1 when no counter doc exists yet", async () => {
+    runTransaction.mockImplementation(async (_db: unknown, fn: (tx: unknown) => unknown) =>
+      fn({ get: async () => ({ exists: () => false, data: () => ({}) }), set: vi.fn() }),
+    );
+    await expect(nextPatientSerial()).resolves.toBe(1);
+  });
+
+  it("increments and persists the existing counter", async () => {
+    const set = vi.fn();
+    runTransaction.mockImplementation(async (_db: unknown, fn: (tx: unknown) => unknown) =>
+      fn({ get: async () => ({ exists: () => true, data: () => ({ lastSerial: 41 }) }), set }),
+    );
+    await expect(nextPatientSerial()).resolves.toBe(42);
+    expect(set).toHaveBeenCalledWith(expect.anything(), { lastSerial: 42 }, { merge: true });
+  });
 });
 ```
 
 - [ ] **Step 2: Run test, verify it fails**
 
-Run: `npm run emulators` in one terminal, then `npm test -- serial` in another.
-Expected: FAIL — `nextPatientSerialWith` not exported.
+Run: `npm test -- serial`
+Expected: FAIL — cannot resolve `./serial`.
 
 - [ ] **Step 3: Implement `src/lib/serial.ts`**
 
 ```ts
-import { doc, runTransaction, type Firestore } from "firebase/firestore";
+import { doc, runTransaction } from "firebase/firestore";
 import { db } from "./firebase";
 
-export async function nextPatientSerialWith(database: Firestore): Promise<number> {
-  const ref = doc(database, "counters", "patients");
-  return runTransaction(database, async (tx) => {
+export async function nextPatientSerial(): Promise<number> {
+  const ref = doc(db, "counters", "patients");
+  return runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const last = snap.exists() ? (snap.data().lastSerial as number) : 0;
     const next = last + 1;
@@ -1060,21 +1073,17 @@ export async function nextPatientSerialWith(database: Firestore): Promise<number
     return next;
   });
 }
-
-export function nextPatientSerial(): Promise<number> {
-  return nextPatientSerialWith(db);
-}
 ```
 
 - [ ] **Step 4: Run test, verify it passes**
 
-Run (emulator running): `npm test -- serial`
-Expected: PASS.
+Run: `npm test -- serial`
+Expected: PASS (2 tests).
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -A && git commit -m "Add atomic patient serial counter with emulator test"
+git add -A && git commit -m "Add atomic patient serial counter with mocked-transaction test"
 ```
 
 ---
@@ -1266,7 +1275,7 @@ Deployment to production (`npm run release`) is performed only when the user exp
 - §4 data model: `counters/patients` + serial → Task 8; `users` doc → Task 6. *(patients/consultations/inventory/expenses collections are created by Plans 2-4 — out of Foundation scope by design.)* ✓
 - §5 auth & security → Tasks 6 (auth/guard/user doc) + 7 (role-aware rules, env config). ✓
 - §7 error/empty/loading states → Task 9 QueryStates. ✓
-- §8 testing (Vitest + RTL + emulator) → Tasks 2, 7, 8. ✓
+- §8 testing (Vitest + RTL) → Tasks 2, 8 (mocked Firestore — `npm test` needs no emulator); emulator still configured in Task 7 for manual/integration use. ✓
 - §9 roadmap phases 1-4 → this entire plan; phases 5-7 are Plans 2-4. ✓
 
 **Placeholder scan:** No TBD/TODO; every code/config step shows full content. Icon generation has an explicit fallback. ✓
