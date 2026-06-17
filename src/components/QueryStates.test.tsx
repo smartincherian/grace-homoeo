@@ -15,3 +15,8 @@ test("renders children on success with data", () => {
   render(<QueryStates status="success" isEmpty={false} emptyMessage="none"><div>content</div></QueryStates>);
   expect(screen.getByText("content")).toBeInTheDocument();
 });
+
+test("shows error message when status is error", () => {
+  render(<QueryStates status="error" isEmpty={false} emptyMessage="none"><div>x</div></QueryStates>);
+  expect(screen.getByText(/something went wrong/i)).toBeInTheDocument();
+});
