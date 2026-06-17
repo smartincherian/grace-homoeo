@@ -1,10 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const runTransaction = vi.fn();
-const doc = vi.fn(() => ({ id: "patients" }));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const doc = vi.fn((..._a: unknown[]) => ({ id: "patients" }));
 vi.mock("firebase/firestore", () => ({
   runTransaction: (...a: unknown[]) => runTransaction(...a),
-  doc: () => doc(),
+  doc: (...a: unknown[]) => doc(...a),
 }));
 vi.mock("./firebase", () => ({ db: {} }));
 

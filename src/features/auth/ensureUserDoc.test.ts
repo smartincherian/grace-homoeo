@@ -2,11 +2,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const getDoc = vi.fn();
 const setDoc = vi.fn();
-const doc = vi.fn(() => ({ id: "u1" }));
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const doc = vi.fn((..._args: unknown[]) => ({ id: "u1" }));
 vi.mock("firebase/firestore", () => ({
   getDoc: (...a: unknown[]) => getDoc(...a),
   setDoc: (...a: unknown[]) => setDoc(...a),
-  doc: () => doc(),
+  doc: (...a: unknown[]) => doc(...a),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
