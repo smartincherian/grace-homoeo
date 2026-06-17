@@ -1,13 +1,15 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ToastProvider, useToast } from "./ToastProvider";
+import { expect, it } from "vitest";
+import { ToastProvider } from "./ToastProvider";
+import { useToast } from "./useToast";
 
 function Trigger() {
   const { showToast } = useToast();
   return <button onClick={() => showToast("Saved!", "success")}>go</button>;
 }
 
-test("shows a toast message when triggered", async () => {
+it("shows a toast message when triggered", async () => {
   render(
     <ToastProvider>
       <Trigger />

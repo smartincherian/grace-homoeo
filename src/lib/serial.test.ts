@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const runTransaction = vi.fn();
-const doc = vi.fn((..._a: unknown[]) => ({ id: "patients" }));
+const doc = vi.fn(() => ({ id: "patients" }));
 vi.mock("firebase/firestore", () => ({
   runTransaction: (...a: unknown[]) => runTransaction(...a),
-  doc: (...a: unknown[]) => doc(...a),
+  doc: () => doc(),
 }));
 vi.mock("./firebase", () => ({ db: {} }));
 

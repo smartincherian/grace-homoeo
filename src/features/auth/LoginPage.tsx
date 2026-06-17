@@ -4,7 +4,7 @@ import { Box, Button, Card, CardContent, TextField, Typography } from "@mui/mate
 import { useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { ensureUserDoc } from "./ensureUserDoc";
-import { useToast } from "../../components/ToastProvider";
+import { useToast } from "../../components/useToast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

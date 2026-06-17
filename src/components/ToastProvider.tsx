@@ -1,12 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from "react";
+import { useCallback, useMemo, useState, ReactNode } from "react";
 import { Alert, Snackbar } from "@mui/material";
-
-type Severity = "success" | "error" | "info" | "warning";
-interface ToastContextValue {
-  showToast: (message: string, severity?: Severity) => void;
-}
-
-const ToastContext = createContext<ToastContextValue | null>(null);
+import { ToastContext, type Severity } from "./useToast";
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -38,8 +32,3 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error("useToast must be used within ToastProvider");
-  return ctx;
-}
