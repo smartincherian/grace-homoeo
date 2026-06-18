@@ -6,7 +6,8 @@ import PatientListPage from "./features/patients/PatientListPage";
 import PatientDetailPage from "./features/patients/PatientDetailPage";
 import PatientFormPage from "./features/patients/PatientFormPage";
 import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
-import InventoryPlaceholder from "./routes/InventoryPlaceholder";
+import InventoryListPage from "./features/inventory/InventoryListPage";
+import InventoryFormPage from "./features/inventory/InventoryFormPage";
 import FundsPlaceholder from "./routes/FundsPlaceholder";
 
 export default function App() {
@@ -26,7 +27,9 @@ export default function App() {
         <Route path="/patients/:id/edit" element={<PatientFormPage />} />
         <Route path="/patients/:patientId/consultations/new" element={<ConsultationFormPage />} />
         <Route path="/patients/:patientId/consultations/:cid/edit" element={<ConsultationFormPage />} />
-        <Route path="/inventory" element={<InventoryPlaceholder />} />
+        <Route path="/inventory" element={<InventoryListPage />} />
+        <Route path="/inventory/new" element={<InventoryFormPage />} />
+        <Route path="/inventory/:id/edit" element={<InventoryFormPage />} />
         <Route path="/funds" element={<FundsPlaceholder />} />
       </Route>
       <Route path="*" element={<Navigate to="/patients" replace />} />
