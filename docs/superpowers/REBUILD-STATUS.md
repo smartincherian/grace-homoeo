@@ -1,6 +1,6 @@
 # Grace Homoeo Rebuild — Status & Next-Session Handoff
 
-_Last updated: 2026-06-18_
+_Last updated: 2026-06-18 (Plan 3 Inventory in progress — Tasks 1–2 done)_
 
 ## Where things stand
 
@@ -8,7 +8,7 @@ The app is being rebuilt from Create React App → **Vite + React + TypeScript +
 
 1. **Foundation — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-foundation.md`). 11 tasks, each implemented + reviewed; whole-branch review passed ("with fixes"; fixes applied).
 2. **Patients & Consultations — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-patients.md`). 10 tasks, each implemented + per-task reviewed; whole-branch review (opus) passed "Ready to merge — Yes", no Critical/Important. HEAD `66da6ca`. `npm run lint` clean, `npm test` (42/42), and `npm run build` (PWA generated) all green. Delivers: searchable patient list, patient detail + consultation-history timeline, add/edit patient & consultation forms, top-level `consultations` with atomic `lastVisitAt` batch, and the AppShell account/logout menu + FAB pattern.
-3. **Inventory — ⬜ NEXT (Plan 3)**
+3. **Inventory — 🔶 IN PROGRESS (Plan 3)** (`docs/superpowers/plans/2026-06-18-grace-homoeo-inventory.md`). Executing via subagent-driven-development. **Tasks 1–2 of 5 complete** (each controller-reviewed clean); HEAD `afff735`, full suite 60/60, lint clean. Tasks 3–5 + final whole-branch review remain. See "Resuming Plan 3" below.
 4. **Funds — ⬜ (Plan 4)**
 
 The authoritative design (data model, scope, decisions) is `docs/superpowers/specs/2026-06-17-grace-homoeo-rebuild-design.md`. Read it before planning a module.
@@ -19,6 +19,18 @@ The authoritative design (data model, scope, decisions) is `docs/superpowers/spe
 - `PatientDetailPage` shows "Loading patient…" for both in-flight and not-found ids (no distinct "not found").
 - Test gaps to backfill: `getConsultation`/`updateConsultation` repo fns, consultation mutation-invalidation hooks, consultation edit-mode page, and the AppShell logout `navigate('/login')` assertion.
 - Cosmetic: literal 📞 emoji vs a MUI `PhoneIcon`; `ConsultationTimeline` has no defensive sort (relies on the repo's client-side date-desc sort).
+
+## Resuming Plan 3 (Inventory) — next session
+
+**State at handoff:** branch `rebuild`, HEAD `afff735`, working tree clean, `npm test` 60/60, lint clean.
+
+**Done (do NOT re-dispatch):**
+- **Task 1 — schema + repository** (`src/features/inventory/inventorySchema.ts`, `inventoryRepo.ts` + tests). Commits `79630b9` (impl) + `3ef7e0b` (added-tests). Exports: `inventoryFormSchema`, `InventoryFormValues`, `InventoryItem`, `isLowStock`, and repo fns `listInventory`/`getItem`/`createItem`/`updateItem`/`setQuantity`/`deleteItem`.
+- **Task 2 — query hooks** (`src/features/inventory/useInventory.ts` + test). Commit `afff735`. Exports: `useInventory`, `useInventoryItem`, `useCreateItem`, `useUpdateItem`, `useSetQuantity`, `useDeleteItem`.
+
+**Remaining:** Task 3 (InventoryListPage — search + low-stock chip + quick ± quantity + FAB), Task 4 (InventoryFormPage — add/edit/delete), Task 5 (wire `/inventory` routes in `src/App.tsx`, delete `src/routes/InventoryPlaceholder.tsx`, verify lint/build/test), then the final whole-branch review.
+
+**To resume:** continue `superpowers:subagent-driven-development` from **Task 3** (BASE for Task 3 = `afff735`). The per-task briefs are already extracted at `.git/sdd/task-3-brief.md`, `task-4-brief.md`, `task-5-brief.md` (regenerate with the skill's `scripts/task-brief` if missing). The durable progress ledger is `.git/sdd/progress.md` (the PLAN 3 section records Tasks 1–2 as complete — trust it over recollection). Note: Task 1's implementer made an extra autonomous test-only commit after reporting DONE; dispatch implementers with an explicit "stop at the commit" instruction (as Task 2 was).
 
 ## How to resume in a new session
 
