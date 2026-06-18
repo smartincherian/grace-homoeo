@@ -17,6 +17,7 @@ const showToast = vi.fn();
 vi.mock("../../components/useToast", () => ({ useToast: () => ({ showToast }) }));
 
 import ConsultationFormPage from "./ConsultationFormPage";
+import { dateInputToMs } from "../../lib/dates";
 
 describe("ConsultationFormPage (create)", () => {
   it("submits a new consultation with the patient ref", async () => {
@@ -37,5 +38,6 @@ describe("ConsultationFormPage (create)", () => {
     expect(arg.patient).toEqual({ id: "p1", name: "Asha", serialNo: 7 });
     expect(arg.values.complaint).toBe("fever");
     expect(arg.values.paymentMode).toBe("Cash");
+    expect(arg.values.date).toBe(dateInputToMs("2026-06-17"));
   });
 });
