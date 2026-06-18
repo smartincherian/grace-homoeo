@@ -8,7 +8,8 @@ import PatientFormPage from "./features/patients/PatientFormPage";
 import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
 import InventoryListPage from "./features/inventory/InventoryListPage";
 import InventoryFormPage from "./features/inventory/InventoryFormPage";
-import FundsPlaceholder from "./routes/FundsPlaceholder";
+import FundsPage from "./features/funds/FundsPage";
+import ExpenseFormPage from "./features/funds/ExpenseFormPage";
 
 export default function App() {
   return (
@@ -30,7 +31,9 @@ export default function App() {
         <Route path="/inventory" element={<InventoryListPage />} />
         <Route path="/inventory/new" element={<InventoryFormPage />} />
         <Route path="/inventory/:id/edit" element={<InventoryFormPage />} />
-        <Route path="/funds" element={<FundsPlaceholder />} />
+        <Route path="/funds" element={<FundsPage />} />
+        <Route path="/funds/expenses/new" element={<ExpenseFormPage />} />
+        <Route path="/funds/expenses/:id/edit" element={<ExpenseFormPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/patients" replace />} />
     </Routes>
