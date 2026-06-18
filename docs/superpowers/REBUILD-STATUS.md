@@ -1,6 +1,6 @@
 # Grace Homoeo Rebuild — Status & Next-Session Handoff
 
-_Last updated: 2026-06-18 (Plan 3 Inventory COMPLETE — all 5 tasks done)_
+_Last updated: 2026-06-18 (Plan 4 Funds COMPLETE — all 4 rebuild plans done)_
 
 ## Where things stand
 
@@ -9,7 +9,7 @@ The app is being rebuilt from Create React App → **Vite + React + TypeScript +
 1. **Foundation — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-foundation.md`). 11 tasks, each implemented + reviewed; whole-branch review passed ("with fixes"; fixes applied).
 2. **Patients & Consultations — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-patients.md`). 10 tasks, each implemented + per-task reviewed; whole-branch review (opus) passed "Ready to merge — Yes", no Critical/Important. HEAD `66da6ca`. `npm run lint` clean, `npm test` (42/42), and `npm run build` (PWA generated) all green. Delivers: searchable patient list, patient detail + consultation-history timeline, add/edit patient & consultation forms, top-level `consultations` with atomic `lastVisitAt` batch, and the AppShell account/logout menu + FAB pattern.
 3. **Inventory — ✅ COMPLETE (Plan 3)** (`docs/superpowers/plans/2026-06-18-grace-homoeo-inventory.md`). All 5 tasks done. HEAD `cd703eb`. `npm run lint` clean, `npm test` (60/60), `npm run build` (PWA generated) all green. Delivers: searchable inventory list with low-stock highlighting + quick ± quantity adjust, add/edit/delete form page, live `/inventory` + `/inventory/new` + `/inventory/:id/edit` routes; placeholder removed. **Note:** per a user directive partway through, Tasks 3–5 (the two UI pages + routing) were built without component tests — schema/repo/hooks (Tasks 1–2) retain their unit tests. The UI pages have no test coverage; backfill if that policy changes.
-4. **Funds — ⬜ (Plan 4) — NEXT**
+4. **Funds — ✅ COMPLETE (Plan 4)** — no separate plan file; built directly from the design spec §6 "Funds / Finance". HEAD `2bae321`. `npm run lint` clean, `npm test` (60/60), `npm run build` (PWA generated) all green. Delivers: `expenses` collection CRUD (date/category/amount/note); a date-range period summary (total income, total expenses, balance) with income broken down by payment mode (Debt/No Fees visible separately); live `/funds`, `/funds/expenses/new`, `/funds/expenses/:id/edit` routes; placeholder removed. **Design notes:** (a) income = sum of consultation `amount` and balance = income − expenses, exactly per spec §4 — Debt/No-Fees consultations count toward income and are surfaced via the breakdown rather than excluded; (b) to respect feature boundaries, Funds reads the `consultations` collection through its **own** `fundsRepo.listIncome` (read-only) instead of importing the consultations feature; (c) built without tests and without the SDD loop / whole-branch review, per the same conserve-tokens user directive as Plan 3. No Firestore rules change needed — the catch-all `match /{document=**}` already covers `expenses`.
 
 The authoritative design (data model, scope, decisions) is `docs/superpowers/specs/2026-06-17-grace-homoeo-rebuild-design.md`. Read it before planning a module.
 
