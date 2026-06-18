@@ -2,7 +2,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import AuthGuard from "./features/auth/AuthGuard";
 import LoginPage from "./features/auth/LoginPage";
-import PatientsPlaceholder from "./routes/PatientsPlaceholder";
+import PatientListPage from "./features/patients/PatientListPage";
+import PatientDetailPage from "./features/patients/PatientDetailPage";
+import PatientFormPage from "./features/patients/PatientFormPage";
+import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
 import InventoryPlaceholder from "./routes/InventoryPlaceholder";
 import FundsPlaceholder from "./routes/FundsPlaceholder";
 
@@ -17,7 +20,12 @@ export default function App() {
           </AuthGuard>
         }
       >
-        <Route path="/patients" element={<PatientsPlaceholder />} />
+        <Route path="/patients" element={<PatientListPage />} />
+        <Route path="/patients/new" element={<PatientFormPage />} />
+        <Route path="/patients/:id" element={<PatientDetailPage />} />
+        <Route path="/patients/:id/edit" element={<PatientFormPage />} />
+        <Route path="/patients/:patientId/consultations/new" element={<ConsultationFormPage />} />
+        <Route path="/patients/:patientId/consultations/:cid/edit" element={<ConsultationFormPage />} />
         <Route path="/inventory" element={<InventoryPlaceholder />} />
         <Route path="/funds" element={<FundsPlaceholder />} />
       </Route>
