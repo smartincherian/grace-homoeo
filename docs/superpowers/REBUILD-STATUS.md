@@ -1,23 +1,30 @@
 # Grace Homoeo Rebuild — Status & Next-Session Handoff
 
-_Last updated: 2026-06-17_
+_Last updated: 2026-06-18_
 
 ## Where things stand
 
 The app is being rebuilt from Create React App → **Vite + React + TypeScript + MUI + Firebase PWA**, on the **`rebuild`** git branch (not merged to `graceh`). The rebuild is split into 4 sequential plans:
 
-1. **Foundation — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-foundation.md`). 11 tasks, each implemented + reviewed; whole-branch review passed ("with fixes"; fixes applied). HEAD `2213620`. `npm run lint`, `npm test` (12/12, pass with and without `.env.local`), and `npm run build` are all green.
-2. **Patients & Consultations — ⬜ NEXT (Plan 2)**
-3. **Inventory — ⬜ (Plan 3)**
+1. **Foundation — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-foundation.md`). 11 tasks, each implemented + reviewed; whole-branch review passed ("with fixes"; fixes applied).
+2. **Patients & Consultations — ✅ COMPLETE** (`docs/superpowers/plans/2026-06-17-grace-homoeo-patients.md`). 10 tasks, each implemented + per-task reviewed; whole-branch review (opus) passed "Ready to merge — Yes", no Critical/Important. HEAD `66da6ca`. `npm run lint` clean, `npm test` (42/42), and `npm run build` (PWA generated) all green. Delivers: searchable patient list, patient detail + consultation-history timeline, add/edit patient & consultation forms, top-level `consultations` with atomic `lastVisitAt` batch, and the AppShell account/logout menu + FAB pattern.
+3. **Inventory — ⬜ NEXT (Plan 3)**
 4. **Funds — ⬜ (Plan 4)**
 
 The authoritative design (data model, scope, decisions) is `docs/superpowers/specs/2026-06-17-grace-homoeo-rebuild-design.md`. Read it before planning a module.
 
+### Plan 2 follow-ups deferred to a future cleanup (whole-branch review Minors — none blocking)
+
+- Denormalized consultation `patientName`/`serialNo` are **point-in-time snapshots**, not live mirrors — they do not update when a patient is renamed. Acceptable for a single-doctor clinic; `patients` is the source of truth for names. Worth a one-line note where the data model is documented.
+- `PatientDetailPage` shows "Loading patient…" for both in-flight and not-found ids (no distinct "not found").
+- Test gaps to backfill: `getConsultation`/`updateConsultation` repo fns, consultation mutation-invalidation hooks, consultation edit-mode page, and the AppShell logout `navigate('/login')` assertion.
+- Cosmetic: literal 📞 emoji vs a MUI `PhoneIcon`; `ConsultationTimeline` has no defensive sort (relies on the repo's client-side date-desc sort).
+
 ## How to resume in a new session
 
-1. The session auto-loads `CLAUDE.md` (now describes the real Vite/TS/Firebase stack).
+1. The session auto-loads `CLAUDE.md` (describes the real Vite/TS/Firebase stack).
 2. Read the **design spec** (above) and this file.
-3. For Plan 2, skip brainstorming (the spec already covers it) — go straight to **superpowers:writing-plans** to author `docs/superpowers/plans/2026-06-17-grace-homoeo-patients.md` from the spec, then execute with **superpowers:subagent-driven-development** (fresh implementer per task + per-task review + final whole-branch review), the same loop used for the Foundation.
+3. For Plan 3 (Inventory), skip brainstorming (the spec already covers it) — go straight to **superpowers:writing-plans** to author `docs/superpowers/plans/<date>-grace-homoeo-inventory.md` from the spec, then execute with **superpowers:subagent-driven-development** (fresh implementer per task + per-task review + final whole-branch review), the same loop used for Foundation and Plan 2. Build on the Plan 2 patterns: per-feature zod schema + typed repo + TanStack Query hooks + `QueryStates` list views + `useToast` mutations + FAB add action.
 
 ## Foundation interfaces Plan 2 builds on (verify before use)
 
