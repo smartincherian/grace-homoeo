@@ -1,6 +1,6 @@
 // src/features/consultations/ConsultationFormPage.test.tsx
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
@@ -29,7 +29,7 @@ describe("ConsultationFormPage (create)", () => {
         </Routes>
       </MemoryRouter>,
     );
-    await user.type(screen.getByLabelText(/date/i), "2026-06-17");
+    fireEvent.change(screen.getByLabelText(/date/i), { target: { value: "2026-06-17" } });
     await user.type(screen.getByLabelText(/complaint/i), "fever");
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(mutateAsync).toHaveBeenCalledTimes(1);

@@ -39,7 +39,7 @@ export default function ConsultationFormPage() {
   const { control, handleSubmit, reset, register, formState: { errors } } =
     useForm<ConsultationFormValues>({
       resolver: zodResolver(consultationFormSchema),
-      defaultValues: DEFAULTS as ConsultationFormValues,
+      defaultValues: { ...DEFAULTS, date: Date.now() } as ConsultationFormValues,
     });
 
   useEffect(() => {
