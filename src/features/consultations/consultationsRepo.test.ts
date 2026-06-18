@@ -5,7 +5,7 @@ const updateDoc = vi.fn();
 const batchSet = vi.fn();
 const batchUpdate = vi.fn();
 const batchCommit = vi.fn();
-const writeBatch = vi.fn(() => ({ set: batchSet, update: batchUpdate, commit: batchCommit }));
+const writeBatch = vi.fn((..._a: unknown[]) => ({ set: batchSet, update: batchUpdate, commit: batchCommit }));
 const collection = vi.fn((..._a: unknown[]) => ({ path: "consultations" }));
 const doc = vi.fn((..._a: unknown[]) => ({ id: "generated-id" }));
 const query = vi.fn((...a: unknown[]) => a);
