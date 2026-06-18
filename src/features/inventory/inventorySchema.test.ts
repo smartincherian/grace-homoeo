@@ -18,6 +18,12 @@ describe("inventoryFormSchema", () => {
   it("rejects a non-integer quantity", () => {
     expect(() => inventoryFormSchema.parse({ name: "A", quantity: 1.5 })).toThrow();
   });
+  it("rejects a negative reorderLevel", () => {
+    expect(() => inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: -1 })).toThrow();
+  });
+  it("rejects a non-integer reorderLevel", () => {
+    expect(() => inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: 1.5 })).toThrow();
+  });
   it("defaults unit, reorderLevel and notes", () => {
     const parsed = inventoryFormSchema.parse({ name: "A", quantity: 0 });
     expect(parsed.unit).toBe("");
@@ -33,5 +39,8 @@ describe("isLowStock", () => {
   });
   it("is false when quantity is above the reorder level", () => {
     expect(isLowStock({ quantity: 4, reorderLevel: 3 })).toBe(false);
+  });
+  it("treats zero stock with a zero reorder level as low", () => {
+    expect(isLowStock({ quantity: 0, reorderLevel: 0 })).toBe(true);
   });
 });

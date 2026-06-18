@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const addDoc = vi.fn();
 const getDocs = vi.fn();
+const getDoc = vi.fn();
 const updateDoc = vi.fn();
 const deleteDoc = vi.fn();
 const collection = vi.fn((..._a: unknown[]) => ({ path: "inventory" }));
@@ -12,7 +13,7 @@ const orderBy = vi.fn((...a: unknown[]) => ({ orderBy: a }));
 vi.mock("firebase/firestore", () => ({
   addDoc: (...a: unknown[]) => addDoc(...a),
   getDocs: (...a: unknown[]) => getDocs(...a),
-  getDoc: vi.fn(),
+  getDoc: (...a: unknown[]) => getDoc(...a),
   updateDoc: (...a: unknown[]) => updateDoc(...a),
   deleteDoc: (...a: unknown[]) => deleteDoc(...a),
   collection: (...a: unknown[]) => collection(...a),
@@ -22,10 +23,10 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
-import { createItem, listInventory, updateItem, setQuantity, deleteItem } from "./inventoryRepo";
+import { createItem, getItem, listInventory, updateItem, setQuantity, deleteItem } from "./inventoryRepo";
 
 beforeEach(() => {
-  addDoc.mockReset(); getDocs.mockReset(); updateDoc.mockReset(); deleteDoc.mockReset();
+  addDoc.mockReset(); getDocs.mockReset(); getDoc.mockReset(); updateDoc.mockReset(); deleteDoc.mockReset();
 });
 
 describe("createItem", () => {
@@ -52,6 +53,25 @@ describe("listInventory", () => {
     expect(list).toEqual([{
       id: "i1", name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9,
     }]);
+  });
+});
+
+describe("getItem", () => {
+  it("maps an existing document to an InventoryItem", async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      id: "i1",
+      data: () => ({ name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9 }),
+    });
+    const item = await getItem("i1");
+    expect(item).toEqual({
+      id: "i1", name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9,
+    });
+  });
+  it("returns null when the document does not exist", async () => {
+    getDoc.mockResolvedValue({ exists: () => false });
+    const item = await getItem("missing");
+    expect(item).toBeNull();
   });
 });
 
