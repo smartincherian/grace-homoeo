@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createItem, deleteItem, getItem, listInventory, setQuantity, updateItem,
+  createItem,
+  deleteItem,
+  getItem,
+  listInventory,
+  setQuantity,
+  updateItem,
 } from "./inventoryRepo";
 import type { InventoryFormValues } from "./inventorySchema";
 
@@ -40,7 +45,8 @@ export function useUpdateItem(id: string) {
 export function useSetQuantity() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { id: string; quantity: number }) => setQuantity(vars.id, vars.quantity),
+    mutationFn: (vars: { id: string; quantity: number }) =>
+      setQuantity(vars.id, vars.quantity),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["inventory"] });
     },

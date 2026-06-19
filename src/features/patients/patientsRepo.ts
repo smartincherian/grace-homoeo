@@ -1,6 +1,15 @@
 import {
-  addDoc, collection, doc, getDoc, getDocs, orderBy, query, updateDoc,
-  type DocumentData, type QueryDocumentSnapshot, type DocumentSnapshot,
+  addDoc,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { nextPatientSerial } from "../../lib/serial";
@@ -8,7 +17,9 @@ import type { Patient, PatientFormValues } from "./patientSchema";
 
 const COLLECTION = "patients";
 
-function toPatient(snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>): Patient {
+function toPatient(
+  snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>,
+): Patient {
   const d = snap.data() as DocumentData;
   return {
     id: snap.id,
@@ -25,7 +36,9 @@ function toPatient(snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<
 }
 
 export async function listPatients(): Promise<Patient[]> {
-  const snap = await getDocs(query(collection(db, COLLECTION), orderBy("nameLower")));
+  const snap = await getDocs(
+    query(collection(db, COLLECTION), orderBy("nameLower")),
+  );
   return snap.docs.map(toPatient);
 }
 
@@ -34,7 +47,9 @@ export async function getPatient(id: string): Promise<Patient | null> {
   return snap.exists() ? toPatient(snap) : null;
 }
 
-export async function createPatient(values: PatientFormValues): Promise<string> {
+export async function createPatient(
+  values: PatientFormValues,
+): Promise<string> {
   const serialNo = await nextPatientSerial();
   const ref = await addDoc(collection(db, COLLECTION), {
     ...values,
@@ -46,7 +61,10 @@ export async function createPatient(values: PatientFormValues): Promise<string> 
   return ref.id;
 }
 
-export async function updatePatient(id: string, values: PatientFormValues): Promise<void> {
+export async function updatePatient(
+  id: string,
+  values: PatientFormValues,
+): Promise<void> {
   await updateDoc(doc(db, COLLECTION, id), {
     ...values,
     nameLower: values.name.toLowerCase(),

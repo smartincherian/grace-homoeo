@@ -26,8 +26,14 @@ export default function App() {
         <Route path="/patients/new" element={<PatientFormPage />} />
         <Route path="/patients/:id" element={<PatientDetailPage />} />
         <Route path="/patients/:id/edit" element={<PatientFormPage />} />
-        <Route path="/patients/:patientId/consultations/new" element={<ConsultationFormPage />} />
-        <Route path="/patients/:patientId/consultations/:cid/edit" element={<ConsultationFormPage />} />
+        <Route
+          path="/patients/:patientId/consultations/new"
+          element={<ConsultationFormPage />}
+        />
+        <Route
+          path="/patients/:patientId/consultations/:cid/edit"
+          element={<ConsultationFormPage />}
+        />
         <Route path="/inventory" element={<InventoryListPage />} />
         <Route path="/inventory/new" element={<InventoryFormPage />} />
         <Route path="/inventory/:id/edit" element={<InventoryFormPage />} />

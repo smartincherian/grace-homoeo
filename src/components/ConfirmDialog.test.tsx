@@ -8,7 +8,13 @@ test("confirm fires onConfirm; cancel fires onClose", async () => {
   const onConfirm = vi.fn();
   const onClose = vi.fn();
   render(
-    <ConfirmDialog open title="Delete item?" message="Cannot be undone." onConfirm={onConfirm} onClose={onClose} />,
+    <ConfirmDialog
+      open
+      title="Delete item?"
+      message="Cannot be undone."
+      onConfirm={onConfirm}
+      onClose={onClose}
+    />,
   );
   await user.click(screen.getByRole("button", { name: /delete/i }));
   expect(onConfirm).toHaveBeenCalledTimes(1);

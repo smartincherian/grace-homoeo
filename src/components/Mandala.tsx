@@ -11,21 +11,40 @@ interface Props {
 const RAYS = Array.from({ length: 16 }, (_, i) => i * 22.5);
 const PETALS = Array.from({ length: 8 }, (_, i) => i * 45);
 
-export default function Mandala({ size = 160, color = "currentColor", opacity = 0.2, sx }: Props) {
+export default function Mandala({
+  size = 160,
+  color = "currentColor",
+  opacity = 0.2,
+  sx,
+}: Props) {
   return (
     <Box
       component="svg"
       aria-hidden="true"
       role="presentation"
       viewBox="0 0 200 200"
-      sx={{ width: size, height: size, color, opacity, pointerEvents: "none", ...sx }}
+      sx={{
+        width: size,
+        height: size,
+        color,
+        opacity,
+        pointerEvents: "none",
+        ...sx,
+      }}
     >
       <g fill="none" stroke="currentColor" strokeWidth={1.4}>
         <circle cx={100} cy={100} r={94} />
         <circle cx={100} cy={100} r={70} />
         <circle cx={100} cy={100} r={46} />
         {RAYS.map((a) => (
-          <line key={a} x1={100} y1={30} x2={100} y2={54} transform={`rotate(${a} 100 100)`} />
+          <line
+            key={a}
+            x1={100}
+            y1={30}
+            x2={100}
+            y2={54}
+            transform={`rotate(${a} 100 100)`}
+          />
         ))}
         {PETALS.map((a) => (
           <path

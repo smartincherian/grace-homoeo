@@ -1,6 +1,16 @@
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query, updateDoc,
-  type DocumentData, type QueryDocumentSnapshot, type DocumentSnapshot,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import type { InventoryItem, InventoryFormValues } from "./inventorySchema";
@@ -24,7 +34,9 @@ function toItem(
 }
 
 export async function listInventory(): Promise<InventoryItem[]> {
-  const snap = await getDocs(query(collection(db, COLLECTION), orderBy("nameLower")));
+  const snap = await getDocs(
+    query(collection(db, COLLECTION), orderBy("nameLower")),
+  );
   return snap.docs.map(toItem);
 }
 
@@ -42,7 +54,10 @@ export async function createItem(values: InventoryFormValues): Promise<string> {
   return ref.id;
 }
 
-export async function updateItem(id: string, values: InventoryFormValues): Promise<void> {
+export async function updateItem(
+  id: string,
+  values: InventoryFormValues,
+): Promise<void> {
   await updateDoc(doc(db, COLLECTION, id), {
     ...values,
     nameLower: values.name.toLowerCase(),

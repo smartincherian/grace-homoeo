@@ -1,8 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createConsultation, getConsultation, listConsultationsByPatient, updateConsultation,
+  createConsultation,
+  getConsultation,
+  listConsultationsByPatient,
+  updateConsultation,
 } from "./consultationsRepo";
-import type { ConsultationFormValues, ConsultationPatientRef } from "./consultationSchema";
+import type {
+  ConsultationFormValues,
+  ConsultationPatientRef,
+} from "./consultationSchema";
 
 export function useConsultations(patientId: string | undefined) {
   return useQuery({
@@ -23,8 +29,10 @@ export function useConsultation(id: string | undefined) {
 export function useCreateConsultation(patientId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { patient: ConsultationPatientRef; values: ConsultationFormValues }) =>
-      createConsultation(vars.patient, vars.values),
+    mutationFn: (vars: {
+      patient: ConsultationPatientRef;
+      values: ConsultationFormValues;
+    }) => createConsultation(vars.patient, vars.values),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["consultations", patientId] });
       void qc.invalidateQueries({ queryKey: ["patients"] });
@@ -40,7 +48,9 @@ export function useUpdateConsultation(patientId: string) {
       updateConsultation(vars.id, vars.values),
     onSuccess: (_data, vars) => {
       void qc.invalidateQueries({ queryKey: ["consultations", patientId] });
-      void qc.invalidateQueries({ queryKey: ["consultations", "one", vars.id] });
+      void qc.invalidateQueries({
+        queryKey: ["consultations", "one", vars.id],
+      });
     },
   });
 }

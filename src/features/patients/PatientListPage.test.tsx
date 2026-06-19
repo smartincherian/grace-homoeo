@@ -5,8 +5,30 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
 const data = [
-  { id: "p1", name: "Asha", nameLower: "asha", dob: 946684800000, gender: "Female", place: "Kochi", phone: "111", serialNo: 1, createdAt: 1, lastVisitAt: 946684800000 },
-  { id: "p2", name: "Biju", nameLower: "biju", dob: 946684800000, gender: "Male", place: "Aluva", phone: "222", serialNo: 2, createdAt: 1, lastVisitAt: null },
+  {
+    id: "p1",
+    name: "Asha",
+    nameLower: "asha",
+    dob: 946684800000,
+    gender: "Female",
+    place: "Kochi",
+    phone: "111",
+    serialNo: 1,
+    createdAt: 1,
+    lastVisitAt: 946684800000,
+  },
+  {
+    id: "p2",
+    name: "Biju",
+    nameLower: "biju",
+    dob: 946684800000,
+    gender: "Male",
+    place: "Aluva",
+    phone: "222",
+    serialNo: 2,
+    createdAt: 1,
+    lastVisitAt: null,
+  },
 ];
 vi.mock("./usePatients", () => ({
   usePatients: () => ({ status: "success", data }),
@@ -15,7 +37,11 @@ vi.mock("./usePatients", () => ({
 import PatientListPage from "./PatientListPage";
 
 const renderPage = () =>
-  render(<MemoryRouter><PatientListPage /></MemoryRouter>);
+  render(
+    <MemoryRouter>
+      <PatientListPage />
+    </MemoryRouter>,
+  );
 
 describe("PatientListPage", () => {
   it("lists patients", () => {
@@ -38,5 +64,12 @@ describe("PatientListPage", () => {
     await user.type(screen.getByLabelText(/search/i), "111");
     expect(screen.getByText("Asha")).toBeInTheDocument();
     expect(screen.queryByText("Biju")).not.toBeInTheDocument();
+  });
+
+  it("shows a clearly labeled add button", () => {
+    renderPage();
+    expect(screen.getByRole("link", { name: "Add patient" })).toHaveTextContent(
+      "Add patient",
+    );
   });
 });

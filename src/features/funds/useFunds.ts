@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  createExpense, deleteExpense, getExpense, listExpenses, listIncome, updateExpense,
+  createExpense,
+  deleteExpense,
+  getExpense,
+  listExpenses,
+  listIncome,
+  updateExpense,
 } from "./fundsRepo";
 import type { ExpenseFormValues } from "./fundsSchema";
 

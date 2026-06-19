@@ -1,4 +1,11 @@
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+} from "@mui/material";
 
 interface Props {
   open: boolean;
@@ -9,7 +16,14 @@ interface Props {
   onClose: () => void;
 }
 
-export default function ConfirmDialog({ open, title, message, confirmLabel = "Delete", onConfirm, onClose }: Props) {
+export default function ConfirmDialog({
+  open,
+  title,
+  message,
+  confirmLabel = "Delete",
+  onConfirm,
+  onClose,
+}: Props) {
   return (
     <Dialog open={open} onClose={onClose}>
       <DialogTitle>{title}</DialogTitle>
@@ -18,7 +32,9 @@ export default function ConfirmDialog({ open, title, message, confirmLabel = "De
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button color="error" variant="contained" onClick={onConfirm}>{confirmLabel}</Button>
+        <Button color="error" variant="contained" onClick={onConfirm}>
+          {confirmLabel}
+        </Button>
       </DialogActions>
     </Dialog>
   );

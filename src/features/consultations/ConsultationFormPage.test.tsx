@@ -6,7 +6,10 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 
 const mutateAsync = vi.fn().mockResolvedValue("c-new");
 vi.mock("../patients/usePatients", () => ({
-  usePatient: () => ({ data: { id: "p1", name: "Asha", serialNo: 7 }, isLoading: false }),
+  usePatient: () => ({
+    data: { id: "p1", name: "Asha", serialNo: 7 },
+    isLoading: false,
+  }),
 }));
 vi.mock("./useConsultations", () => ({
   useConsultation: () => ({ data: undefined, isLoading: false }),
@@ -14,7 +17,9 @@ vi.mock("./useConsultations", () => ({
   useUpdateConsultation: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 const showToast = vi.fn();
-vi.mock("../../components/useToast", () => ({ useToast: () => ({ showToast }) }));
+vi.mock("../../components/useToast", () => ({
+  useToast: () => ({ showToast }),
+}));
 
 import ConsultationFormPage from "./ConsultationFormPage";
 import { dateInputToMs } from "../../lib/dates";
@@ -25,12 +30,17 @@ describe("ConsultationFormPage (create)", () => {
     render(
       <MemoryRouter initialEntries={["/patients/p1/consultations/new"]}>
         <Routes>
-          <Route path="/patients/:patientId/consultations/new" element={<ConsultationFormPage />} />
+          <Route
+            path="/patients/:patientId/consultations/new"
+            element={<ConsultationFormPage />}
+          />
           <Route path="/patients/:id" element={<div>detail</div>} />
         </Routes>
       </MemoryRouter>,
     );
-    fireEvent.change(screen.getByLabelText(/date/i), { target: { value: "2026-06-17" } });
+    fireEvent.change(screen.getByLabelText(/date/i), {
+      target: { value: "2026-06-17" },
+    });
     await user.type(screen.getByLabelText(/complaint/i), "fever");
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(mutateAsync).toHaveBeenCalledTimes(1);

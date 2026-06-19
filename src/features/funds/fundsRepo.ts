@@ -1,6 +1,16 @@
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, query, updateDoc, where,
-  type DocumentData, type QueryDocumentSnapshot, type DocumentSnapshot,
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import type { Expense, ExpenseFormValues, IncomeRecord } from "./fundsSchema";
@@ -25,17 +35,31 @@ function toExpense(
 }
 
 /** Expenses with `date` within [startMs, endMs], newest first. */
-export async function listExpenses(startMs: number, endMs: number): Promise<Expense[]> {
+export async function listExpenses(
+  startMs: number,
+  endMs: number,
+): Promise<Expense[]> {
   const snap = await getDocs(
-    query(collection(db, EXPENSES), where("date", ">=", startMs), where("date", "<=", endMs)),
+    query(
+      collection(db, EXPENSES),
+      where("date", ">=", startMs),
+      where("date", "<=", endMs),
+    ),
   );
   return snap.docs.map(toExpense).sort((a, b) => b.date - a.date);
 }
 
 /** Consultation amounts within [startMs, endMs], reduced to income records. */
-export async function listIncome(startMs: number, endMs: number): Promise<IncomeRecord[]> {
+export async function listIncome(
+  startMs: number,
+  endMs: number,
+): Promise<IncomeRecord[]> {
   const snap = await getDocs(
-    query(collection(db, CONSULTATIONS), where("date", ">=", startMs), where("date", "<=", endMs)),
+    query(
+      collection(db, CONSULTATIONS),
+      where("date", ">=", startMs),
+      where("date", "<=", endMs),
+    ),
   );
   return snap.docs.map((d) => {
     const data = d.data() as DocumentData;
@@ -52,12 +76,20 @@ export async function getExpense(id: string): Promise<Expense | null> {
   return snap.exists() ? toExpense(snap) : null;
 }
 
-export async function createExpense(values: ExpenseFormValues): Promise<string> {
-  const ref = await addDoc(collection(db, EXPENSES), { ...values, createdAt: Date.now() });
+export async function createExpense(
+  values: ExpenseFormValues,
+): Promise<string> {
+  const ref = await addDoc(collection(db, EXPENSES), {
+    ...values,
+    createdAt: Date.now(),
+  });
   return ref.id;
 }
 
-export async function updateExpense(id: string, values: ExpenseFormValues): Promise<void> {
+export async function updateExpense(
+  id: string,
+  values: ExpenseFormValues,
+): Promise<void> {
   await updateDoc(doc(db, EXPENSES, id), { ...values });
 }
 

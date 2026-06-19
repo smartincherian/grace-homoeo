@@ -21,14 +21,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <Snackbar
         open={open}
         autoHideDuration={4000}
-        onClose={(_event, reason) => { if (reason !== "clickaway") setOpen(false); }}
+        onClose={(_event, reason) => {
+          if (reason !== "clickaway") setOpen(false);
+        }}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert severity={severity} onClose={() => setOpen(false)} variant="filled">
+        <Alert
+          severity={severity}
+          onClose={() => setOpen(false)}
+          variant="filled"
+        >
           {message}
         </Alert>
       </Snackbar>
     </ToastContext.Provider>
   );
 }
-

@@ -1,9 +1,22 @@
 import {
-  collection, doc, getDoc, getDocs, query, updateDoc, where, writeBatch,
-  type DocumentData, type QueryDocumentSnapshot, type DocumentSnapshot,
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  updateDoc,
+  where,
+  writeBatch,
+  type DocumentData,
+  type QueryDocumentSnapshot,
+  type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import type { Consultation, ConsultationFormValues, ConsultationPatientRef } from "./consultationSchema";
+import type {
+  Consultation,
+  ConsultationFormValues,
+  ConsultationPatientRef,
+} from "./consultationSchema";
 
 const COLLECTION = "consultations";
 const PATIENTS = "patients";
@@ -30,12 +43,18 @@ function toConsultation(
   };
 }
 
-export async function listConsultationsByPatient(patientId: string): Promise<Consultation[]> {
-  const snap = await getDocs(query(collection(db, COLLECTION), where("patientId", "==", patientId)));
+export async function listConsultationsByPatient(
+  patientId: string,
+): Promise<Consultation[]> {
+  const snap = await getDocs(
+    query(collection(db, COLLECTION), where("patientId", "==", patientId)),
+  );
   return snap.docs.map(toConsultation).sort((a, b) => b.date - a.date);
 }
 
-export async function getConsultation(id: string): Promise<Consultation | null> {
+export async function getConsultation(
+  id: string,
+): Promise<Consultation | null> {
   const snap = await getDoc(doc(db, COLLECTION, id));
   return snap.exists() ? toConsultation(snap) : null;
 }
@@ -60,6 +79,9 @@ export async function createConsultation(
   return ref.id;
 }
 
-export async function updateConsultation(id: string, values: ConsultationFormValues): Promise<void> {
+export async function updateConsultation(
+  id: string,
+  values: ConsultationFormValues,
+): Promise<void> {
   await updateDoc(doc(db, COLLECTION, id), { ...values });
 }

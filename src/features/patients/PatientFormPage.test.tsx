@@ -11,7 +11,9 @@ vi.mock("./usePatients", () => ({
   useUpdatePatient: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 const showToast = vi.fn();
-vi.mock("../../components/useToast", () => ({ useToast: () => ({ showToast }) }));
+vi.mock("../../components/useToast", () => ({
+  useToast: () => ({ showToast }),
+}));
 
 import PatientFormPage from "./PatientFormPage";
 

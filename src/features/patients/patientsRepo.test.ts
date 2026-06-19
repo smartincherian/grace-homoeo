@@ -20,19 +20,30 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 const nextPatientSerial = vi.fn();
-vi.mock("../../lib/serial", () => ({ nextPatientSerial: () => nextPatientSerial() }));
+vi.mock("../../lib/serial", () => ({
+  nextPatientSerial: () => nextPatientSerial(),
+}));
 
 import { createPatient, listPatients, updatePatient } from "./patientsRepo";
 
 beforeEach(() => {
-  addDoc.mockReset(); getDocs.mockReset(); updateDoc.mockReset(); nextPatientSerial.mockReset();
+  addDoc.mockReset();
+  getDocs.mockReset();
+  updateDoc.mockReset();
+  nextPatientSerial.mockReset();
 });
 
 describe("createPatient", () => {
   it("assigns a serial and writes derived fields", async () => {
     nextPatientSerial.mockResolvedValue(7);
     addDoc.mockResolvedValue({ id: "new-id" });
-    const id = await createPatient({ name: "Asha", dob: 100, gender: "Female", place: "Kochi", phone: "9" });
+    const id = await createPatient({
+      name: "Asha",
+      dob: 100,
+      gender: "Female",
+      place: "Kochi",
+      phone: "9",
+    });
     expect(id).toBe("new-id");
     const payload = addDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.serialNo).toBe(7);
@@ -45,22 +56,51 @@ describe("createPatient", () => {
 describe("listPatients", () => {
   it("maps Firestore docs to Patient objects", async () => {
     getDocs.mockResolvedValue({
-      docs: [{
-        id: "p1",
-        data: () => ({ name: "Asha", nameLower: "asha", dob: 1, gender: "Female", place: "Kochi", phone: "9", serialNo: 1, createdAt: 2, lastVisitAt: 3 }),
-      }],
+      docs: [
+        {
+          id: "p1",
+          data: () => ({
+            name: "Asha",
+            nameLower: "asha",
+            dob: 1,
+            gender: "Female",
+            place: "Kochi",
+            phone: "9",
+            serialNo: 1,
+            createdAt: 2,
+            lastVisitAt: 3,
+          }),
+        },
+      ],
     });
     const list = await listPatients();
-    expect(list).toEqual([{
-      id: "p1", name: "Asha", nameLower: "asha", dob: 1, gender: "Female", place: "Kochi", phone: "9", serialNo: 1, createdAt: 2, lastVisitAt: 3,
-    }]);
+    expect(list).toEqual([
+      {
+        id: "p1",
+        name: "Asha",
+        nameLower: "asha",
+        dob: 1,
+        gender: "Female",
+        place: "Kochi",
+        phone: "9",
+        serialNo: 1,
+        createdAt: 2,
+        lastVisitAt: 3,
+      },
+    ]);
   });
 });
 
 describe("updatePatient", () => {
   it("rewrites nameLower from the new name", async () => {
     updateDoc.mockResolvedValue(undefined);
-    await updatePatient("p1", { name: "New Name", dob: 1, gender: "Male", place: "", phone: "" });
+    await updatePatient("p1", {
+      name: "New Name",
+      dob: 1,
+      gender: "Male",
+      place: "",
+      phone: "",
+    });
     const payload = updateDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.nameLower).toBe("new name");
   });

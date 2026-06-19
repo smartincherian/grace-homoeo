@@ -7,7 +7,10 @@ import { theme } from "../theme/theme";
 import App from "../App";
 
 vi.mock("../features/auth/useAuth", () => ({
-  useAuth: () => ({ user: { uid: "test-uid", email: "doc@example.com" }, loading: false }),
+  useAuth: () => ({
+    user: { uid: "test-uid", email: "doc@example.com" },
+    loading: false,
+  }),
 }));
 vi.mock("firebase/auth", () => ({ signOut: vi.fn() }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));

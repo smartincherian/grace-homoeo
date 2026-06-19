@@ -4,25 +4,39 @@ import { inventoryFormSchema, isLowStock } from "./inventorySchema";
 describe("inventoryFormSchema", () => {
   it("accepts a valid item and trims the name", () => {
     const parsed = inventoryFormSchema.parse({
-      name: "  Arnica 30  ", quantity: 12, unit: "vials", reorderLevel: 3, notes: "shelf A",
+      name: "  Arnica 30  ",
+      quantity: 12,
+      unit: "vials",
+      reorderLevel: 3,
+      notes: "shelf A",
     });
     expect(parsed.name).toBe("Arnica 30");
     expect(parsed.quantity).toBe(12);
   });
   it("rejects an empty name", () => {
-    expect(() => inventoryFormSchema.parse({ name: "  ", quantity: 1 })).toThrow();
+    expect(() =>
+      inventoryFormSchema.parse({ name: "  ", quantity: 1 }),
+    ).toThrow();
   });
   it("rejects a negative quantity", () => {
-    expect(() => inventoryFormSchema.parse({ name: "A", quantity: -1 })).toThrow();
+    expect(() =>
+      inventoryFormSchema.parse({ name: "A", quantity: -1 }),
+    ).toThrow();
   });
   it("rejects a non-integer quantity", () => {
-    expect(() => inventoryFormSchema.parse({ name: "A", quantity: 1.5 })).toThrow();
+    expect(() =>
+      inventoryFormSchema.parse({ name: "A", quantity: 1.5 }),
+    ).toThrow();
   });
   it("rejects a negative reorderLevel", () => {
-    expect(() => inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: -1 })).toThrow();
+    expect(() =>
+      inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: -1 }),
+    ).toThrow();
   });
   it("rejects a non-integer reorderLevel", () => {
-    expect(() => inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: 1.5 })).toThrow();
+    expect(() =>
+      inventoryFormSchema.parse({ name: "A", quantity: 0, reorderLevel: 1.5 }),
+    ).toThrow();
   });
   it("defaults unit, reorderLevel and notes", () => {
     const parsed = inventoryFormSchema.parse({ name: "A", quantity: 0 });

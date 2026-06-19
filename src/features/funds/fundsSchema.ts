@@ -12,10 +12,15 @@ export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
 
 export const expenseFormSchema = z.object({
   date: z
-    .number({ required_error: "Date is required", invalid_type_error: "Date is required" })
+    .number({
+      required_error: "Date is required",
+      invalid_type_error: "Date is required",
+    })
     .int()
     .nonnegative(),
-  category: z.enum(EXPENSE_CATEGORIES, { required_error: "Category is required" }),
+  category: z.enum(EXPENSE_CATEGORIES, {
+    required_error: "Category is required",
+  }),
   amount: z
     .number({ invalid_type_error: "Amount must be a number" })
     .nonnegative("Amount cannot be negative"),
@@ -64,5 +69,10 @@ export function summarizePeriod(
     .map(([mode, amount]) => ({ mode, amount }))
     .sort((a, b) => b.amount - a.amount);
 
-  return { totalIncome, totalExpenses, balance: totalIncome - totalExpenses, incomeByMode };
+  return {
+    totalIncome,
+    totalExpenses,
+    balance: totalIncome - totalExpenses,
+    incomeByMode,
+  };
 }

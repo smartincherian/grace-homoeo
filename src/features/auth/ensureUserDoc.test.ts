@@ -14,19 +14,33 @@ vi.mock("../../lib/firebase", () => ({ db: {} }));
 import { ensureUserDoc } from "./ensureUserDoc";
 
 describe("ensureUserDoc", () => {
-  beforeEach(() => { getDoc.mockReset(); setDoc.mockReset(); });
+  beforeEach(() => {
+    getDoc.mockReset();
+    setDoc.mockReset();
+  });
 
   it("creates a users doc with role admin when none exists", async () => {
     getDoc.mockResolvedValue({ exists: () => false });
-    await ensureUserDoc({ uid: "u1", email: "doc@x.com", displayName: "Dr" } as never);
+    await ensureUserDoc({
+      uid: "u1",
+      email: "doc@x.com",
+      displayName: "Dr",
+    } as never);
     expect(setDoc).toHaveBeenCalledWith(expect.anything(), {
-      uid: "u1", email: "doc@x.com", displayName: "Dr", role: "admin",
+      uid: "u1",
+      email: "doc@x.com",
+      displayName: "Dr",
+      role: "admin",
     });
   });
 
   it("does nothing when the doc already exists", async () => {
     getDoc.mockResolvedValue({ exists: () => true });
-    await ensureUserDoc({ uid: "u1", email: "doc@x.com", displayName: "Dr" } as never);
+    await ensureUserDoc({
+      uid: "u1",
+      email: "doc@x.com",
+      displayName: "Dr",
+    } as never);
     expect(setDoc).not.toHaveBeenCalled();
   });
 });

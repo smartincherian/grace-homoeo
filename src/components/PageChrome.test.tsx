@@ -1,5 +1,9 @@
 import { render, screen } from "@testing-library/react";
-import { PageChromeProvider, usePageTitle, useSetPageTitle } from "./PageChrome";
+import {
+  PageChromeProvider,
+  usePageTitle,
+  useSetPageTitle,
+} from "./PageChrome";
 
 function Setter() {
   useSetPageTitle("Anjali Menon");

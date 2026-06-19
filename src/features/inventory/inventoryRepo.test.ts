@@ -23,16 +23,33 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
-import { createItem, getItem, listInventory, updateItem, setQuantity, deleteItem } from "./inventoryRepo";
+import {
+  createItem,
+  getItem,
+  listInventory,
+  updateItem,
+  setQuantity,
+  deleteItem,
+} from "./inventoryRepo";
 
 beforeEach(() => {
-  addDoc.mockReset(); getDocs.mockReset(); getDoc.mockReset(); updateDoc.mockReset(); deleteDoc.mockReset();
+  addDoc.mockReset();
+  getDocs.mockReset();
+  getDoc.mockReset();
+  updateDoc.mockReset();
+  deleteDoc.mockReset();
 });
 
 describe("createItem", () => {
   it("writes derived nameLower and updatedAt", async () => {
     addDoc.mockResolvedValue({ id: "new-id" });
-    const id = await createItem({ name: "Arnica 30", quantity: 5, unit: "vials", reorderLevel: 2, notes: "" });
+    const id = await createItem({
+      name: "Arnica 30",
+      quantity: 5,
+      unit: "vials",
+      reorderLevel: 2,
+      notes: "",
+    });
     expect(id).toBe("new-id");
     const payload = addDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.nameLower).toBe("arnica 30");
@@ -44,15 +61,34 @@ describe("createItem", () => {
 describe("listInventory", () => {
   it("maps Firestore docs to InventoryItem objects", async () => {
     getDocs.mockResolvedValue({
-      docs: [{
-        id: "i1",
-        data: () => ({ name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9 }),
-      }],
+      docs: [
+        {
+          id: "i1",
+          data: () => ({
+            name: "Arnica",
+            nameLower: "arnica",
+            quantity: 5,
+            unit: "vials",
+            reorderLevel: 2,
+            notes: "x",
+            updatedAt: 9,
+          }),
+        },
+      ],
     });
     const list = await listInventory();
-    expect(list).toEqual([{
-      id: "i1", name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9,
-    }]);
+    expect(list).toEqual([
+      {
+        id: "i1",
+        name: "Arnica",
+        nameLower: "arnica",
+        quantity: 5,
+        unit: "vials",
+        reorderLevel: 2,
+        notes: "x",
+        updatedAt: 9,
+      },
+    ]);
   });
 });
 
@@ -61,11 +97,26 @@ describe("getItem", () => {
     getDoc.mockResolvedValue({
       exists: () => true,
       id: "i1",
-      data: () => ({ name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9 }),
+      data: () => ({
+        name: "Arnica",
+        nameLower: "arnica",
+        quantity: 5,
+        unit: "vials",
+        reorderLevel: 2,
+        notes: "x",
+        updatedAt: 9,
+      }),
     });
     const item = await getItem("i1");
     expect(item).toEqual({
-      id: "i1", name: "Arnica", nameLower: "arnica", quantity: 5, unit: "vials", reorderLevel: 2, notes: "x", updatedAt: 9,
+      id: "i1",
+      name: "Arnica",
+      nameLower: "arnica",
+      quantity: 5,
+      unit: "vials",
+      reorderLevel: 2,
+      notes: "x",
+      updatedAt: 9,
     });
   });
   it("returns null when the document does not exist", async () => {
@@ -78,7 +129,13 @@ describe("getItem", () => {
 describe("updateItem", () => {
   it("rewrites nameLower and updatedAt", async () => {
     updateDoc.mockResolvedValue(undefined);
-    await updateItem("i1", { name: "New Name", quantity: 1, unit: "", reorderLevel: 0, notes: "" });
+    await updateItem("i1", {
+      name: "New Name",
+      quantity: 1,
+      unit: "",
+      reorderLevel: 0,
+      notes: "",
+    });
     const payload = updateDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.nameLower).toBe("new name");
     expect(typeof payload.updatedAt).toBe("number");
