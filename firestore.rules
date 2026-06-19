@@ -1,9 +1,12 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    // role() reserved for future per-collection tightening:
+    // function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if signedIn();
     }
   }
 }
