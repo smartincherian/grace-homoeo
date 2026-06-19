@@ -10,6 +10,7 @@ import InventoryListPage from "./features/inventory/InventoryListPage";
 import InventoryFormPage from "./features/inventory/InventoryFormPage";
 import FundsPage from "./features/funds/FundsPage";
 import ExpenseFormPage from "./features/funds/ExpenseFormPage";
+import CalculatorPage from "./features/rateCalculator/CalculatorPage";
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/funds" element={<FundsPage />} />
         <Route path="/funds/expenses/new" element={<ExpenseFormPage />} />
         <Route path="/funds/expenses/:id/edit" element={<ExpenseFormPage />} />
+        <Route path="/calculator" element={<CalculatorPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/patients" replace />} />
     </Routes>

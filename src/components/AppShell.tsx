@@ -22,6 +22,7 @@ import {
 import PeopleIcon from "@mui/icons-material/People";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import PaidIcon from "@mui/icons-material/Paid";
+import CalculateIcon from "@mui/icons-material/Calculate";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
@@ -34,6 +35,7 @@ import Mandala from "./Mandala";
 const NAV = [
   { to: "/patients", label: "Patients", icon: <PeopleIcon /> },
   { to: "/inventory", label: "Inventory", icon: <Inventory2Icon /> },
+  { to: "/calculator", label: "Calculator", icon: <CalculateIcon /> },
   { to: "/funds", label: "Funds", icon: <PaidIcon /> },
 ];
 const DRAWER_WIDTH = 240;

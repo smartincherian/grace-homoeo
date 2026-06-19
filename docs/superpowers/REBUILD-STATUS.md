@@ -1,6 +1,40 @@
 # Grace Homoeo Rebuild — Status & Next-Session Handoff
 
-_Last updated: 2026-06-19 (UI Polish pass — "Stained Glass" theme — COMPLETE)_
+_Last updated: 2026-06-19 (Medicine cost — Inventory pricing + Rate Calculator — COMPLETE)_
+
+## Medicine cost — Inventory pricing + Rate Calculator — ✅ COMPLETE (2026-06-19)
+
+A new feature on branch **`feature/rate-calculator`** (off `main`). Spec:
+`docs/superpowers/specs/2026-06-19-medicine-cost-rate-calculator-design.md`.
+`npm run lint` clean (same 2 benign PageChrome warnings), `npm test` 88/88,
+`npm run build` green.
+
+**Goal:** the doctor charges a flat ₹150/visit (consult + ~15 days of medicine) and
+wants the real per-patient medicine cost. Medicines are bought in bulk (big jar /
+tincture bottle) with only a total bill and dispensed in plastic bottles.
+
+**Delivered (two parts):**
+- **Inventory pricing** — `inventorySchema` gains `form`
+  (`pieces`/`liquid`/`packaging`/`flat`), `purchaseCost`, `lotSize`, plus helpers
+  `unitCostOf`, `isPriced`, `baseUnitLabel`. `unitCost = purchaseCost / lotSize`.
+  Fields are additive/optional; `inventoryRepo.toItem` defaults legacy docs to
+  `flat / 0 / 1`. `InventoryFormPage` adds a Form select, adaptive cost inputs, and
+  a live "≈ ₹x / pill" rate preview.
+- **Rate Calculator** — new feature folder `src/features/rateCalculator/`, route
+  `/calculator`, nav tab "Calculator" (CalculateIcon). `calculatorMath.ts` (pure,
+  unit-tested) computes base quantity per form (pieces = times×pills×days; liquid
+  drops = drops×times×days÷dropsPerMl; liquid fixed = ml; packaging/flat = qty) ×
+  unitCost. `calculatorRepo.listPricedItems` reads the `inventory` collection
+  **read-only** (own query, mirrors `fundsRepo` — no cross-feature import).
+  `CalculatorPage` is a local-state **basket** (add medicine / add bottle, per-line
+  inputs with editable defaults 4×/day · 4 pills · 14 days · 20 drops/ml), shows
+  total medicine cost + editable ₹150 fee + margin. **Nothing is persisted** — the
+  result is on-screen only.
+
+**Tests:** TDD on the logic — `inventorySchema.test` (new fields/helpers),
+`calculatorMath.test` (all base-quantity branches), and updated `inventoryRepo.test`
+expectations for the new defaults. No Firestore rules change (catch-all covers
+`inventory`). No calculator UI render test (consistent with Plans 3–4 UI policy).
 
 ## Where things stand
 
