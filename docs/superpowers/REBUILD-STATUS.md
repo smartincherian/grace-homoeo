@@ -1,6 +1,6 @@
 # Grace Homoeo Rebuild — Status & Next-Session Handoff
 
-_Last updated: 2026-06-18 (Plan 4 Funds COMPLETE — all 4 rebuild plans done)_
+_Last updated: 2026-06-19 (UI Polish pass — "Stained Glass" theme — COMPLETE)_
 
 ## Where things stand
 
@@ -12,6 +12,21 @@ The app is being rebuilt from Create React App → **Vite + React + TypeScript +
 4. **Funds — ✅ COMPLETE (Plan 4)** — no separate plan file; built directly from the design spec §6 "Funds / Finance". HEAD `2bae321`. `npm run lint` clean, `npm test` (60/60), `npm run build` (PWA generated) all green. Delivers: `expenses` collection CRUD (date/category/amount/note); a date-range period summary (total income, total expenses, balance) with income broken down by payment mode (Debt/No Fees visible separately); live `/funds`, `/funds/expenses/new`, `/funds/expenses/:id/edit` routes; placeholder removed. **Design notes:** (a) income = sum of consultation `amount` and balance = income − expenses, exactly per spec §4 — Debt/No-Fees consultations count toward income and are surfaced via the breakdown rather than excluded; (b) to respect feature boundaries, Funds reads the `consultations` collection through its **own** `fundsRepo.listIncome` (read-only) instead of importing the consultations feature; (c) built without tests and without the SDD loop / whole-branch review, per the same conserve-tokens user directive as Plan 3. No Firestore rules change needed — the catch-all `match /{document=**}` already covers `expenses`.
 
 The authoritative design (data model, scope, decisions) is `docs/superpowers/specs/2026-06-17-grace-homoeo-rebuild-design.md`. Read it before planning a module.
+
+## UI Polish — "Stained Glass" theme — ✅ COMPLETE (2026-06-19)
+
+A cross-cutting visual + UX polish pass on top of the four feature plans. Spec: `docs/superpowers/specs/2026-06-19-ui-polish-stained-glass-design.md`; plan: `docs/superpowers/plans/2026-06-19-ui-polish-stained-glass.md`. HEAD `6bc90a5`. `npm run lint` clean (2 benign react-refresh warnings in `PageChrome.tsx`), `npm test` 72/72, `npm run build` green.
+
+**Direction:** user chose Theme B "Stained Glass" from three mandala/zentangle mockups built via the brainstorming visual companion (mockups persist in `.superpowers/brainstorm/`, git-ignored). Subtle Christian rose-window motif; crisp white, jewel-tone gradient app bar, jewel accent edges on cards.
+
+**Delivered (all 14 plan tasks):**
+- **Theme** (`src/theme/theme.ts`): jewel palette + `JEWEL_ACCENTS`/`accentFor()`, soft shadow, gradient `MuiAppBar`, Inter font (linked in `index.html`).
+- **New shared components** (`src/components/`): `Mandala` (decorative SVG), `ListCard` (avatar/edge/trailing/menu row), `RowMenu` (⋮ overflow Edit/Delete), `ConfirmDialog`, `PageChrome` (`PageChromeProvider`/`usePageTitle`/`useSetPageTitle` — contextual app-bar title), plus an upgraded `QueryStates` empty state (mandala) and `AddButton` (labeled extended FAB). **`PageHeader` was created then removed** — the app-bar title made an in-body page heading redundant (and caused a duplicate-heading smoke-test failure), so list screens have no in-body title.
+- **AppShell**: contextual title + **back button on non-root routes** (`navigate(-1)`), themed sidebar/nav, app-bar mandala watermark.
+- **Screens**: themed login; Patients/Inventory/Funds lists use `ListCard` + labeled add buttons; patient detail + `ConsultationTimeline` restyled; all four form pages card-wrapped with contextual titles.
+- **CRUD made visible**: inventory items and expenses now have ⋮ → **Delete** behind `ConfirmDialog` (wires the previously-unused `useDeleteItem` / `useDeleteExpense` hooks). **Patients & consultations remain edit-only** (no delete) — per user decision, to protect clinical history. (Note: inventory/expense *form* pages also still have their original `window.confirm` Delete button.)
+
+**Testing note (departure from Plans 3–4):** this pass *did* add component tests (`Mandala`, `AddButton`, `RowMenu`, `ConfirmDialog`, `PageChrome`, `InventoryListPage`, `FundsPage`, plus AppShell back-button tests) — TDD per the plan. Executed **inline** (not the SDD subagent loop) since the user said "implement" without requesting subagents.
 
 ### Plan 2 follow-ups deferred to a future cleanup (whole-branch review Minors — none blocking)
 
