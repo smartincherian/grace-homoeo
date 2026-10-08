@@ -29,6 +29,9 @@ function toItem(
     unit: d.unit ?? "",
     reorderLevel: d.reorderLevel ?? 0,
     notes: d.notes ?? "",
+    form: d.form ?? "flat",
+    purchaseCost: d.purchaseCost ?? 0,
+    lotSize: d.lotSize ?? 1,
     updatedAt: d.updatedAt,
   };
 }

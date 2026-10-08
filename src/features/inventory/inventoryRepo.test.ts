@@ -49,6 +49,9 @@ describe("createItem", () => {
       unit: "vials",
       reorderLevel: 2,
       notes: "",
+      form: "flat",
+      purchaseCost: 0,
+      lotSize: 1,
     });
     expect(id).toBe("new-id");
     const payload = addDoc.mock.calls[0][1] as Record<string, unknown>;
@@ -86,6 +89,9 @@ describe("listInventory", () => {
         unit: "vials",
         reorderLevel: 2,
         notes: "x",
+        form: "flat",
+        purchaseCost: 0,
+        lotSize: 1,
         updatedAt: 9,
       },
     ]);
@@ -116,6 +122,9 @@ describe("getItem", () => {
       unit: "vials",
       reorderLevel: 2,
       notes: "x",
+      form: "flat",
+      purchaseCost: 0,
+      lotSize: 1,
       updatedAt: 9,
     });
   });
@@ -135,6 +144,9 @@ describe("updateItem", () => {
       unit: "",
       reorderLevel: 0,
       notes: "",
+      form: "flat",
+      purchaseCost: 0,
+      lotSize: 1,
     });
     const payload = updateDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.nameLower).toBe("new name");
