@@ -23,8 +23,6 @@ npm run emulators    # firebase emulators:start --only firestore,auth
 npm run release      # build + firebase deploy --only hosting
 ```
 
-Firebase Functions live in `functions/` as a separate npm package; currently empty boilerplate (predeploy runs `npm --prefix functions run lint`).
-
 ## Architecture
 
 - **Entry & providers** — `src/main.tsx` renders the provider stack in order: `QueryClientProvider` → `ThemeProvider` + `CssBaseline` → `ToastProvider` → `BrowserRouter` → `App`. Toast sits above the router so route components can call `useToast`.
@@ -54,4 +52,3 @@ Target collections (see the design spec for full field lists):
 - **Storage formats** — dates as **epoch milliseconds** (number); money as **rupee numbers** (displayed with `₹`).
 - **Firestore rules** (`firestore.rules`) gate all access on `request.auth != null` (signed-in doctor) and are structured to be role-aware for future tightening. Be careful before deploying rules.
 - **Hosting** — `firebase.json` serves `./dist` with an SPA rewrite to `/index.html`, on the `grace-homoeo` project.
-- `misc/` holds standalone data-migration/scripting helpers from the old app, not part of the bundle.
