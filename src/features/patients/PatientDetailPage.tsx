@@ -14,6 +14,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { usePatient } from "./usePatients";
 import { useConsultations } from "../consultations/useConsultations";
 import ConsultationHistory from "../consultations/ConsultationHistory";
+import GeneralsView from "../consultations/GeneralsView";
+import LsmcTable from "../consultations/LsmcTable";
+import { latestGenerals } from "../consultations/caseRecordRepo";
+import { isGeneralsBlank } from "../consultations/caseRecordSchema";
+import {
+  usePatientGenerals,
+  usePatientLsmc,
+} from "../consultations/useCaseRecord";
 import QueryStates from "../../components/QueryStates";
 import AddButton from "../../components/AddButton";
 import { useSetPageTitle } from "../../components/PageChrome";
@@ -27,6 +35,10 @@ export default function PatientDetailPage() {
   useSetPageTitle(patient?.name ?? "Patient");
   // useConsultations returns newest first.
   const latest = consultations?.[0];
+  const { data: generalsList } = usePatientGenerals(id);
+  const { data: lsmc } = usePatientLsmc(id);
+  const generals = latestGenerals(generalsList ?? []);
+  const showGenerals = !!generals && !isGeneralsBlank(generals);
 
   if (!patient) {
     return (
@@ -108,6 +120,33 @@ export default function PatientDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {showGenerals && (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Typography variant="h6">Generals</Typography>
+            <Typography color="text.secondary" sx={{ fontSize: 13, mb: 1.5 }}>
+              Updated {formatDate(generals.date)} ·{" "}
+              {daysAgoLabel(generals.date)}
+            </Typography>
+            <GeneralsView generals={generals} />
+          </CardContent>
+        </Card>
+      )}
+
+      {(lsmc ?? []).length > 0 && (
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            LSMC
+          </Typography>
+          <Divider sx={{ mb: 1.5 }} />
+          <LsmcTable
+            rows={lsmc ?? []}
+            showDate
+            onSelect={(cid) => navigate(`/patients/${id}/consultations/${cid}`)}
+          />
+        </Box>
+      )}
 
       <Typography variant="h6" sx={{ mb: 1 }}>
         Consultation history
