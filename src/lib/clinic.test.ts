@@ -59,6 +59,32 @@ describe("active clinic", () => {
   });
 });
 
+describe("explicit clinic", () => {
+  it("builds refs under the given clinic, not the active one", () => {
+    setActiveClinic("other");
+    clinicCollection("patients", "pinned");
+    expect(collection).toHaveBeenCalledWith(
+      {},
+      "clinics",
+      "pinned",
+      "patients",
+    );
+    clinicDoc("counters", "patients", "pinned");
+    expect(doc).toHaveBeenCalledWith(
+      {},
+      "clinics",
+      "pinned",
+      "counters",
+      "patients",
+    );
+  });
+
+  it("does not need an active clinic when one is given", () => {
+    setActiveClinic(null);
+    expect(() => clinicCollection("patients", "pinned")).not.toThrow();
+  });
+});
+
 describe("slugify", () => {
   it("lowercases and hyphenates", () => {
     expect(slugify("Grace Homoeo Clinic!")).toBe("grace-homoeo-clinic");

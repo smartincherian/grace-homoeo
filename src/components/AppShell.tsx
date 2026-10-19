@@ -25,8 +25,11 @@ import {
   useParams,
 } from "react-router-dom";
 import { signOut } from "firebase/auth";
+import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../features/auth/useAuth";
+import { useMembership } from "../features/auth/AuthGuard";
+import { setActiveClinic } from "../lib/clinic";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import ScriptureBanner from "./ScriptureBanner";
 import logo from "../assets/logo.png";
@@ -73,7 +76,14 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const section = pathname.split("/")[2];
   const current = NAV.find((n) => n.to === section)?.to ?? "patients";
   const isRoot = !clinicSlug || NAV.some((n) => sectionHref(n.to) === pathname);
-  const clinicName = useClinic(clinicSlug).data?.name;
+  const membership = useMembership();
+  // A member's read of another clinic would be denied; skip it.
+  const canReadClinic =
+    !!membership &&
+    (membership.superadmin || membership.clinicId === clinicSlug);
+  const clinicName = useClinic(canReadClinic ? clinicSlug : undefined).data
+    ?.name;
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();
   const superadmin = isSuperadmin(user?.email);
@@ -91,6 +101,8 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const handleSignOut = async () => {
     closeMenu();
     await signOut(auth);
+    queryClient.clear();
+    setActiveClinic(null);
     navigate("/login", { replace: true });
   };
 

@@ -24,13 +24,19 @@ vi.mock("firebase/firestore", () => ({
   writeBatch: () => ({ delete: batchDelete, commit }),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+const activeClinic = vi.hoisted(() => ({ id: "c1" }));
 vi.mock("../../lib/clinic", () => ({
-  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
-  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+  getActiveClinic: () => activeClinic.id,
+  clinicCollection: (n: string, c: string = activeClinic.id) => ({
+    path: `clinics/${c}/${n}`,
+  }),
+  clinicDoc: (n: string, id: string, c: string = activeClinic.id) => ({
+    path: `clinics/${c}/${n}/${id}`,
+  }),
 }));
 const nextPatientSerial = vi.fn();
 vi.mock("../../lib/serial", () => ({
-  nextPatientSerial: () => nextPatientSerial(),
+  nextPatientSerial: (c?: string) => nextPatientSerial(c),
 }));
 
 import {
@@ -47,6 +53,7 @@ beforeEach(() => {
   batchDelete.mockReset();
   commit.mockReset();
   nextPatientSerial.mockReset();
+  activeClinic.id = "c1";
 });
 
 describe("createPatient", () => {
@@ -66,6 +73,23 @@ describe("createPatient", () => {
     expect(payload.nameLower).toBe("asha");
     expect(payload.lastVisitAt).toBeNull();
     expect(typeof payload.createdAt).toBe("number");
+  });
+
+  it("keeps the serial and the doc in the original clinic if the active clinic switches mid-save", async () => {
+    nextPatientSerial.mockImplementation(async () => {
+      activeClinic.id = "c2"; // the superadmin switches during the await
+      return 7;
+    });
+    addDoc.mockResolvedValue({ id: "new-id" });
+    await createPatient({
+      name: "Asha",
+      dob: 100,
+      gender: "Female",
+      place: "",
+      phone: "",
+    });
+    expect(nextPatientSerial).toHaveBeenCalledWith("c1");
+    expect(addDoc.mock.calls[0][0]).toEqual({ path: "clinics/c1/patients" });
   });
 });
 
@@ -124,6 +148,22 @@ describe("updatePatient", () => {
 });
 
 describe("deletePatient", () => {
+  it("keeps every ref in the original clinic if the active clinic switches mid-delete", async () => {
+    getDocs.mockImplementation(async () => {
+      activeClinic.id = "c2"; // the superadmin switches during the awaits
+      return { docs: [{ ref: { path: "clinics/c1/consultations/x" } }] };
+    });
+    commit.mockResolvedValue(undefined);
+    await deletePatient("p1");
+    const queried = query.mock.calls.map(
+      (c) => (c[0] as { path: string }).path,
+    );
+    expect(queried.every((p) => p.startsWith("clinics/c1/"))).toBe(true);
+    expect(batchDelete).toHaveBeenCalledWith({
+      path: "clinics/c1/patients/p1",
+    });
+  });
+
   it("deletes the patient's consultations, case record and the patient", async () => {
     getDocs
       .mockResolvedValueOnce({ docs: [{ ref: "c1" }, { ref: "c2" }] })

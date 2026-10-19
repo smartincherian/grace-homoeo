@@ -1,5 +1,6 @@
 import { vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@mui/material";
@@ -14,29 +15,71 @@ const authUser = vi.hoisted(() => ({ email: "doc@example.com" }));
 vi.mock("../features/auth/useAuth", () => ({
   useAuth: () => ({ user: authUser, loading: false }),
 }));
+const useClinic = vi.hoisted(() => vi.fn());
 vi.mock("../lib/clinicQueries", () => ({
-  useClinic: (id: string | undefined) => ({
-    data: id ? { id, name: `Clinic ${id}`, createdAt: 0 } : undefined,
-  }),
+  useClinic: (id: string | undefined) => useClinic(id),
 }));
+const membership = vi.hoisted(() => ({
+  value: { superadmin: true, clinicId: null } as {
+    superadmin: boolean;
+    clinicId: string | null;
+  },
+}));
+vi.mock("../features/auth/AuthGuard", () => ({
+  useMembership: () => membership.value,
+}));
+const setActiveClinic = vi.fn();
+vi.mock("../lib/clinic", () => ({
+  setActiveClinic: (...a: unknown[]) => setActiveClinic(...a),
+}));
+
+beforeEach(() => {
+  membership.value = { superadmin: true, clinicId: null };
+  setActiveClinic.mockClear();
+  useClinic.mockReset();
+  useClinic.mockImplementation((id: string | undefined) => ({
+    data: id ? { id, name: `Clinic ${id}`, createdAt: 0 } : undefined,
+  }));
+});
 
 import AppShell from "./AppShell";
 import { useSetPageTitle } from "./PageChrome";
 
 /** Mounts the shell as the app does: a layout route above the clinic routes. */
-const renderShell = (entries: string[], children?: React.ReactNode) =>
+const renderShell = (
+  entries: string[],
+  children?: React.ReactNode,
+  qc = new QueryClient(),
+) =>
   render(
-    <ThemeProvider theme={theme}>
-      <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
-        <Routes>
-          <Route element={<AppShell>{children}</AppShell>}>
-            <Route path="/admin" element={null} />
-            <Route path="/:clinicSlug/*" element={null} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
-    </ThemeProvider>,
+    <QueryClientProvider client={qc}>
+      <ThemeProvider theme={theme}>
+        <MemoryRouter
+          initialEntries={entries}
+          initialIndex={entries.length - 1}
+        >
+          <Routes>
+            <Route element={<AppShell>{children}</AppShell>}>
+              <Route path="/admin" element={null} />
+              <Route path="/:clinicSlug/*" element={null} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
+
+test("a member does not fetch a clinic other than their own", () => {
+  membership.value = { superadmin: false, clinicId: "c1" };
+  renderShell(["/c2/patients"]);
+  expect(useClinic).not.toHaveBeenCalledWith("c2");
+});
+
+test("a member fetches their own clinic", () => {
+  membership.value = { superadmin: false, clinicId: "c1" };
+  renderShell(["/c1/patients"]);
+  expect(screen.getByText("Clinic c1")).toBeInTheDocument();
+});
 
 test("renders clinic-scoped navigation to every module", () => {
   renderShell(["/c1/patients"]);
@@ -73,16 +116,14 @@ test("offers the superadmin an Admin menu item", async () => {
 
 test("account menu signs the user out", async () => {
   const user = userEvent.setup();
-  render(
-    <MemoryRouter>
-      <AppShell>
-        <div />
-      </AppShell>
-    </MemoryRouter>,
-  );
+  const qc = new QueryClient();
+  qc.setQueryData(["patients"], [{ id: "p1" }]);
+  renderShell(["/c1/patients"], <div />, qc);
   await user.click(screen.getByRole("button", { name: /account/i }));
   await user.click(screen.getByRole("menuitem", { name: /sign out/i }));
   expect(signOut).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(setActiveClinic).toHaveBeenCalledWith(null));
+  expect(qc.getQueryData(["patients"])).toBeUndefined();
 });
 
 function TitleSetter() {

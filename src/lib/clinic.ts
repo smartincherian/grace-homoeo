@@ -39,12 +39,20 @@ export function peekActiveClinic(): string | null {
   return active;
 }
 
-export function clinicCollection(name: string): CollectionReference {
-  return collection(db, CLINICS, getActiveClinic(), name);
+/** Pass `clinicId` to pin a multi-step operation to one clinic across awaits. */
+export function clinicCollection(
+  name: string,
+  clinicId: string = getActiveClinic(),
+): CollectionReference {
+  return collection(db, CLINICS, clinicId, name);
 }
 
-export function clinicDoc(name: string, id: string): DocumentReference {
-  return doc(db, CLINICS, getActiveClinic(), name, id);
+export function clinicDoc(
+  name: string,
+  id: string,
+  clinicId: string = getActiveClinic(),
+): DocumentReference {
+  return doc(db, CLINICS, clinicId, name, id);
 }
 
 export function slugify(name: string): string {

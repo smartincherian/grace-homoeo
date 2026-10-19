@@ -9,8 +9,9 @@ const state = vi.hoisted(() => ({
   clinic: { data: undefined as unknown },
 }));
 vi.mock("./AuthGuard", () => ({ useMembership: () => state.membership }));
+const useClinic = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/clinicQueries", () => ({
-  useClinic: () => state.clinic,
+  useClinic: (id: string | undefined) => useClinic(id),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
@@ -45,6 +46,14 @@ const renderAt = (path: string, qc = new QueryClient()) =>
 beforeEach(() => {
   clinic.setActiveClinic(null);
   state.clinic = { data: undefined };
+  useClinic.mockReset();
+  useClinic.mockImplementation(() => state.clinic);
+});
+
+test("a member never looks up a foreign clinic", () => {
+  state.membership = { superadmin: false, clinicId: "c1" };
+  renderAt("/c2/patients");
+  expect(useClinic).not.toHaveBeenCalledWith("c2");
 });
 
 test("bounces a member away from another clinic without activating it", () => {

@@ -13,7 +13,7 @@ import {
   type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { clinicCollection, clinicDoc } from "../../lib/clinic";
+import { clinicCollection, clinicDoc, getActiveClinic } from "../../lib/clinic";
 import { nextPatientSerial } from "../../lib/serial";
 import type { Patient, PatientFormValues } from "./patientSchema";
 
@@ -52,8 +52,10 @@ export async function getPatient(id: string): Promise<Patient | null> {
 export async function createPatient(
   values: PatientFormValues,
 ): Promise<string> {
-  const serialNo = await nextPatientSerial();
-  const ref = await addDoc(clinicCollection(COLLECTION), {
+  // Pin the clinic: the active one may change while the serial is awaited.
+  const clinic = getActiveClinic();
+  const serialNo = await nextPatientSerial(clinic);
+  const ref = await addDoc(clinicCollection(COLLECTION, clinic), {
     ...values,
     nameLower: values.name.toLowerCase(),
     serialNo,
@@ -84,15 +86,19 @@ const BATCH_LIMIT = 500;
  * fees drop out of the Funds income totals.
  */
 export async function deletePatient(id: string): Promise<void> {
+  // Pin the clinic: the active one may change while the queries are awaited.
+  const clinic = getActiveClinic();
   const owned = await Promise.all(
     PATIENT_OWNED.map((name) =>
-      getDocs(query(clinicCollection(name), where("patientId", "==", id))),
+      getDocs(
+        query(clinicCollection(name, clinic), where("patientId", "==", id)),
+      ),
     ),
   );
   const refs: DocumentReference[] = [
     ...owned.flatMap((snap) => snap.docs.map((d) => d.ref)),
     // Patient last, so a partial failure never leaves visits without a patient.
-    clinicDoc(COLLECTION, id),
+    clinicDoc(COLLECTION, id, clinic),
   ];
   for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
     const batch = writeBatch(db);

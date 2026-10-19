@@ -120,7 +120,14 @@ The script aborts (exit 1) if the destination already has data, because a re-run
 (`firebase deploy --only firestore:rules,hosting`) → check the app → delete legacy
 top-level collections manually later. Between the script and the deploy, new
 writes still go to the old collections, so deploy straight after the script (or
-re-run it immediately before deploying).
+re-run it with `--resync` immediately before deploying).
+
+After deploying, close and reopen the app (or refresh) on every device: the first
+open may still show the old cached PWA version, which reads legacy collections
+the new rules deny (it looks like errors until the new service worker takes
+over). Do not create a second clinic until the rules deploy is confirmed:
+hosting deployed with the old catch-all rules would let any allow-listed member
+read every clinic. `npm run release` ships rules and hosting together.
 
 ## 8. Deferred (not in this build)
 

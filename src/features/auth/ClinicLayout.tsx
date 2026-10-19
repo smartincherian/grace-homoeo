@@ -24,7 +24,6 @@ export default function ClinicLayout() {
   const { clinicSlug } = useParams();
   const membership = useMembership();
   const queryClient = useQueryClient();
-  const clinic = useClinic(clinicSlug);
   // Reserved words (e.g. a legacy `/patients` link) are never clinic slugs.
   const reserved = !!clinicSlug && RESERVED_SLUGS.includes(clinicSlug);
   const allowed =
@@ -32,6 +31,9 @@ export default function ClinicLayout() {
     !!clinicSlug &&
     !reserved &&
     (membership.superadmin || clinicSlug === membership.clinicId);
+  // Only the superadmin's not-found check needs it; a member's read of a
+  // foreign clinic would be denied by the rules.
+  const clinic = useClinic(allowed ? clinicSlug : undefined);
   // The module-level active clinic survives leaving clinic routes (e.g. via /admin),
   // so it tells us whose data the cache holds. Children wait until it is cleared.
   const previous = peekActiveClinic();

@@ -20,7 +20,7 @@ npm test -- serial   # run a single test file by name fragment
 npm run lint         # eslint . --ext ts,tsx
 npm run format       # prettier --write .
 npm run emulators    # firebase emulators:start --only firestore,auth
-npm run release      # build + firebase deploy --only hosting
+npm run release      # build + firebase deploy --only firestore:rules,hosting
 npm run test:rules   # Firestore rules tests (needs the Firestore emulator)
 npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-run] [--resync] --project grace-homoeo  # copy legacy data into clinics/{id}
 ```
@@ -37,7 +37,7 @@ npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-ru
 
 ## Data model (Firestore)
 
-**Multi-clinic:** all clinic data lives under `clinics/{clinicId}/…` (`patients, consultations, generals, lsmc, inventory, orderItems, expenses, counters/patients`); `clinics/{clinicId}` holds `{ name, createdAt }` and the slug is the doc ID. `allowedEmails/{email}` carries `clinicId` (one clinic per email); `users/{uid}` stays top-level. Collection descriptions below are per clinic. See `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`. Cutover order: `npm run migrate:clinics` (dry run, then real) -> verify (every source doc ID must exist at the destination; re-run only with `--resync`, only BEFORE deploying, never after) -> `firebase deploy --only firestore:rules,hosting` immediately -> delete legacy top-level collections later.
+**Multi-clinic:** all clinic data lives under `clinics/{clinicId}/…` (`patients, consultations, generals, lsmc, inventory, orderItems, expenses, counters/patients`); `clinics/{clinicId}` holds `{ name, createdAt }` and the slug is the doc ID. `allowedEmails/{email}` carries `clinicId` (one clinic per email); `users/{uid}` stays top-level. Collection descriptions below are per clinic. See `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`. Cutover order: `npm run migrate:clinics` (dry run, then real) -> verify (every source doc ID must exist at the destination; re-run only with `--resync`, only BEFORE deploying, never after) -> `firebase deploy --only firestore:rules,hosting` immediately (or re-run with `--resync` right before deploying) -> close and reopen the app on every device (the first open may still run the old cached PWA, which reads legacy collections the new rules deny) -> do not create a second clinic until the rules deploy is confirmed (hosting with the old catch-all rules would let any allow-listed member read every clinic) -> delete legacy top-level collections later.
 
 Target collections (see the design spec for full field lists):
 

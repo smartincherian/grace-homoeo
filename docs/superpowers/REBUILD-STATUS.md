@@ -120,9 +120,11 @@ Spec: `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`; plan: `docs/su
 0. Pre-check: in Firebase Console -> Authentication -> Sign-in method, confirm Email/Password **self sign-up is disabled**. The rules trust password accounts without email verification, so open sign-up would let someone register an allow-listed email that has no account yet.
 1. `gcloud auth application-default login` (or a service-account key) for the `grace-homoeo` project.
 2. `npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" --project grace-homoeo --dry-run`, then again without `--dry-run`; the table must show `missing 0` everywhere (exit 1 otherwise). `--project` is required for real Firestore. The script aborts if the destination already has data; use `--resync` only for a re-run BEFORE deploying the new rules, never after cutover (it would overwrite live edits).
-3. Immediately `npm run build && firebase deploy --only firestore:rules,hosting`. Between the script and the deploy new writes still go to the old collections, so deploy straight after (or re-run the script right before deploying).
-4. Sign in as the doctor -> lands on `/grace-homoeo/patients` with all data; sign in as superadmin -> `/admin`.
-5. After a few days of normal use, delete the legacy top-level collections in the Firebase console.
+3. Immediately `npm run build && firebase deploy --only firestore:rules,hosting`. Between the script and the deploy new writes still go to the old collections, so deploy straight after (or re-run the script with `--resync` right before deploying). `npm run release` now ships rules and hosting together.
+4. After deploying, close and reopen the app (or refresh) on every device: the first open may still show the old cached PWA version, which reads legacy collections that the new rules deny (it looks like errors until the new service worker takes over).
+5. Do not create a second clinic until the rules deploy is confirmed: hosting deployed with the old catch-all rules would let any allow-listed member read every clinic.
+6. Sign in as the doctor -> lands on `/grace-homoeo/patients` with all data; sign in as superadmin -> `/admin`.
+7. After a few days of normal use, delete the legacy top-level collections in the Firebase console.
 
 ### Deferred (not in this build)
 
