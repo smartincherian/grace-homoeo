@@ -1,9 +1,10 @@
 // src/features/consultations/ConsultationFormPage.tsx
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -126,6 +127,14 @@ export default function ConsultationFormPage() {
   const baseline = useRef<Generals>(EMPTY_GENERALS);
   const hasOwnGenerals = useRef(false);
   const loaded = useRef(false);
+  // LSMC ids as loaded into the form; rows missing on save get deleted, so a
+  // later refetch must not add ids the doctor never saw.
+  const loadedLsmcIds = useRef<string[]>([]);
+  // Save stays off until the case record has loaded, so a missing baseline
+  // can't overwrite or truncate stored generals.
+  const [ready, setReady] = useState(false);
+  const caseRecordError =
+    patientGenerals.isError || visitGenerals.isError || visitLsmc.isError;
 
   // New visit: pre-fill from the patient's latest generals (LMP excluded),
   // without touching fields the doctor has already typed into.
@@ -135,6 +144,7 @@ export default function ConsultationFormPage() {
   useEffect(() => {
     if (isEdit || loaded.current || !patientGenerals.data) return;
     loaded.current = true;
+    setReady(true);
     baseline.current = toBaseline(latestGenerals(patientGenerals.data));
     for (const k of GENERALS_KEYS) {
       if (!dirtyGenerals?.[k]) {
@@ -147,6 +157,7 @@ export default function ConsultationFormPage() {
   useEffect(() => {
     if (
       loaded.current ||
+      caseRecordError ||
       !existing ||
       visitGenerals.isPending ||
       visitLsmc.isPending ||
@@ -155,6 +166,8 @@ export default function ConsultationFormPage() {
       return;
     }
     loaded.current = true;
+    setReady(true);
+    loadedLsmcIds.current = (visitLsmc.data ?? []).map((r) => r.id);
     const own = visitGenerals.data ?? null;
     hasOwnGenerals.current = !!own;
     baseline.current = own
@@ -184,6 +197,7 @@ export default function ConsultationFormPage() {
     });
   }, [
     existing,
+    caseRecordError,
     visitGenerals.isPending,
     visitGenerals.data,
     visitLsmc.isPending,
@@ -207,7 +221,7 @@ export default function ConsultationFormPage() {
           id: cid,
           values,
           record,
-          existingLsmcIds: (visitLsmc.data ?? []).map((r) => r.id),
+          existingLsmcIds: loadedLsmcIds.current,
         });
         showToast("Consultation updated", "success");
       } else if (patient) {
@@ -332,6 +346,13 @@ export default function ConsultationFormPage() {
               )}
             />
 
+            {caseRecordError && (
+              <Alert severity="error">
+                Couldn't load generals or LSMC for this patient. Reload the page
+                before saving, so existing records aren't overwritten.
+              </Alert>
+            )}
+
             <SectionHeading>Generals</SectionHeading>
             <GeneralsFormSection
               control={control}
@@ -346,7 +367,11 @@ export default function ConsultationFormPage() {
               <Button onClick={() => navigate(-1)} disabled={busy}>
                 Cancel
               </Button>
-              <Button type="submit" variant="contained" disabled={busy}>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={busy || !ready || caseRecordError}
+              >
                 {busy ? "Saving..." : "Save"}
               </Button>
             </Stack>

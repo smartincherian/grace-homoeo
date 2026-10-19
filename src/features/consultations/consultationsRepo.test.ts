@@ -147,6 +147,43 @@ describe("createConsultation case record", () => {
   });
 });
 
+describe("LSMC entry order", () => {
+  const createdAts = () =>
+    calls(batchSet)
+      .filter(([p]) => p.startsWith("lsmc/"))
+      .map(([, d]) => (d as { createdAt: number }).createdAt);
+
+  it("stamps rows created together in the order they were entered", async () => {
+    await createConsultation(PATIENT, values, {
+      generals: null,
+      lsmc: [
+        row({ location: "a" }),
+        row({ location: "b" }),
+        row({ location: "c" }),
+      ],
+    });
+    const t = createdAts();
+    expect(t).toHaveLength(3);
+    expect(t[0]).toBeLessThan(t[1]);
+    expect(t[1]).toBeLessThan(t[2]);
+  });
+
+  it("stamps new rows added on edit in order", async () => {
+    await updateConsultation(
+      "c1",
+      "p1",
+      values,
+      {
+        generals: null,
+        lsmc: [row({ location: "a" }), row({ location: "b" })],
+      },
+      [],
+    );
+    const t = createdAts();
+    expect(t[0]).toBeLessThan(t[1]);
+  });
+});
+
 describe("updateConsultation", () => {
   it("keeps legacy text fields untouched", async () => {
     await updateConsultation("c1", "p1", values, NO_RECORD, []);

@@ -40,12 +40,12 @@ function addNewLsmcRow(
   batch: WriteBatch,
   r: LsmcRowInput,
   link: { patientId: string; consultationId: string; date: number },
-  now: number,
+  createdAt: number,
 ) {
   batch.set(doc(collection(db, LSMC)), {
     ...toLsmcCells(r),
     ...link,
-    createdAt: now,
+    createdAt,
   });
 }
 
@@ -118,8 +118,10 @@ export async function createConsultation(
       updatedAt: now,
     });
   }
+  // createdAt + n keeps rows entered together in entry order.
+  let n = 0;
   for (const r of record.lsmc) {
-    if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now);
+    if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now + n++);
   }
   // Stamp the patient's last visit in the same atomic batch (write by path,
   // not by importing the patients feature, to respect feature boundaries).
@@ -153,6 +155,7 @@ export async function updateConsultation(
   }
 
   const kept = new Set<string>();
+  let n = 0;
   for (const r of record.lsmc) {
     if (isLsmcRowBlank(r)) continue;
     if (r.id && existingLsmcIds.includes(r.id)) {
@@ -162,7 +165,7 @@ export async function updateConsultation(
         date: values.date,
       });
     } else {
-      addNewLsmcRow(batch, r, link, now);
+      addNewLsmcRow(batch, r, link, now + n++);
     }
   }
   for (const lid of existingLsmcIds) {

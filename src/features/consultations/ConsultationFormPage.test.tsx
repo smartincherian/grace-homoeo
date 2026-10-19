@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   patientGenerals: undefined as GeneralsRecord[] | undefined,
   visitGenerals: null as GeneralsRecord | null,
   visitLsmc: [] as LsmcRow[],
+  visitGeneralsError: false,
 }));
 const create = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
@@ -36,8 +37,9 @@ vi.mock("./useCaseRecord", () => ({
     isPending: state.patientGenerals === undefined,
   }),
   useConsultationGenerals: () => ({
-    data: state.visitGenerals,
+    data: state.visitGeneralsError ? undefined : state.visitGenerals,
     isPending: false,
+    isError: state.visitGeneralsError,
   }),
   useConsultationLsmc: () => ({ data: state.visitLsmc, isPending: false }),
 }));
@@ -127,6 +129,7 @@ beforeEach(() => {
   state.patientGenerals = [];
   state.visitGenerals = null;
   state.visitLsmc = [];
+  state.visitGeneralsError = false;
   create.mockReset().mockResolvedValue("c-new");
   update.mockReset().mockResolvedValue(undefined);
 });
@@ -237,6 +240,14 @@ describe("ConsultationFormPage (create)", () => {
   });
 });
 
+describe("ConsultationFormPage (create) loading", () => {
+  it("keeps Save disabled until the patient's generals have loaded", () => {
+    state.patientGenerals = undefined;
+    renderNew();
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
+});
+
 describe("ConsultationFormPage (edit)", () => {
   it("keeps stored menstrual values when editing a non-female patient", async () => {
     const user = userEvent.setup();
@@ -280,5 +291,37 @@ describe("ConsultationFormPage (edit)", () => {
     await screen.findByDisplayValue("earlier");
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(update.mock.calls[0][0].record.generals).toBeNull();
+  });
+
+  it("blocks saving and says so when the visit's generals fail to load", async () => {
+    state.existing = consultation;
+    state.visitGeneralsError = true;
+    renderEdit();
+    expect(
+      await screen.findByText(/couldn't load generals/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
+  });
+
+  it("uses the LSMC ids from when the form loaded, not a later refetch", async () => {
+    const user = userEvent.setup();
+    state.existing = consultation;
+    state.visitLsmc = [lsmcRow("l1", "head")];
+    const view = renderEdit();
+    await screen.findByDisplayValue("head");
+    // A refetch brings in a row added elsewhere after the form loaded.
+    state.visitLsmc = [lsmcRow("l1", "head"), lsmcRow("l9", "other device")];
+    view.rerender(
+      <MemoryRouter initialEntries={["/patients/p1/consultations/c1/edit"]}>
+        <Routes>
+          <Route
+            path="/patients/:patientId/consultations/:cid/edit"
+            element={<ConsultationFormPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(update.mock.calls[0][0].existingLsmcIds).toEqual(["l1"]);
   });
 });
