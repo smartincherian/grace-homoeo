@@ -7,7 +7,10 @@ import {
   orderBy,
   query,
   updateDoc,
+  where,
+  writeBatch,
   type DocumentData,
+  type DocumentReference,
   type QueryDocumentSnapshot,
   type DocumentSnapshot,
 } from "firebase/firestore";
@@ -69,4 +72,32 @@ export async function updatePatient(
     ...values,
     nameLower: values.name.toLowerCase(),
   });
+}
+
+// Collections whose docs belong to one patient (via `patientId`).
+const PATIENT_OWNED = ["consultations", "generals", "lsmc"];
+// Firestore caps a write batch at 500 operations.
+const BATCH_LIMIT = 500;
+
+/**
+ * Deletes a patient together with their consultations and case record
+ * (generals, LSMC), so no orphaned visits are left behind. Their consultation
+ * fees drop out of the Funds income totals.
+ */
+export async function deletePatient(id: string): Promise<void> {
+  const owned = await Promise.all(
+    PATIENT_OWNED.map((name) =>
+      getDocs(query(collection(db, name), where("patientId", "==", id))),
+    ),
+  );
+  const refs: DocumentReference[] = [
+    ...owned.flatMap((snap) => snap.docs.map((d) => d.ref)),
+    // Patient last, so a partial failure never leaves visits without a patient.
+    doc(db, COLLECTION, id),
+  ];
+  for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
+    const batch = writeBatch(db);
+    refs.slice(i, i + BATCH_LIMIT).forEach((r) => batch.delete(r));
+    await batch.commit();
+  }
 }

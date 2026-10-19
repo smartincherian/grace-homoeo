@@ -13,7 +13,6 @@ import type { LsmcRow } from "./caseRecordSchema";
 import { tableSx } from "./tableStyles";
 import Cell from "./TableTextCell";
 import { formatDate } from "../../lib/dates";
-import { accentFor } from "../../theme/theme";
 
 interface Props {
   rows: LsmcRow[];
@@ -40,7 +39,7 @@ export default function LsmcTable({ rows, showDate, onSelect }: Props) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((r, i) => (
+            {rows.map((r) => (
               <TableRow
                 key={r.id}
                 hover={!!onSelect}
@@ -49,24 +48,13 @@ export default function LsmcTable({ rows, showDate, onSelect }: Props) {
                 }
               >
                 {showDate && (
-                  <TableCell
-                    sx={{
-                      whiteSpace: "nowrap",
-                      borderLeft: `3px solid ${accentFor(i)}`,
-                    }}
-                  >
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
                     <Typography sx={{ fontWeight: 600, fontSize: 14 }}>
                       {formatDate(r.date)}
                     </Typography>
                   </TableCell>
                 )}
-                <TableCell
-                  sx={
-                    showDate
-                      ? undefined
-                      : { borderLeft: `3px solid ${accentFor(i)}` }
-                  }
-                >
+                <TableCell>
                   <Cell value={r.location} strong />
                 </TableCell>
                 <TableCell>

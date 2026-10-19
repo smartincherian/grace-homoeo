@@ -7,6 +7,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 const mutateAsync = vi.fn().mockResolvedValue("new-id");
 vi.mock("./usePatients", () => ({
   usePatient: () => ({ data: undefined, isLoading: false }),
+  usePatients: () => ({ data: [] }),
   useCreatePatient: () => ({ mutateAsync, isPending: false }),
   useUpdatePatient: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
@@ -35,7 +36,7 @@ describe("PatientFormPage (create)", () => {
     await user.type(screen.getByLabelText(/name/i), "Asha");
     await user.type(screen.getByLabelText(/date of birth/i), "2000-01-01");
     // gender defaults to Female; place/phone optional
-    await user.click(screen.getByRole("button", { name: /save/i }));
+    await user.click(screen.getByRole("button", { name: /save only/i }));
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     const arg = mutateAsync.mock.calls[0][0];
     expect(arg.name).toBe("Asha");
@@ -46,7 +47,7 @@ describe("PatientFormPage (create)", () => {
     const user = userEvent.setup();
     renderCreate();
     await user.type(screen.getByLabelText(/date of birth/i), "2000-01-01");
-    await user.click(screen.getByRole("button", { name: /save/i }));
+    await user.click(screen.getByRole("button", { name: /save only/i }));
     expect(await screen.findByText(/name is required/i)).toBeInTheDocument();
   });
 });

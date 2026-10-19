@@ -1,31 +1,45 @@
 // src/features/patients/PatientDetailPage.tsx
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
-  Stack,
-  Typography,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
+import { Box, Button, ButtonBase, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import dayjs from "dayjs";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { usePatient } from "./usePatients";
+import { useDeletePatient, usePatient } from "./usePatients";
 import { useConsultations } from "../consultations/useConsultations";
 import ConsultationHistory from "../consultations/ConsultationHistory";
-import GeneralsView from "../consultations/GeneralsView";
-import LsmcTable from "../consultations/LsmcTable";
-import { latestGenerals } from "../consultations/caseRecordRepo";
-import { isGeneralsBlank } from "../consultations/caseRecordSchema";
+import GeneralsLatest from "../consultations/GeneralsLatest";
 import {
   usePatientGenerals,
   usePatientLsmc,
 } from "../consultations/useCaseRecord";
 import QueryStates from "../../components/QueryStates";
-import AddButton from "../../components/AddButton";
+import AvatarTile from "../../components/AvatarTile";
+import ConfirmDialog from "../../components/ConfirmDialog";
+import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { calcAge, daysAgoLabel, formatDate } from "../../lib/dates";
+import { CARD_SX, GRADIENT, LINE, PILL_SX, TOKENS } from "../../theme/theme";
+
+function SectionTitle({ title, note }: { title: string; note?: string }) {
+  return (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        gap: 2,
+        mb: 1.75,
+      }}
+    >
+      <Typography sx={{ fontSize: 18, fontWeight: 800 }}>{title}</Typography>
+      {note && (
+        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+          {note}
+        </Typography>
+      )}
+    </Box>
+  );
+}
 
 export default function PatientDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,11 +48,29 @@ export default function PatientDetailPage() {
   const { status, data: consultations } = useConsultations(id);
   useSetPageTitle(patient?.name ?? "Patient");
   // useConsultations returns newest first.
-  const latest = consultations?.[0];
+  const visits = consultations ?? [];
+  const latest = visits[0];
   const { data: generalsList } = usePatientGenerals(id);
   const { data: lsmc } = usePatientLsmc(id);
-  const generals = latestGenerals(generalsList ?? []);
-  const showGenerals = !!generals && !isGeneralsBlank(generals);
+  const openVisit = (cid: string) =>
+    navigate(`/patients/${id}/consultations/${cid}`);
+  const course = visits.filter((v) => v.remedy);
+  const deletePatient = useDeletePatient();
+  const { showToast } = useToast();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const removePatient = () => {
+    if (!id) return;
+    setConfirmDelete(false);
+    deletePatient.mutate(id, {
+      onSuccess: () => {
+        showToast("Patient deleted", "success");
+        navigate("/patients", { replace: true });
+      },
+      onError: () =>
+        showToast("Could not delete patient. Please try again.", "error"),
+    });
+  };
 
   if (!patient) {
     return (
@@ -49,124 +81,254 @@ export default function PatientDetailPage() {
   }
 
   return (
-    <Box
-      sx={{
-        position: "relative",
-        minHeight: "60vh",
-        maxWidth: 720,
-        mx: "auto",
-      }}
-    >
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="flex-start"
-          >
-            <Box>
-              <Typography variant="h5">
-                {patient.name} · #{patient.serialNo}
-              </Typography>
-              <Typography color="text.secondary">
-                {calcAge(patient.dob)} yrs · {patient.gender}
-                {patient.place ? ` · ${patient.place}` : ""}
-              </Typography>
-              {patient.phone && (
-                <Typography color="text.secondary">
-                  📞 {patient.phone}
-                </Typography>
-              )}
-            </Box>
-            <Button
-              startIcon={<EditIcon />}
-              variant="outlined"
-              component={Link}
-              to={`/patients/${id}/edit`}
-            >
-              Edit
-            </Button>
-          </Stack>
-          {latest && (
-            <>
-              <Divider sx={{ my: 2 }} />
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="overline" color="text.secondary">
-                    Last consultation
-                  </Typography>
-                  <Stack direction="row" spacing={1} alignItems="center">
-                    <Typography sx={{ fontWeight: 600 }}>
-                      {formatDate(latest.date)}
-                    </Typography>
-                    <Chip
-                      label={daysAgoLabel(latest.date)}
-                      size="small"
-                      color="secondary"
-                      variant="outlined"
-                    />
-                  </Stack>
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="overline" color="text.secondary">
-                    Last prescribed
-                  </Typography>
-                  <Typography sx={{ fontWeight: 600 }}>
-                    {latest.remedy || "—"}
-                  </Typography>
-                </Box>
-              </Stack>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {showGenerals && (
-        <Card sx={{ mb: 3 }}>
-          <CardContent>
-            <Typography variant="h6">Generals</Typography>
-            <Typography color="text.secondary" sx={{ fontSize: 13, mb: 1.5 }}>
-              Updated {formatDate(generals.date)} ·{" "}
-              {daysAgoLabel(generals.date)}
-            </Typography>
-            <GeneralsView generals={generals} />
-          </CardContent>
-        </Card>
-      )}
-
-      {(lsmc ?? []).length > 0 && (
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h6" sx={{ mb: 1 }}>
-            LSMC
-          </Typography>
-          <Divider sx={{ mb: 1.5 }} />
-          <LsmcTable
-            rows={lsmc ?? []}
-            showDate
-            onSelect={(cid) => navigate(`/patients/${id}/consultations/${cid}`)}
-          />
-        </Box>
-      )}
-
-      <Typography variant="h6" sx={{ mb: 1 }}>
-        Consultation history
-      </Typography>
-      <Divider sx={{ mb: 1.5 }} />
-      <QueryStates
-        status={status}
-        isEmpty={(consultations ?? []).length === 0}
-        emptyMessage="No consultations yet"
+    <Box>
+      <Box
+        sx={{
+          ...CARD_SX,
+          px: { xs: 2, sm: 3 },
+          py: { xs: 2, sm: 2.5 },
+          mb: 2.25,
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: { xs: 1.75, sm: 2.5 },
+        }}
       >
-        <ConsultationHistory
-          consultations={consultations ?? []}
-          patientId={id ?? ""}
-          onSelect={(cid) => navigate(`/patients/${id}/consultations/${cid}`)}
-        />
-      </QueryStates>
+        <AvatarTile name={patient.name} size={64} solid />
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography
+            variant="h1"
+            sx={{ fontSize: { xs: 22, sm: 26 }, mb: 0.75 }}
+          >
+            {patient.name}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+            {[
+              `#${patient.serialNo}`,
+              `${calcAge(patient.dob)} yrs · ${patient.gender}`,
+              patient.place,
+              patient.phone,
+            ]
+              .filter(Boolean)
+              .map((t) => (
+                <Box
+                  key={t}
+                  component="span"
+                  sx={{
+                    ...PILL_SX,
+                    bgcolor: TOKENS.ground,
+                    color: "text.secondary",
+                  }}
+                >
+                  {t}
+                </Box>
+              ))}
+          </Box>
+        </Box>
+        <Box
+          sx={{ display: "flex", gap: 1.25, width: { xs: "100%", sm: "auto" } }}
+        >
+          <Button
+            variant="outlined"
+            component={Link}
+            to={`/patients/${id}/edit`}
+            sx={{ height: 46 }}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outlined"
+            color="error"
+            disabled={deletePatient.isPending}
+            onClick={() => setConfirmDelete(true)}
+            sx={{ height: 46 }}
+          >
+            Delete
+          </Button>
+          <Button
+            variant="contained"
+            component={Link}
+            to={`/patients/${id}/consultations/new`}
+            startIcon={<AddIcon />}
+            sx={{ height: 46, flex: { xs: 1, sm: "none" } }}
+          >
+            New consultation
+          </Button>
+        </Box>
+      </Box>
 
-      <AddButton
-        label="Add consultation"
-        to={`/patients/${id}/consultations/new`}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 320px" },
+          gap: 2.5,
+          alignItems: "start",
+        }}
+      >
+        <Box sx={{ minWidth: 0 }}>
+          <SectionTitle
+            title="Consultation history"
+            note={`${visits.length} visit${visits.length === 1 ? "" : "s"} · newest first`}
+          />
+          <QueryStates
+            status={status}
+            isEmpty={visits.length === 0}
+            emptyMessage="No consultations yet"
+          >
+            <ConsultationHistory
+              consultations={visits}
+              patientId={id ?? ""}
+              lsmc={lsmc ?? []}
+              onSelect={openVisit}
+            />
+          </QueryStates>
+
+          {(generalsList ?? []).length > 0 && (
+            <Box sx={{ mt: 3.5 }}>
+              <SectionTitle title="Generals" />
+              <Box sx={{ ...CARD_SX, px: { xs: 2, sm: 2.75 }, py: 2.25 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 1.5,
+                    flexWrap: "wrap",
+                    pb: 1.75,
+                    mb: 1.75,
+                    borderBottom: LINE,
+                  }}
+                >
+                  <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                    Last updated{" "}
+                    <Box
+                      component="span"
+                      sx={{ fontWeight: 700, color: "text.primary" }}
+                    >
+                      {formatDate((generalsList ?? [])[0].date)}
+                    </Box>
+                  </Typography>
+                  <Button
+                    component={Link}
+                    to={`/patients/${id}/generals`}
+                    size="small"
+                    sx={{
+                      minHeight: 32,
+                      borderRadius: "99px",
+                      px: 1.75,
+                      fontSize: 12,
+                      color: TOKENS.blue700,
+                      bgcolor: TOKENS.blue50,
+                      "&:hover": { bgcolor: TOKENS.blue100 },
+                    }}
+                  >
+                    View past history
+                  </Button>
+                </Box>
+                <GeneralsLatest list={generalsList ?? []} />
+              </Box>
+            </Box>
+          )}
+        </Box>
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 1.75,
+            position: { md: "sticky" },
+            top: { md: 28 },
+          }}
+        >
+          <Box
+            sx={{
+              borderRadius: "20px",
+              background: GRADIENT,
+              color: "#fff",
+              p: 2.5,
+              display: "flex",
+              flexDirection: "column",
+              gap: 0.5,
+            }}
+          >
+            <Typography sx={{ fontSize: 13, opacity: 0.85 }}>
+              Last consultation
+            </Typography>
+            <Typography sx={{ fontSize: 26, fontWeight: 800 }}>
+              {latest ? formatDate(latest.date) : "—"}
+            </Typography>
+            <Typography sx={{ fontSize: 13, opacity: 0.9 }}>
+              {latest ? daysAgoLabel(latest.date) : "No visits yet"}
+            </Typography>
+          </Box>
+          {course.length > 0 && (
+            <Box
+              sx={{
+                ...CARD_SX,
+                px: 2.5,
+                py: 2.25,
+                display: { xs: "none", md: "block" },
+              }}
+            >
+              <Typography sx={{ fontSize: 14, fontWeight: 800, mb: 0.75 }}>
+                Remedy course
+              </Typography>
+              {course.map((v, i) => (
+                <ButtonBase
+                  key={v.id}
+                  onClick={() => openVisit(v.id)}
+                  sx={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: 1.5,
+                    py: 1,
+                    borderTop: LINE,
+                    textAlign: "left",
+                    fontSize: 14,
+                  }}
+                >
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      mt: 0.75,
+                      flex: "none",
+                      borderRadius: "50%",
+                      bgcolor: i === 0 ? TOKENS.blue : "#c3c9d8",
+                    }}
+                  />
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: 14,
+                      whiteSpace: "pre-wrap",
+                      flex: 1,
+                    }}
+                  >
+                    {v.remedy}
+                  </Typography>
+                  <Typography
+                    sx={{ fontSize: 12, color: "text.secondary", flex: "none" }}
+                  >
+                    {dayjs(v.date).format("D MMM")}
+                  </Typography>
+                </ButtonBase>
+              ))}
+            </Box>
+          )}
+        </Box>
+      </Box>
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete patient?"
+        message={`Delete "${patient.name}" (#${patient.serialNo})${
+          visits.length
+            ? ` and all ${visits.length} consultation${visits.length === 1 ? "" : "s"}, including their fees in Funds`
+            : ""
+        }? This cannot be undone.`}
+        onConfirm={removePatient}
+        onClose={() => setConfirmDelete(false)}
       />
     </Box>
   );

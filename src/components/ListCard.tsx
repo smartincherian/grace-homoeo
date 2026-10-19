@@ -1,5 +1,6 @@
-import { Box, Card, CardActionArea, Stack } from "@mui/material";
+import { Box, ButtonBase, Stack } from "@mui/material";
 import type { ReactNode } from "react";
+import { CARD_SX } from "../theme/theme";
 
 interface Props {
   avatar?: ReactNode;
@@ -11,6 +12,7 @@ interface Props {
   onClick?: () => void;
 }
 
+/** One white rounded row in a list; optional coloured edge on the left. */
 export default function ListCard({
   avatar,
   edgeColor,
@@ -20,18 +22,18 @@ export default function ListCard({
   menu,
   onClick,
 }: Props) {
-  const inner = (
+  const body = (
     <Stack
       direction="row"
       alignItems="center"
       spacing={1.5}
-      sx={{ px: 1.5, py: 1.25, width: "100%" }}
+      sx={{ py: 1.5, px: 2, flex: 1, minWidth: 0, textAlign: "left" }}
     >
       {avatar}
       <Box sx={{ minWidth: 0, flex: 1 }}>
         <Box
           sx={{
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 15,
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -46,23 +48,37 @@ export default function ListCard({
           </Box>
         )}
       </Box>
-      {trailing}
-      {menu}
     </Stack>
   );
   return (
-    <Card
+    <Box
       sx={{
+        ...CARD_SX,
+        borderRadius: "16px",
         mb: 1,
-        borderLeft: edgeColor ? `3px solid ${edgeColor}` : undefined,
+        display: "flex",
+        alignItems: "center",
         overflow: "hidden",
+        boxShadow: edgeColor ? `inset 4px 0 0 ${edgeColor}` : undefined,
+        "&:hover": onClick ? { bgcolor: "action.hover" } : undefined,
       }}
     >
       {onClick ? (
-        <CardActionArea onClick={onClick}>{inner}</CardActionArea>
+        <ButtonBase
+          onClick={onClick}
+          sx={{ flex: 1, minWidth: 0, display: "flex", font: "inherit" }}
+        >
+          {body}
+        </ButtonBase>
       ) : (
-        inner
+        body
       )}
-    </Card>
+      {(trailing || menu) && (
+        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ pr: 1.5 }}>
+          {trailing}
+          {menu}
+        </Stack>
+      )}
+    </Box>
   );
 }

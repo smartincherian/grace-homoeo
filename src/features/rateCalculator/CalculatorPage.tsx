@@ -18,6 +18,8 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import MedicationLiquidIcon from "@mui/icons-material/MedicationLiquid";
 import QueryStates from "../../components/QueryStates";
 import { useSetPageTitle } from "../../components/PageChrome";
+import { PageHeader } from "../../components/PageLayout";
+import { GRADIENT } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
 import { usePricedItems } from "./useCalculator";
 import {
@@ -63,15 +65,109 @@ function NumField({
   );
 }
 
+/**
+ * Number input for the gradient summary cards. The label sits above the box as
+ * plain text — an outlined floating label would straddle the white input and
+ * the gradient and become unreadable.
+ */
+function GradientField({
+  label,
+  value,
+  onChange,
+  width = 130,
+}: {
+  label: string;
+  value: number;
+  onChange: (n: number) => void;
+  width?: number;
+}) {
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="caption" sx={{ opacity: 0.9 }}>
+        {label}
+      </Typography>
+      <TextField
+        type="number"
+        size="small"
+        sx={{ width }}
+        inputProps={{ "aria-label": label }}
+        value={Number.isFinite(value) ? value : ""}
+        onChange={(e) =>
+          onChange(e.target.value === "" ? 0 : Number(e.target.value))
+        }
+      />
+    </Stack>
+  );
+}
+
+const gradientCardSx = {
+  background: GRADIENT,
+  color: "#fff",
+  border: 0,
+  "& .MuiTypography-root": { color: "inherit" },
+  "& .MuiOutlinedInput-root": { bgcolor: "#fff" },
+} as const;
+
+/** Change to return: money handed over by the patient minus the bill. */
+function BalanceCard() {
+  const [given, setGiven] = useState(0);
+  const [incurred, setIncurred] = useState(0);
+  const balance = given - incurred;
+  return (
+    <Card sx={gradientCardSx}>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 1.5 }}>
+          Balance
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+          <GradientField
+            label="Money given (₹)"
+            value={given}
+            onChange={setGiven}
+          />
+          <GradientField
+            label="Amount incurred (₹)"
+            value={incurred}
+            onChange={setIncurred}
+          />
+        </Stack>
+        <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,.3)" }} />
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+        >
+          <Typography variant="body2">
+            {balance < 0 ? "Still to collect" : "Balance to return"}
+          </Typography>
+          <Box
+            sx={{
+              px: 2,
+              py: 0.5,
+              borderRadius: 2,
+              bgcolor: "#fff",
+              color: balance < 0 ? "error.main" : "primary.main",
+            }}
+          >
+            <Typography
+              variant="h5"
+              sx={{ fontWeight: 800, color: "inherit !important" }}
+            >
+              {rupees(Math.abs(balance))}
+            </Typography>
+          </Box>
+        </Stack>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function CalculatorPage() {
   useSetPageTitle("Calculator");
   const { status, data } = usePricedItems();
   const { showToast } = useToast();
   const items = useMemo(() => data ?? [], [data]);
-  const itemById = useMemo(
-    () => new Map(items.map((i) => [i.id, i])),
-    [items],
-  );
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
   const nextKey = useRef(0);
   const makeLine = (itemId = ""): Line => ({
@@ -90,9 +186,7 @@ export default function CalculatorPage() {
       ),
     );
   const setItem = (key: string, itemId: string) =>
-    setLines((ls) =>
-      ls.map((l) => (l.key === key ? { ...l, itemId } : l)),
-    );
+    setLines((ls) => ls.map((l) => (l.key === key ? { ...l, itemId } : l)));
   const removeLine = (key: string) =>
     setLines((ls) => ls.filter((l) => l.key !== key));
 
@@ -118,11 +212,15 @@ export default function CalculatorPage() {
   const margin = fee - total;
 
   return (
-    <Box sx={{ maxWidth: 640, mx: "auto", pb: 2 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Estimate the medicine cost for one patient. Pick items, set the dose —
-        nothing is saved.
-      </Typography>
+    <Box sx={{ maxWidth: 720, pb: 2 }}>
+      <PageHeader
+        title="Calculator"
+        subtitle="Work out the change to return, and estimate the medicine cost for one patient — nothing is saved."
+      />
+
+      <Box sx={{ mb: 2 }}>
+        <BalanceCard />
+      </Box>
 
       <QueryStates
         status={status}
@@ -132,12 +230,10 @@ export default function CalculatorPage() {
         <Stack spacing={2}>
           {lines.map((line) => {
             const item = itemById.get(line.itemId);
-            const qty = item
-              ? baseQuantity(item.form, line.inputs)
-              : 0;
+            const qty = item ? baseQuantity(item.form, line.inputs) : 0;
             const cost = costOf(line);
             return (
-              <Card key={line.key} variant="outlined">
+              <Card key={line.key}>
                 <CardContent>
                   <Stack
                     direction="row"
@@ -192,9 +288,7 @@ export default function CalculatorPage() {
                           <NumField
                             label="Days"
                             value={line.inputs.days}
-                            onChange={(n) =>
-                              patchInputs(line.key, { days: n })
-                            }
+                            onChange={(n) => patchInputs(line.key, { days: n })}
                           />
                         </Stack>
                       )}
@@ -249,9 +343,7 @@ export default function CalculatorPage() {
                             <NumField
                               label="Volume (ml)"
                               value={line.inputs.ml}
-                              onChange={(n) =>
-                                patchInputs(line.key, { ml: n })
-                              }
+                              onChange={(n) => patchInputs(line.key, { ml: n })}
                             />
                           )}
                         </Stack>
@@ -291,15 +383,12 @@ export default function CalculatorPage() {
             >
               Add medicine
             </Button>
-            <Button
-              startIcon={<MedicationLiquidIcon />}
-              onClick={addBottle}
-            >
+            <Button startIcon={<MedicationLiquidIcon />} onClick={addBottle}>
               Add bottle
             </Button>
           </Stack>
 
-          <Card sx={{ bgcolor: "background.default" }}>
+          <Card sx={gradientCardSx}>
             <CardContent>
               <Stack
                 direction="row"
@@ -307,28 +396,29 @@ export default function CalculatorPage() {
                 alignItems="center"
               >
                 <Typography variant="h6">Medicine cost</Typography>
-                <Typography variant="h6" color="primary">
-                  {rupees(total)}
-                </Typography>
+                <Typography variant="h6">{rupees(total)}</Typography>
               </Stack>
-              <Divider sx={{ my: 1.5 }} />
+              <Divider sx={{ my: 1.5, borderColor: "rgba(255,255,255,.3)" }} />
               <Stack
                 direction="row"
                 justifyContent="space-between"
-                alignItems="center"
+                alignItems="flex-end"
               >
-                <NumField
+                <GradientField
                   label="Visit fee (₹)"
                   value={fee}
                   onChange={setFee}
                 />
                 <Stack alignItems="flex-end">
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" sx={{ opacity: 0.9 }}>
                     Margin (fee − cost)
                   </Typography>
                   <Typography
                     variant="h6"
-                    sx={{ color: margin < 0 ? "error.main" : "success.main" }}
+                    sx={{
+                      fontWeight: 800,
+                      color: margin < 0 ? "#ffd2db !important" : "inherit",
+                    }}
                   >
                     {rupees(margin)}
                   </Typography>

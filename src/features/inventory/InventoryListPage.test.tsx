@@ -21,6 +21,7 @@ vi.mock("./useInventory", () => ({
   useSetQuantity: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteItem: () => ({ mutate: deleteMutate, isPending: false }),
 }));
+vi.mock("./OrderListSection", () => ({ default: () => null }));
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));

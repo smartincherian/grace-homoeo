@@ -83,17 +83,3 @@ export function isLsmcRowBlank(
     (v) => !norm(v),
   );
 }
-
-export function generalsEqual(a: Generals, b: Generals): boolean {
-  return GENERALS_KEYS.every(
-    (k) => (norm(a[k]) ?? null) === (norm(b[k]) ?? null),
-  );
-}
-
-/** Pre-fill values from a stored snapshot: metadata stripped, LMP never carried forward. */
-export function toBaseline(rec: GeneralsRecord | null): Generals {
-  if (!rec) return { ...EMPTY_GENERALS };
-  const base = {} as Record<keyof Generals, unknown>;
-  for (const k of GENERALS_KEYS) base[k] = rec[k];
-  return { ...(base as Generals), lmp: null };
-}

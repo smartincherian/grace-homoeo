@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import {
-  Avatar,
   Box,
-  Chip,
+  Button,
   IconButton,
   Stack,
   TextField,
@@ -10,15 +9,18 @@ import {
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useInventory, useSetQuantity, useDeleteItem } from "./useInventory";
 import { isLowStock, type InventoryItem } from "./inventorySchema";
+import OrderListSection from "./OrderListSection";
 import QueryStates from "../../components/QueryStates";
-import AddButton from "../../components/AddButton";
 import ListCard from "../../components/ListCard";
 import RowMenu from "../../components/RowMenu";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { useSetPageTitle } from "../../components/PageChrome";
+import { PageHeader } from "../../components/PageLayout";
+import AvatarTile from "../../components/AvatarTile";
+import { CARD_SX, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
 
 export default function InventoryListPage() {
@@ -37,6 +39,8 @@ export default function InventoryListPage() {
     if (!q) return list;
     return list.filter((i) => i.nameLower.includes(q));
   }, [data, search]);
+
+  const lowCount = (data ?? []).filter(isLowStock).length;
 
   const adjust = (item: InventoryItem, delta: number) => {
     const quantity = Math.max(0, item.quantity + delta);
@@ -63,86 +67,136 @@ export default function InventoryListPage() {
 
   return (
     <Box sx={{ position: "relative", minHeight: "60vh" }}>
-      <TextField
-        label="Search by name"
-        fullWidth
-        size="small"
-        sx={{ mb: 2 }}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
-      <QueryStates
-        status={status}
-        isEmpty={filtered.length === 0}
-        emptyMessage="No items yet"
-      >
-        {filtered.map((i) => (
-          <ListCard
-            key={i.id}
-            onClick={() => navigate(`/inventory/${i.id}/edit`)}
-            avatar={
-              <Avatar
-                sx={{ bgcolor: "#E6F7F3", color: "#0F8C7E", fontWeight: 700 }}
-              >
-                {i.name[0]?.toUpperCase()}
-              </Avatar>
-            }
-            primary={
-              <Stack
-                direction="row"
-                spacing={1}
-                alignItems="center"
-                component="span"
-              >
-                <span>{i.name}</span>
-                {isLowStock(i) && (
-                  <Chip label="Low stock" color="warning" size="small" />
-                )}
-              </Stack>
-            }
-            secondary={`${i.quantity}${i.unit ? ` ${i.unit}` : ""} in stock`}
-            trailing={
-              <Stack
-                direction="row"
-                alignItems="center"
-                spacing={0.5}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <IconButton
-                  aria-label={`Decrease ${i.name}`}
-                  size="small"
-                  disabled={i.quantity === 0 || setQuantity.isPending}
-                  onClick={() => adjust(i, -1)}
-                >
-                  <RemoveIcon fontSize="small" />
-                </IconButton>
-                <Typography
-                  component="span"
-                  sx={{ minWidth: 24, textAlign: "center" }}
-                >
-                  {i.quantity}
-                </Typography>
-                <IconButton
-                  aria-label={`Increase ${i.name}`}
-                  size="small"
-                  disabled={setQuantity.isPending}
-                  onClick={() => adjust(i, 1)}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Stack>
-            }
-            menu={
-              <RowMenu
-                label={i.name}
-                onEdit={() => navigate(`/inventory/${i.id}/edit`)}
-                onDelete={() => setToDelete(i)}
-              />
-            }
+      <PageHeader
+        title="Inventory"
+        subtitle={
+          data
+            ? `${data.length} item${data.length === 1 ? "" : "s"} · ${lowCount} low on stock`
+            : "Medicines and supplies"
+        }
+        actions={
+          <TextField
+            label="Search by name"
+            size="small"
+            sx={{
+              width: { xs: "100%", md: 320 },
+              "& .MuiOutlinedInput-root": { bgcolor: TOKENS.white },
+            }}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
           />
-        ))}
-      </QueryStates>
-      <AddButton label="Add item" to="/inventory/new" />
+        }
+      />
+      <OrderListSection />
+      <Box
+        component="section"
+        sx={{ ...CARD_SX, p: { xs: 2, md: 2.5 }, mb: 3 }}
+      >
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
+          <Typography variant="h2" sx={{ fontSize: 20, fontWeight: 700 }}>
+            In Stock
+          </Typography>
+          {filtered.length > 0 && (
+            <Box
+              component="span"
+              sx={{
+                ...PILL_SX,
+                py: 0.25,
+                bgcolor: TOKENS.okBg,
+                color: TOKENS.ok,
+              }}
+            >
+              {filtered.length}
+            </Box>
+          )}
+          <Box sx={{ flex: 1 }} />
+          <Button
+            component={Link}
+            to="/inventory/new"
+            variant="contained"
+            startIcon={<AddIcon />}
+            sx={{ height: 40 }}
+          >
+            Add item
+          </Button>
+        </Stack>
+        <QueryStates
+          status={status}
+          isEmpty={filtered.length === 0}
+          emptyMessage="No items yet"
+        >
+          {filtered.map((i) => (
+            <ListCard
+              key={i.id}
+              onClick={() => navigate(`/inventory/${i.id}/edit`)}
+              edgeColor={isLowStock(i) ? TOKENS.warn : undefined}
+              avatar={<AvatarTile name={i.name} seed={i.name.length} />}
+              primary={
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  alignItems="center"
+                  component="span"
+                >
+                  <span>{i.name}</span>
+                  {isLowStock(i) && (
+                    <Box
+                      component="span"
+                      sx={{
+                        ...PILL_SX,
+                        py: 0.25,
+                        bgcolor: TOKENS.warnBg,
+                        color: TOKENS.warn,
+                      }}
+                    >
+                      Low stock
+                    </Box>
+                  )}
+                </Stack>
+              }
+              secondary={`${i.quantity}${i.unit ? ` ${i.unit}` : ""} in stock`}
+              trailing={
+                <Stack
+                  direction="row"
+                  alignItems="center"
+                  spacing={0.5}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <IconButton
+                    aria-label={`Decrease ${i.name}`}
+                    size="small"
+                    disabled={i.quantity === 0 || setQuantity.isPending}
+                    onClick={() => adjust(i, -1)}
+                  >
+                    <RemoveIcon fontSize="small" />
+                  </IconButton>
+                  <Typography
+                    component="span"
+                    sx={{ minWidth: 24, textAlign: "center" }}
+                  >
+                    {i.quantity}
+                  </Typography>
+                  <IconButton
+                    aria-label={`Increase ${i.name}`}
+                    size="small"
+                    disabled={setQuantity.isPending}
+                    onClick={() => adjust(i, 1)}
+                  >
+                    <AddIcon fontSize="small" />
+                  </IconButton>
+                </Stack>
+              }
+              menu={
+                <RowMenu
+                  label={i.name}
+                  onEdit={() => navigate(`/inventory/${i.id}/edit`)}
+                  onDelete={() => setToDelete(i)}
+                />
+              }
+            />
+          ))}
+        </QueryStates>
+      </Box>
       <ConfirmDialog
         open={!!toDelete}
         title="Delete item?"

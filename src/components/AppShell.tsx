@@ -1,36 +1,30 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import {
-  AppBar,
   Box,
   BottomNavigation,
   BottomNavigationAction,
-  Drawer,
+  ButtonBase,
   IconButton,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
   Menu,
   MenuItem,
   ListItemText as MenuItemText,
-  Stack,
-  Toolbar,
   Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import PeopleIcon from "@mui/icons-material/People";
-import Inventory2Icon from "@mui/icons-material/Inventory2";
-import PaidIcon from "@mui/icons-material/Paid";
-import CalculateIcon from "@mui/icons-material/Calculate";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PeopleIcon from "@mui/icons-material/PeopleOutline";
+import Inventory2Icon from "@mui/icons-material/Inventory2Outlined";
+import PaidIcon from "@mui/icons-material/CreditCardOutlined";
+import CalculateIcon from "@mui/icons-material/CalculateOutlined";
+import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../features/auth/useAuth";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
-import Mandala from "./Mandala";
+import ScriptureBanner from "./ScriptureBanner";
+import logo from "../assets/logo.png";
+import { LINE, TOKENS, initials } from "../theme/theme";
 
 const NAV = [
   { to: "/patients", label: "Patients", icon: <PeopleIcon /> },
@@ -38,7 +32,28 @@ const NAV = [
   { to: "/calculator", label: "Calculator", icon: <CalculateIcon /> },
   { to: "/funds", label: "Funds", icon: <PaidIcon /> },
 ];
-const DRAWER_WIDTH = 240;
+const SIDEBAR_WIDTH = 244;
+
+function LogoTile({ size = 36 }: { size?: number }) {
+  return (
+    <Box
+      sx={{
+        width: size,
+        height: size,
+        flex: "none",
+        borderRadius: `${Math.round(size * 0.3)}px`,
+        background: "linear-gradient(135deg,#4f86ff,#2f6bff)",
+        color: "#fff",
+        display: "grid",
+        placeItems: "center",
+        fontWeight: 800,
+        fontSize: size * 0.44,
+      }}
+    >
+      G
+    </Box>
+  );
+}
 
 function ShellInner({ children }: { children?: ReactNode }) {
   const theme = useTheme();
@@ -49,8 +64,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const pageTitle = usePageTitle();
-  const navLabel = NAV.find((n) => n.to === current)?.label;
-  const title = pageTitle || navLabel || "Grace Homoeo";
+  const userName = user?.displayName || user?.email?.split("@")[0] || "Account";
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = (e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
@@ -61,112 +75,306 @@ function ShellInner({ children }: { children?: ReactNode }) {
     navigate("/login", { replace: true });
   };
 
-  return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <AppBar
-        position="fixed"
-        sx={{ zIndex: (t) => t.zIndex.drawer + 1, overflow: "hidden" }}
-      >
-        <Mandala
-          size={120}
-          color="#7FB4FF"
-          opacity={0.18}
-          sx={{ position: "absolute", top: -36, right: -24, zIndex: 0 }}
-        />
-        <Toolbar variant="dense" sx={{ position: "relative", zIndex: 1 }}>
-          {!isRoot && (
-            <IconButton
-              color="inherit"
-              aria-label="back"
-              edge="start"
-              onClick={() => navigate(-1)}
-              sx={{ mr: 1 }}
-            >
-              <ArrowBackIcon />
-            </IconButton>
-          )}
-          <Typography variant="h6" sx={{ flexGrow: 1 }} noWrap>
-            {title}
-          </Typography>
-          <IconButton color="inherit" aria-label="account" onClick={openMenu}>
-            <AccountCircleIcon />
-          </IconButton>
-          <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={closeMenu}>
-            {user?.email && (
-              <MenuItem disabled>
-                <MenuItemText primary={user.email} />
-              </MenuItem>
-            )}
-            <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
-          </Menu>
-        </Toolbar>
-      </AppBar>
+  const avatar = (
+    <Box
+      sx={{
+        width: 32,
+        height: 32,
+        flex: "none",
+        borderRadius: "50%",
+        bgcolor: TOKENS.blue100,
+        color: TOKENS.blue700,
+        display: "grid",
+        placeItems: "center",
+        fontWeight: 700,
+        fontSize: 13,
+      }}
+    >
+      {initials(userName)}
+    </Box>
+  );
 
-      {isDesktop && (
-        <Drawer
-          variant="permanent"
+  const accountMenu = (
+    <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={closeMenu}>
+      {user?.email && (
+        <MenuItem disabled>
+          <MenuItemText primary={user.email} />
+        </MenuItem>
+      )}
+      <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
+    </Menu>
+  );
+
+  if (isDesktop) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          minHeight: "100vh",
+          bgcolor: "background.default",
+        }}
+      >
+        <Box
+          component="aside"
           sx={{
-            width: DRAWER_WIDTH,
-            "& .MuiDrawer-paper": { width: DRAWER_WIDTH },
+            width: SIDEBAR_WIDTH,
+            flex: "none",
+            position: "sticky",
+            top: 0,
+            height: "100vh",
+            bgcolor: TOKENS.white,
+            borderRight: LINE,
+            px: 2,
+            py: 3,
+            display: "flex",
+            flexDirection: "column",
+            gap: 3.5,
           }}
         >
-          <Toolbar variant="dense" />
-          <Stack
-            direction="row"
-            alignItems="center"
-            spacing={1}
-            sx={{ px: 2, py: 2 }}
+          <Box
+            component={Link}
+            to="/patients"
+            sx={{ display: "block", px: 1.5, pt: 0.5 }}
           >
-            <Mandala size={28} color="#150E56" opacity={0.9} />
-            <Typography sx={{ fontWeight: 700, color: "primary.main" }}>
-              Grace Homoeo
-            </Typography>
-          </Stack>
-          <List sx={{ px: 1 }}>
-            {NAV.map((n) => (
-              <ListItemButton
-                key={n.to}
-                component={Link}
-                to={n.to}
-                selected={current === n.to}
-              >
-                <ListItemIcon>{n.icon}</ListItemIcon>
-                <ListItemText primary={n.label} />
-              </ListItemButton>
-            ))}
-          </List>
-        </Drawer>
-      )}
+            <Box
+              component="img"
+              src={logo}
+              alt="Grace Homoeo Clinic"
+              sx={{
+                display: "block",
+                width: "100%",
+                maxWidth: 176,
+                height: "auto",
+                mx: "auto",
+              }}
+            />
+          </Box>
+          <Box
+            component="nav"
+            sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+          >
+            {NAV.map((n) => {
+              const active = current === n.to;
+              return (
+                <Box
+                  key={n.to}
+                  component={Link}
+                  to={n.to}
+                  aria-current={active ? "page" : undefined}
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1.5,
+                    px: 1.5,
+                    py: 1.25,
+                    borderRadius: "12px",
+                    fontSize: 14,
+                    fontWeight: active ? 700 : 500,
+                    color: active ? TOKENS.blue700 : TOKENS.muted,
+                    bgcolor: active ? TOKENS.blue50 : "transparent",
+                    textDecoration: "none",
+                    "& svg": { fontSize: 20 },
+                    "&:hover": {
+                      bgcolor: active ? TOKENS.blue50 : TOKENS.ground,
+                    },
+                  }}
+                >
+                  {n.icon}
+                  {n.label}
+                </Box>
+              );
+            })}
+          </Box>
+          <ButtonBase
+            aria-label="account"
+            onClick={openMenu}
+            sx={{
+              mt: "auto",
+              justifyContent: "flex-start",
+              gap: 1.25,
+              px: 1,
+              py: 0.75,
+              borderRadius: "12px",
+              fontSize: 14,
+              fontWeight: 600,
+              "&:hover": { bgcolor: TOKENS.ground },
+            }}
+          >
+            {avatar}
+            <Box
+              component="span"
+              sx={{
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {userName}
+            </Box>
+          </ButtonBase>
+          {accountMenu}
+        </Box>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 2, pb: isDesktop ? 2 : 9 }}>
-        <Toolbar variant="dense" />
-        {children ?? <Outlet />}
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            minWidth: 0,
+            px: 4,
+            pt: 3.5,
+            pb: 1.5,
+            display: "flex",
+            flexDirection: "column",
+            minHeight: "100vh",
+          }}
+        >
+          {!isRoot && (
+            <ButtonBase
+              aria-label="back"
+              onClick={() => navigate(-1)}
+              sx={{
+                alignSelf: "flex-start",
+                gap: 1.25,
+                mb: 2.5,
+                height: 40,
+                pl: 0.5,
+                pr: 2,
+                borderRadius: "99px",
+                bgcolor: TOKENS.white,
+                border: LINE,
+                boxShadow: "0 1px 2px rgba(20,26,46,.06)",
+                fontSize: 14,
+                fontWeight: 700,
+                color: TOKENS.ink,
+                transition: "background-color .15s, border-color .15s",
+                "& .back-badge": { transition: "transform .15s" },
+                "&:hover": {
+                  bgcolor: TOKENS.blue50,
+                  borderColor: TOKENS.blue200,
+                  "& .back-badge": { transform: "translateX(-2px)" },
+                },
+                "&:focus-visible": {
+                  outline: `2px solid ${TOKENS.blue}`,
+                  outlineOffset: 2,
+                },
+                "@media (prefers-reduced-motion: reduce)": {
+                  "& .back-badge": { transition: "none" },
+                  "&:hover .back-badge": { transform: "none" },
+                },
+              }}
+            >
+              <Box
+                className="back-badge"
+                sx={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  bgcolor: TOKENS.blue,
+                  color: "#fff",
+                  display: "grid",
+                  placeItems: "center",
+                  boxShadow: "0 3px 8px rgba(47,107,255,.35)",
+                }}
+              >
+                <ArrowBackIcon sx={{ fontSize: 13 }} />
+              </Box>
+              Back
+            </ButtonBase>
+          )}
+          <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
+          <ScriptureBanner />
+        </Box>
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
+      <Box
+        component="header"
+        sx={{
+          position: "sticky",
+          top: 0,
+          zIndex: (t) => t.zIndex.appBar,
+          height: 60,
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          px: 1.5,
+          bgcolor: TOKENS.white,
+          borderBottom: LINE,
+        }}
+      >
+        {isRoot ? (
+          <LogoTile size={32} />
+        ) : (
+          <IconButton
+            aria-label="back"
+            onClick={() => navigate(-1)}
+            sx={{
+              width: 38,
+              height: 38,
+              borderRadius: "12px",
+              bgcolor: TOKENS.blue50,
+              color: TOKENS.blue700,
+              "&:hover": { bgcolor: TOKENS.blue100 },
+            }}
+          >
+            <ArrowBackIcon sx={{ fontSize: 16 }} />
+          </IconButton>
+        )}
+        <Typography
+          component="div"
+          noWrap
+          sx={{ flex: 1, minWidth: 0, fontWeight: 800, fontSize: 17 }}
+        >
+          {isRoot ? "Grace Homoeo" : pageTitle || "Grace Homoeo"}
+        </Typography>
+        <IconButton aria-label="account" onClick={openMenu} sx={{ p: 0.5 }}>
+          {avatar}
+        </IconButton>
+        {accountMenu}
       </Box>
 
-      {!isDesktop && (
-        <BottomNavigation
-          value={current}
-          showLabels
-          sx={{
-            position: "fixed",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            zIndex: (t) => t.zIndex.drawer + 1,
-          }}
-        >
-          {NAV.map((n) => (
-            <BottomNavigationAction
-              key={n.to}
-              component={Link}
-              to={n.to}
-              value={n.to}
-              label={n.label}
-              icon={n.icon}
-            />
-          ))}
-        </BottomNavigation>
-      )}
+      <Box
+        component="main"
+        sx={{
+          px: 2,
+          pt: 2.5,
+          pb: "calc(80px + env(safe-area-inset-bottom))",
+          display: "flex",
+          flexDirection: "column",
+          minHeight: "calc(100vh - 60px)",
+        }}
+      >
+        <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
+        <ScriptureBanner />
+      </Box>
+
+      <BottomNavigation
+        value={current}
+        showLabels
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: (t) => t.zIndex.appBar,
+          pb: "env(safe-area-inset-bottom)",
+          boxSizing: "content-box",
+        }}
+      >
+        {NAV.map((n) => (
+          <BottomNavigationAction
+            key={n.to}
+            component={Link}
+            to={n.to}
+            value={n.to}
+            label={n.label}
+            icon={n.icon}
+          />
+        ))}
+      </BottomNavigation>
     </Box>
   );
 }

@@ -127,3 +127,24 @@ Both new collections are top-level, keyed by `patientId`, like `consultations`, 
 - "LMP, Date" is a single LMP date field.
 - Patient page order: header, Generals, LSMC, history.
 - No editing of Generals or LSMC outside a consultation.
+
+## Revision — Generals as field-by-field history (supersedes pre-fill / baseline)
+
+Most generals stay the same between visits. The doctor records only what is **new** at a visit.
+
+- **Form:** Generals is a table, one row per field, with three columns:
+  - **Field**
+  - **Present / history** (read-only), drawn from earlier visits:
+    - **Present:** the latest non-blank value, with its visit date.
+    - **History:** older values beneath it, newest first. Consecutive repeats are collapsed and keep the date the value was first entered.
+  - **This visit:** starts **empty**; blank means "no change".
+- **No pre-fill and no baseline.** A visit stores a generals doc with just what was typed, and only when something was typed. On edit, blanking every field deletes that visit's doc.
+- **"Earlier" means:**
+  - new visit: all of the patient's visits
+  - editing: other visits dated on or before this one
+- **LSMC on the form:** earlier visits' rows show read-only, with their dates, above this visit's editable rows.
+- **Patient page:** the Generals card becomes the same read-only table across all visits (Field, Present with date, history). The "Updated …" line is dropped.
+- **Consultation page and drawer:** unchanged. They show only what was entered at that visit.
+- **Save gating:**
+  - **New visit:** never waits for history, because nothing can be overwritten.
+  - **Edit:** still waits for that visit's own generals and LSMC to load, and is blocked if they fail.

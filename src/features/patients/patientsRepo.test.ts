@@ -7,6 +7,9 @@ const collection = vi.fn((..._a: unknown[]) => ({ path: "patients" }));
 const doc = vi.fn((..._a: unknown[]) => ({ id: "doc-ref" }));
 const query = vi.fn((...a: unknown[]) => a);
 const orderBy = vi.fn((...a: unknown[]) => ({ orderBy: a }));
+const where = vi.fn((...a: unknown[]) => ({ where: a }));
+const batchDelete = vi.fn();
+const commit = vi.fn();
 
 vi.mock("firebase/firestore", () => ({
   addDoc: (...a: unknown[]) => addDoc(...a),
@@ -17,6 +20,8 @@ vi.mock("firebase/firestore", () => ({
   doc: (...a: unknown[]) => doc(...a),
   query: (...a: unknown[]) => query(...a),
   orderBy: (...a: unknown[]) => orderBy(...a),
+  where: (...a: unknown[]) => where(...a),
+  writeBatch: () => ({ delete: batchDelete, commit }),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 const nextPatientSerial = vi.fn();
@@ -24,12 +29,19 @@ vi.mock("../../lib/serial", () => ({
   nextPatientSerial: () => nextPatientSerial(),
 }));
 
-import { createPatient, listPatients, updatePatient } from "./patientsRepo";
+import {
+  createPatient,
+  deletePatient,
+  listPatients,
+  updatePatient,
+} from "./patientsRepo";
 
 beforeEach(() => {
   addDoc.mockReset();
   getDocs.mockReset();
   updateDoc.mockReset();
+  batchDelete.mockReset();
+  commit.mockReset();
   nextPatientSerial.mockReset();
 });
 
@@ -103,5 +115,29 @@ describe("updatePatient", () => {
     });
     const payload = updateDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.nameLower).toBe("new name");
+  });
+});
+
+describe("deletePatient", () => {
+  it("deletes the patient's consultations, case record and the patient", async () => {
+    getDocs
+      .mockResolvedValueOnce({ docs: [{ ref: "c1" }, { ref: "c2" }] })
+      .mockResolvedValueOnce({ docs: [{ ref: "g1" }] })
+      .mockResolvedValueOnce({ docs: [{ ref: "l1" }] });
+    commit.mockResolvedValue(undefined);
+    await deletePatient("p1");
+    expect(collection.mock.calls.map((c) => c[1])).toEqual(
+      expect.arrayContaining(["consultations", "generals", "lsmc"]),
+    );
+    expect(where).toHaveBeenCalledWith("patientId", "==", "p1");
+    expect(batchDelete.mock.calls.map((c) => c[0])).toEqual([
+      "c1",
+      "c2",
+      "g1",
+      "l1",
+      { id: "doc-ref" },
+    ]);
+    expect(doc).toHaveBeenLastCalledWith({}, "patients", "p1");
+    expect(commit).toHaveBeenCalledTimes(1);
   });
 });

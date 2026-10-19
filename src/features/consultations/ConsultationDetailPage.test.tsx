@@ -89,11 +89,11 @@ describe("ConsultationDetailPage", () => {
   it("keeps previous visits collapsed until the heading is clicked", async () => {
     const user = userEvent.setup();
     renderPage();
-    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: /previous consultations \(1\)/i }),
     );
-    const table = screen.getByRole("table");
+    const table = screen.getByRole("list");
     expect(within(table).getByText("Older visit")).toBeInTheDocument();
     expect(within(table).queryByText("Newer visit")).not.toBeInTheDocument();
     expect(within(table).queryByText(/Bryonia/)).not.toBeInTheDocument();

@@ -11,8 +11,8 @@ export default defineConfig({
       manifest: {
         name: "Grace Homoeo",
         short_name: "Grace",
-        theme_color: "#150E56",
-        background_color: "#150E56",
+        theme_color: "#f5f7fc",
+        background_color: "#f5f7fc",
         display: "standalone",
         start_url: "/patients",
         icons: [

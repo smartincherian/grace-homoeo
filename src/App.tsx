@@ -5,6 +5,7 @@ import LoginPage from "./features/auth/LoginPage";
 import PatientListPage from "./features/patients/PatientListPage";
 import PatientDetailPage from "./features/patients/PatientDetailPage";
 import PatientFormPage from "./features/patients/PatientFormPage";
+import GeneralsHistoryPage from "./features/patients/GeneralsHistoryPage";
 import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
 import ConsultationDetailPage from "./features/consultations/ConsultationDetailPage";
 import InventoryListPage from "./features/inventory/InventoryListPage";
@@ -28,6 +29,10 @@ export default function App() {
         <Route path="/patients/new" element={<PatientFormPage />} />
         <Route path="/patients/:id" element={<PatientDetailPage />} />
         <Route path="/patients/:id/edit" element={<PatientFormPage />} />
+        <Route
+          path="/patients/:id/generals"
+          element={<GeneralsHistoryPage />}
+        />
         <Route
           path="/patients/:patientId/consultations/new"
           element={<ConsultationFormPage />}

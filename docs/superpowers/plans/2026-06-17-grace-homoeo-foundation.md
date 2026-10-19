@@ -372,7 +372,7 @@ VITE_FIREBASE_APP_ID=
 
 - [ ] **Step 2: Create `.env.local` with the real values**
 
-Copy `.env.example` to `.env.local` and fill from the old `src/firestore/config.js` values (apiKey `AIzaSyDWt6RxMQVV9wdlU6vbYGwf4O_DaqYxNew`, messagingSenderId `231106436960`, appId `1:231106436960:web:942c6e78656a784ad10805`). This file is git-ignored.
+Copy `.env.example` to `.env.local` and fill from the old `src/firestore/config.js` values (`apiKey`, `messagingSenderId`, `appId` — get them from the Firebase console, **Project settings → Your apps**). This file is git-ignored.
 
 - [ ] **Step 3: Write `src/lib/firebase.ts`**
 

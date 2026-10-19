@@ -14,13 +14,13 @@ vi.mock("firebase/firestore", () => ({
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
 import {
+  fieldHistory,
   getConsultationGenerals,
-  latestGenerals,
-  latestGeneralsBefore,
   listLsmcByPatient,
   listPatientGenerals,
+  priorRecords,
 } from "./caseRecordRepo";
-import type { GeneralsRecord } from "./caseRecordSchema";
+import { EMPTY_GENERALS, type GeneralsRecord } from "./caseRecordSchema";
 
 const snap = (id: string, data: Record<string, unknown>) => ({
   id,
@@ -85,19 +85,63 @@ describe("getConsultationGenerals", () => {
   });
 });
 
-describe("latestGenerals / latestGeneralsBefore", () => {
-  const rec = (id: string, date: number) =>
-    ({ id, date }) as unknown as GeneralsRecord;
-  const list = [rec("new", 300), rec("mid", 200), rec("old", 100)];
+const rec = (
+  cid: string,
+  date: number,
+  over: Partial<GeneralsRecord> = {},
+): GeneralsRecord => ({
+  ...EMPTY_GENERALS,
+  id: cid,
+  patientId: "p1",
+  consultationId: cid,
+  date,
+  updatedAt: 0,
+  ...over,
+});
 
-  it("latestGenerals is the first of the sorted list, or null", () => {
-    expect(latestGenerals(list)?.id).toBe("new");
-    expect(latestGenerals([])).toBeNull();
+describe("fieldHistory", () => {
+  // newest first, as listPatientGenerals returns them
+  const list = [
+    rec("v4", 400, { thirst: "high" }),
+    rec("v3", 300),
+    rec("v2", 200, { thirst: "low " }),
+    rec("v1", 100, { thirst: "low", lmp: 50 }),
+  ];
+
+  it("lists non-blank values newest first, collapsing repeats to when first entered", () => {
+    expect(fieldHistory(list, "thirst")).toEqual([
+      { value: "high", date: 400, consultationId: "v4" },
+      { value: "low", date: 100, consultationId: "v1" },
+    ]);
   });
 
-  it("latestGeneralsBefore skips records on or after the date", () => {
-    expect(latestGeneralsBefore(list, 300)?.id).toBe("mid");
-    expect(latestGeneralsBefore(list, 100)).toBeNull();
+  it("keeps LMP as a number", () => {
+    expect(fieldHistory(list, "lmp")).toEqual([
+      { value: 50, date: 100, consultationId: "v1" },
+    ]);
+  });
+
+  it("is empty for a field never recorded", () => {
+    expect(fieldHistory(list, "appetite")).toEqual([]);
+  });
+});
+
+describe("priorRecords", () => {
+  const list = [rec("v3", 300), rec("v2", 200), rec("v1", 100)];
+
+  it("returns everything for a new visit", () => {
+    expect(priorRecords(list).map((r) => r.id)).toEqual(["v3", "v2", "v1"]);
+  });
+
+  it("returns other visits on or before the edited visit's date", () => {
+    expect(
+      priorRecords(list, { id: "v2", date: 200 }).map((r) => r.id),
+    ).toEqual(["v1"]);
+    expect(
+      priorRecords([...list, rec("same", 200)], { id: "v2", date: 200 }).map(
+        (r) => r.id,
+      ),
+    ).toEqual(["v1", "same"]);
   });
 });
 

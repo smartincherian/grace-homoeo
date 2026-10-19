@@ -18,8 +18,12 @@ export default function AddButton({
       aria-label={label}
       sx={{
         position: "fixed",
-        bottom: { xs: 72, md: 24 },
-        right: 24,
+        // Above the bottom tab bar and the pinned scripture bar.
+        bottom: {
+          xs: "calc(84px + var(--scripture-h, 0px) + env(safe-area-inset-bottom))",
+          md: "calc(40px + var(--scripture-h, 0px))",
+        },
+        right: { xs: 16, md: 32 },
         fontWeight: 700,
       }}
     >

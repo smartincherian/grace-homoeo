@@ -12,7 +12,8 @@ import { useNavigate } from "react-router-dom";
 import { auth } from "../../lib/firebase";
 import { ensureUserDoc } from "./ensureUserDoc";
 import { useToast } from "../../components/useToast";
-import Mandala from "../../components/Mandala";
+import { TOKENS } from "../../theme/theme";
+import ScriptureBanner from "../../components/ScriptureBanner";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -39,41 +40,55 @@ export default function LoginPage() {
     <Box
       sx={{
         minHeight: "100vh",
-        display: "grid",
-        placeItems: "center",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
         p: 2,
-        background:
-          "radial-gradient(120% 120% at 50% -20%, #15307A 0%, #101C57 45%, #0B1442 100%)",
+        bgcolor: "background.default",
+        backgroundImage: `radial-gradient(60% 50% at 50% 0%, ${TOKENS.blue100} 0%, transparent 70%)`,
       }}
     >
-      <Card sx={{ width: "100%", maxWidth: 380, overflow: "hidden" }}>
-        <Box
-          sx={{
-            position: "relative",
-            bgcolor: "primary.main",
-            color: "#EAF1FF",
-            px: 3,
-            py: 3.5,
-            overflow: "hidden",
-          }}
+      <Card
+        sx={{
+          width: "100%",
+          maxWidth: 400,
+          my: "auto",
+          borderRadius: "24px",
+          boxShadow: "0 24px 60px rgba(20,26,46,.10)",
+        }}
+      >
+        <CardContent
+          component="form"
+          onSubmit={submit}
+          sx={{ p: { xs: 3, sm: 4 } }}
         >
-          <Mandala
-            size={120}
-            color="#7FB4FF"
-            opacity={0.2}
-            sx={{ position: "absolute", top: -30, right: -20 }}
-          />
-          <Typography variant="h5" sx={{ position: "relative", color: "#fff" }}>
-            Grace Homoeo
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{ position: "relative", opacity: 0.8 }}
+          <Box
+            sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3.5 }}
           >
-            Clinic sign-in
-          </Typography>
-        </Box>
-        <CardContent component="form" onSubmit={submit} sx={{ p: 3 }}>
+            <Box
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: "14px",
+                background: "linear-gradient(135deg,#4f86ff,#2f6bff)",
+                color: "#fff",
+                display: "grid",
+                placeItems: "center",
+                fontWeight: 800,
+                fontSize: 19,
+              }}
+            >
+              G
+            </Box>
+            <Box>
+              <Typography variant="h1" sx={{ fontSize: 22 }}>
+                Grace Homoeo
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                Clinic sign-in
+              </Typography>
+            </Box>
+          </Box>
           <TextField
             label="Email"
             type="email"
@@ -92,11 +107,20 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <Button type="submit" variant="contained" fullWidth disabled={busy}>
+          <Button
+            type="submit"
+            variant="contained"
+            fullWidth
+            size="large"
+            disabled={busy}
+          >
             {busy ? "Signing in..." : "Sign In"}
           </Button>
         </CardContent>
       </Card>
+      <Box sx={{ width: "100%", maxWidth: 880 }}>
+        <ScriptureBanner pinned={false} />
+      </Box>
     </Box>
   );
 }

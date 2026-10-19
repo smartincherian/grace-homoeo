@@ -86,8 +86,7 @@ export default function ConsultationDetailPage() {
                       <Chip
                         label={daysAgoLabel(c.date)}
                         size="small"
-                        color="secondary"
-                        variant="outlined"
+                        sx={{ bgcolor: "primary.light", color: "primary.dark" }}
                       />
                     </Stack>
                     <Typography color="text.secondary">

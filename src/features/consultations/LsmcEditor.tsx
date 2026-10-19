@@ -17,7 +17,7 @@ import {
   type Path,
   type UseFormRegister,
 } from "react-hook-form";
-import { accentFor } from "../../theme/theme";
+import { LINE, TOKENS } from "../../theme/theme";
 
 const COLUMNS = [
   { key: "location", label: "Location" },
@@ -77,9 +77,8 @@ export default function LsmcEditor<T extends FieldValues>({
           sx={{
             ...ROW_GRID,
             p: 1.5,
-            borderRadius: 2,
-            bgcolor: "rgba(46,115,214,0.04)",
-            borderLeft: `3px solid ${accentFor(i)}`,
+            borderRadius: "14px",
+            border: LINE,
           }}
         >
           {COLUMNS.map((c) => (
@@ -103,7 +102,6 @@ export default function LsmcEditor<T extends FieldValues>({
                 multiline
                 placeholder={c.label}
                 inputProps={{ "aria-label": c.label }}
-                sx={{ bgcolor: "background.paper" }}
                 {...register(`lsmc.${i}.${c.key}` as Path<T>)}
               />
             </Box>
@@ -120,7 +118,13 @@ export default function LsmcEditor<T extends FieldValues>({
       <Box>
         <Button
           startIcon={<AddIcon />}
-          variant="outlined"
+          fullWidth
+          sx={{
+            border: `1.5px dashed ${TOKENS.blue200}`,
+            color: TOKENS.blue700,
+            justifyContent: "flex-start",
+            "&:hover": { bgcolor: TOKENS.blue50 },
+          }}
           onClick={() =>
             append({
               location: "",

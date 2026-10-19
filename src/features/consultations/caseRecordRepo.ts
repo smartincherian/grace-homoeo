@@ -11,6 +11,7 @@ import { db } from "../../lib/firebase";
 import {
   EMPTY_GENERALS,
   GENERALS_KEYS,
+  type Generals,
   type GeneralsRecord,
   type LsmcRow,
 } from "./caseRecordSchema";
@@ -67,16 +68,43 @@ export async function listPatientGenerals(
     .sort((a, b) => b.date - a.date || b.updatedAt - a.updatedAt);
 }
 
-export function latestGenerals(list: GeneralsRecord[]): GeneralsRecord | null {
-  return list[0] ?? null;
+export type FieldEntry = {
+  value: string | number;
+  date: number;
+  consultationId: string;
+};
+
+/**
+ * One general's values across visits, newest first. Blank means "no change"
+ * at that visit; a repeated value collapses to the visit it was first entered.
+ * `list` must be newest first.
+ */
+export function fieldHistory(
+  list: GeneralsRecord[],
+  key: keyof Generals,
+): FieldEntry[] {
+  const out: FieldEntry[] = [];
+  for (const r of [...list].reverse()) {
+    const raw = r[key];
+    const value = typeof raw === "string" ? raw.trim() : raw;
+    if (value === "" || value == null) continue;
+    if (out.length > 0 && out[out.length - 1].value === value) continue;
+    out.push({ value, date: r.date, consultationId: r.consultationId });
+  }
+  return out.reverse();
 }
 
-/** Latest snapshot strictly before `date`; `list` must be newest first. */
-export function latestGeneralsBefore(
-  list: GeneralsRecord[],
-  date: number,
-): GeneralsRecord | null {
-  return list.find((g) => g.date < date) ?? null;
+/**
+ * Records from visits before the one being entered: all of them for a new
+ * visit, otherwise other visits dated on or before the edited one.
+ */
+export function priorRecords<
+  T extends { consultationId: string; date: number },
+>(list: T[], visit?: { id: string; date: number }): T[] {
+  if (!visit) return list;
+  return list.filter(
+    (r) => r.consultationId !== visit.id && r.date <= visit.date,
+  );
 }
 
 /** Newest visit first; rows within a visit in entry order. */

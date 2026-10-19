@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   visitGenerals: null as GeneralsRecord | null,
   visitLsmc: [] as LsmcRow[],
   visitGeneralsError: false,
+  patientLsmc: [] as LsmcRow[],
 }));
 const create = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
@@ -28,6 +29,7 @@ vi.mock("./useConsultations", () => ({
     data: cid ? state.existing : undefined,
     isPending: !!cid && !state.existing,
   }),
+  useConsultations: () => ({ data: [] }),
   useCreateConsultation: () => ({ mutateAsync: create, isPending: false }),
   useUpdateConsultation: () => ({ mutateAsync: update, isPending: false }),
 }));
@@ -41,6 +43,7 @@ vi.mock("./useCaseRecord", () => ({
     isPending: false,
     isError: state.visitGeneralsError,
   }),
+  usePatientLsmc: () => ({ data: state.patientLsmc, isPending: false }),
   useConsultationLsmc: () => ({ data: state.visitLsmc, isPending: false }),
 }));
 const showToast = vi.fn();
@@ -130,6 +133,7 @@ beforeEach(() => {
   state.visitGenerals = null;
   state.visitLsmc = [];
   state.visitGeneralsError = false;
+  state.patientLsmc = [];
   create.mockReset().mockResolvedValue("c-new");
   update.mockReset().mockResolvedValue(undefined);
 });
@@ -169,64 +173,43 @@ describe("ConsultationFormPage (create)", () => {
     expect(record.lsmc[0].location).toBe("head");
   });
 
-  it("pre-fills generals from the patient's latest record, except LMP", async () => {
-    state.gender = "Female";
+  it("starts generals empty and shows earlier values read-only", async () => {
     state.patientGenerals = [
-      generalsRec({
-        date: 2,
-        appetite: "good",
-        lmp: dateInputToMs("2026-05-01"),
-      }),
-      generalsRec({ date: 1, appetite: "poor" }),
+      generalsRec({ date: 2, thirst: "Moderate" }),
+      generalsRec({ date: 1, thirst: "Large qty", appetite: "good" }),
     ];
     renderNew();
-    expect(await screen.findByDisplayValue("good")).toBe(
-      screen.getByLabelText("Appetite"),
-    );
-    expect(screen.getByLabelText("LMP")).toHaveValue("");
+    expect(screen.getByLabelText("Thirst")).toHaveValue("");
+    expect(screen.getByLabelText("Appetite")).toHaveValue("");
+    expect(screen.getByText("Moderate")).toBeInTheDocument();
+    expect(screen.getByText("Large qty")).toBeInTheDocument();
+    expect(screen.getByText("good")).toBeInTheDocument();
   });
 
-  it("does not save generals when the pre-filled values are unchanged", async () => {
+  it("saves only the generals typed at this visit", async () => {
     const user = userEvent.setup();
-    state.patientGenerals = [generalsRec({ date: 2, appetite: "good" })];
+    state.patientGenerals = [generalsRec({ date: 1, appetite: "good" })];
     renderNew();
-    await screen.findByDisplayValue("good");
-    await user.click(screen.getByRole("button", { name: /save/i }));
-    expect(create.mock.calls[0][0].record.generals).toBeNull();
-  });
-
-  it("saves the full generals snapshot when one field is changed", async () => {
-    const user = userEvent.setup();
-    state.patientGenerals = [generalsRec({ date: 2, appetite: "good" })];
-    renderNew();
-    await screen.findByDisplayValue("good");
     await user.type(screen.getByLabelText("Thirst"), "low");
     await user.click(screen.getByRole("button", { name: /save/i }));
     const { generals } = create.mock.calls[0][0].record;
     expect(generals.thirst).toBe("low");
-    expect(generals.appetite).toBe("good");
+    expect(generals.appetite).toBe("");
   });
 
-  it("does not overwrite generals typed before the latest record loads", async () => {
-    const user = userEvent.setup();
+  it("allows saving a new visit before the history has loaded", () => {
     state.patientGenerals = undefined;
-    const view = renderNew();
-    await user.type(screen.getByLabelText("Appetite"), "typed");
-    state.patientGenerals = [
-      generalsRec({ date: 2, appetite: "good", thirst: "low" }),
+    renderNew();
+    expect(screen.getByRole("button", { name: /save/i })).toBeEnabled();
+  });
+
+  it("shows earlier LSMC rows read-only above this visit's rows", () => {
+    state.patientLsmc = [
+      { ...lsmcRow("l0", "Right temple"), consultationId: "c0" },
     ];
-    view.rerender(
-      <MemoryRouter initialEntries={["/patients/p1/consultations/new"]}>
-        <Routes>
-          <Route
-            path="/patients/:patientId/consultations/new"
-            element={<ConsultationFormPage />}
-          />
-        </Routes>
-      </MemoryRouter>,
-    );
-    expect(await screen.findByDisplayValue("low")).toBeInTheDocument();
-    expect(screen.getByLabelText("Appetite")).toHaveValue("typed");
+    renderNew();
+    expect(screen.getByText("Right temple")).toBeInTheDocument();
+    expect(screen.queryByDisplayValue("Right temple")).not.toBeInTheDocument();
   });
 
   it("shows menstrual fields only for female patients", () => {
@@ -237,14 +220,6 @@ describe("ConsultationFormPage (create)", () => {
     renderNew();
     expect(screen.getByLabelText("LMP")).toBeInTheDocument();
     expect(screen.getByLabelText("Menarche")).toBeInTheDocument();
-  });
-});
-
-describe("ConsultationFormPage (create) loading", () => {
-  it("keeps Save disabled until the patient's generals have loaded", () => {
-    state.patientGenerals = undefined;
-    renderNew();
-    expect(screen.getByRole("button", { name: /save/i })).toBeDisabled();
   });
 });
 
@@ -280,17 +255,30 @@ describe("ConsultationFormPage (edit)", () => {
     expect(vars.record.lsmc[0]).toMatchObject({ id: "l1", location: "head" });
   });
 
-  it("pre-fills from generals before this visit when it has none, saving only if changed", async () => {
-    const user = userEvent.setup();
+  it("edits this visit's own generals with only earlier visits as history", async () => {
     state.existing = consultation;
+    state.visitGenerals = generalsRec({
+      date: consultation.date,
+      id: "c1",
+      consultationId: "c1",
+      thirst: "now",
+    });
     state.patientGenerals = [
-      generalsRec({ date: consultation.date + 1, appetite: "later" }),
-      generalsRec({ date: consultation.date - 1, appetite: "earlier" }),
+      generalsRec({
+        date: consultation.date + 1,
+        id: "c2",
+        consultationId: "c2",
+        thirst: "later",
+      }),
+      state.visitGenerals,
+      generalsRec({ date: consultation.date - 1, thirst: "earlier" }),
     ];
     renderEdit();
-    await screen.findByDisplayValue("earlier");
-    await user.click(screen.getByRole("button", { name: /save/i }));
-    expect(update.mock.calls[0][0].record.generals).toBeNull();
+    expect(await screen.findByDisplayValue("now")).toBe(
+      screen.getByLabelText("Thirst"),
+    );
+    expect(screen.getByText("earlier")).toBeInTheDocument();
+    expect(screen.queryByText("later")).not.toBeInTheDocument();
   });
 
   it("blocks saving and says so when the visit's generals fail to load", async () => {

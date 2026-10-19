@@ -41,7 +41,11 @@ export default function GeneralsView({ generals }: { generals: Generals }) {
             >
               {filled.map((f) => (
                 <Box key={f.key}>
-                  <Typography variant="overline" color="text.secondary">
+                  <Typography
+                    variant="overline"
+                    color="text.primary"
+                    sx={{ fontWeight: 700, display: "block", lineHeight: 1.8 }}
+                  >
                     {f.label}
                   </Typography>
                   <Typography sx={{ whiteSpace: "pre-wrap" }}>

@@ -52,9 +52,9 @@ function renderHistory() {
 }
 
 describe("ConsultationHistory", () => {
-  it("lists every visit with its key details in a table", () => {
+  it("lists every visit with its key details as cards", () => {
     renderHistory();
-    const rows = screen.getAllByRole("row").slice(1); // skip header
+    const rows = screen.getAllByRole("listitem");
     expect(rows).toHaveLength(2);
     expect(within(rows[0]).getByText("Cough")).toBeInTheDocument();
     expect(within(rows[0]).getByText("Drosera 200")).toBeInTheDocument();

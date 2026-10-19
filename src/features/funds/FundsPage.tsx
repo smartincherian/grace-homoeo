@@ -1,10 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Box,
-  Card,
-  CardContent,
-  Chip,
-  Divider,
   Stack,
   TextField,
   Typography,
@@ -21,6 +17,8 @@ import ListCard from "../../components/ListCard";
 import RowMenu from "../../components/RowMenu";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { useSetPageTitle } from "../../components/PageChrome";
+import { PageHeader } from "../../components/PageLayout";
+import { CARD_SX, GRADIENT, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
@@ -29,24 +27,33 @@ function StatCard({
   label,
   value,
   color,
-  edge,
+  highlight,
 }: {
   label: string;
   value: string;
   color?: string;
-  edge: string;
+  highlight?: boolean;
 }) {
   return (
-    <Card sx={{ flex: 1, minWidth: 0, borderLeft: `3px solid ${edge}` }}>
-      <CardContent sx={{ py: 1.5, "&:last-child": { pb: 1.5 } }}>
-        <Typography variant="caption" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="h6" sx={{ color, fontWeight: 700 }} noWrap>
-          {value}
-        </Typography>
-      </CardContent>
-    </Card>
+    <Box
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        borderRadius: "20px",
+        px: { xs: 1.75, sm: 2.5 },
+        py: { xs: 1.5, sm: 2 },
+        ...(highlight
+          ? { background: GRADIENT, color: "#fff" }
+          : { ...CARD_SX }),
+      }}
+    >
+      <Typography sx={{ fontSize: 13, opacity: highlight ? 0.85 : 1, color: highlight ? "inherit" : "text.secondary" }}>
+        {label}
+      </Typography>
+      <Typography sx={{ fontSize: { xs: 18, sm: 26 }, fontWeight: 800, color }} noWrap>
+        {value}
+      </Typography>
+    </Box>
   );
 }
 
@@ -86,7 +93,12 @@ export default function FundsPage() {
 
   return (
     <Box sx={{ position: "relative", minHeight: "60vh" }}>
-      <Stack direction={{ xs: "column", sm: "row" }} spacing={2} sx={{ mb: 2 }}>
+      <PageHeader title="Funds" subtitle="Income from consultations, minus expenses" />
+      <Stack
+        direction={{ xs: "column", sm: "row" }}
+        spacing={2}
+        sx={{ mb: 2.5, maxWidth: { sm: 520 }, "& .MuiOutlinedInput-root": { bgcolor: TOKENS.white } }}
+      >
         <TextField
           label="From"
           type="date"
@@ -118,20 +130,18 @@ export default function FundsPage() {
         <StatCard
           label="Income"
           value={stat(summary.totalIncome)}
-          color="success.main"
-          edge="#16A39B"
+          color={TOKENS.ok}
         />
         <StatCard
           label="Expenses"
           value={stat(summary.totalExpenses)}
-          color="error.main"
-          edge="#C0496B"
+          color={TOKENS.danger}
         />
         <StatCard
           label="Balance"
           value={stat(summary.balance)}
-          color={summary.balance < 0 ? "error.main" : "text.primary"}
-          edge="#2E73D6"
+          color={summary.balance < 0 ? TOKENS.dangerBg : undefined}
+          highlight
         />
       </Stack>
 
@@ -144,18 +154,18 @@ export default function FundsPage() {
           sx={{ mb: 3 }}
         >
           {summary.incomeByMode.map((m) => (
-            <Chip
+            <Box
               key={m.mode}
-              size="small"
-              variant="outlined"
-              label={`${m.mode}: ${inr(m.amount)}`}
-            />
+              component="span"
+              sx={{ ...PILL_SX, bgcolor: TOKENS.blue50, color: TOKENS.blue700 }}
+            >
+              {m.mode}: {inr(m.amount)}
+            </Box>
           ))}
         </Stack>
       )}
 
-      <Divider sx={{ mb: 1.5 }} />
-      <Typography variant="subtitle1" sx={{ mb: 1 }}>
+      <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 1.5 }}>
         Expenses
       </Typography>
 
@@ -171,7 +181,7 @@ export default function FundsPage() {
             primary={e.category}
             secondary={`${formatDate(e.date)}${e.note ? ` · ${e.note}` : ""}`}
             trailing={
-              <Typography sx={{ color: "error.main", fontWeight: 600 }}>
+              <Typography sx={{ color: TOKENS.danger, fontWeight: 700 }}>
                 {inr(e.amount)}
               </Typography>
             }
