@@ -23,7 +23,8 @@ import ConsultationFields from "./ConsultationFields";
 import type { Consultation } from "./consultationSchema";
 import { daysAgoLabel, formatDate } from "../../lib/dates";
 import { accentFor } from "../../theme/theme";
-import { Cell, tableSx, WIDE_ONLY } from "./tableStyles";
+import { tableSx, WIDE_ONLY } from "./tableStyles";
+import Cell from "./TableTextCell";
 
 interface Props {
   consultations: Consultation[];

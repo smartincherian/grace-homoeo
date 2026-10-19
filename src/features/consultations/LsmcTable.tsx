@@ -10,7 +10,8 @@ import {
   Typography,
 } from "@mui/material";
 import type { LsmcRow } from "./caseRecordSchema";
-import { Cell, tableSx } from "./tableStyles";
+import { tableSx } from "./tableStyles";
+import Cell from "./TableTextCell";
 import { formatDate } from "../../lib/dates";
 import { accentFor } from "../../theme/theme";
 

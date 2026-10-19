@@ -1,6 +1,5 @@
-// src/features/consultations/tableStyles.tsx
+// src/features/consultations/tableStyles.ts
 // Shared look for the consultation-history and LSMC tables.
-import { Typography } from "@mui/material";
 
 // Columns hidden on phones so the table fits without sideways scrolling.
 export const WIDE_ONLY = { display: { xs: "none", sm: "table-cell" } };
@@ -24,21 +23,4 @@ export function tableSx(clickable: boolean) {
       "& tbody tr:hover": { bgcolor: "rgba(46,115,214,0.06) !important" },
     }),
   };
-}
-
-export function Cell({ value, strong }: { value: string; strong?: boolean }) {
-  return value ? (
-    <Typography
-      sx={{
-        fontSize: 14,
-        fontWeight: strong ? 600 : 400,
-        whiteSpace: "pre-wrap",
-      }}
-      color={strong ? "primary" : "text.primary"}
-    >
-      {value}
-    </Typography>
-  ) : (
-    <Typography sx={{ fontSize: 14, color: "text.disabled" }}>—</Typography>
-  );
 }
