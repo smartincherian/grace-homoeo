@@ -66,7 +66,8 @@ function member(clinicId) {
 match /clinics/{clinicId} {
   allow get: if member(clinicId);
   allow list, write: if superadmin();
-  match /{document=**} { allow read, write: if member(clinicId); }
+  // needs >= 1 segment: a bare {document=**} also matches the clinic doc itself
+  match /{sub}/{document=**} { allow read, write: if member(clinicId); }
 }
 match /users/{uid} {
   allow read, write: if superadmin() || (allowed() && request.auth.uid == uid);

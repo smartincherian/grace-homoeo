@@ -110,3 +110,22 @@ A cross-cutting visual + UX polish pass on top of the four feature plans. Spec: 
 
 - No doctor login account exists yet — create one in the Firebase console (Authentication → Email/Password) to actually sign in.
 - A per-task progress ledger from the Foundation lives at `.git/sdd/progress.md` (git metadata, not committed).
+
+## Multi-clinic — built, not cut over (branch `feature/multi-clinic`)
+
+Spec: `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`; plan: `docs/superpowers/plans/2026-10-19-multi-clinic.md`. Clinic data lives in `clinics/{clinicId}/…`, `/admin` manages clinics + allowed emails, routes are `/:clinicSlug/…`, rules isolate clinics. Production data is still in the legacy top-level collections until cutover.
+
+### Cutover runbook (user-run, after merge)
+
+0. Pre-check: in Firebase Console -> Authentication -> Sign-in method, confirm Email/Password **self sign-up is disabled**. The rules trust password accounts without email verification, so open sign-up would let someone register an allow-listed email that has no account yet.
+1. `gcloud auth application-default login` (or a service-account key) for the `grace-homoeo` project.
+2. `npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" --dry-run`, then again without `--dry-run`; confirm source vs destination counts match (exit code 1 if any destination is short). Re-running is safe.
+3. Immediately `npm run build && firebase deploy --only firestore:rules,hosting`. Between the script and the deploy new writes still go to the old collections, so deploy straight after (or re-run the script right before deploying).
+4. Sign in as the doctor -> lands on `/grace-homoeo/patients` with all data; sign in as superadmin -> `/admin`.
+5. After a few days of normal use, delete the legacy top-level collections in the Firebase console.
+
+### Deferred (not in this build)
+
+- Common hosting site `homoeoclinic.web.app` (`firebase hosting:sites:create`, hosting target in `firebase.json`, add to Auth authorized domains, redirect `grace-homoeo.web.app` -> `homoeoclinic.web.app/grace-homoeo`).
+- Generic PWA name/icon ("Homoeo Clinic"); per-clinic logo and scripture footer.
+- Emails belonging to several clinics; clinic-level roles.
