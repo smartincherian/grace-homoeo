@@ -14,11 +14,15 @@ vi.mock("../features/auth/useAuth", () => ({
 }));
 vi.mock("firebase/auth", () => ({ signOut: vi.fn() }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));
+vi.mock("../lib/access", async (orig) => ({
+  ...(await orig<typeof import("../lib/access")>()),
+  hasAccess: () => Promise.resolve(true),
+}));
 vi.mock("../features/patients/usePatients", () => ({
   usePatients: () => ({ status: "success", data: [] }),
 }));
 
-test("redirects to patients list", () => {
+test("redirects to patients list", async () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>
@@ -29,5 +33,7 @@ test("redirects to patients list", () => {
       </ThemeProvider>
     </QueryClientProvider>,
   );
-  expect(screen.getByRole("heading", { name: "Patients" })).toBeInTheDocument();
+  expect(
+    await screen.findByRole("heading", { name: "Patients" }),
+  ).toBeInTheDocument();
 });

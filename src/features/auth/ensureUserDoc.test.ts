@@ -34,6 +34,19 @@ describe("ensureUserDoc", () => {
     });
   });
 
+  it("gives the superadmin email the superadmin role", async () => {
+    getDoc.mockResolvedValue({ exists: () => false });
+    await ensureUserDoc({
+      uid: "u2",
+      email: "smartin.cherian@gmail.com",
+      displayName: "S",
+    } as never);
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ role: "superadmin" }),
+    );
+  });
+
   it("does nothing when the doc already exists", async () => {
     getDoc.mockResolvedValue({ exists: () => true });
     await ensureUserDoc({
