@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const data = [
   {
@@ -30,8 +30,10 @@ import InventoryListPage from "./InventoryListPage";
 
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <InventoryListPage />
+    <MemoryRouter initialEntries={["/c1/inventory"]}>
+      <Routes>
+        <Route path="/:clinicSlug/*" element={<InventoryListPage />} />
+      </Routes>
     </MemoryRouter>,
   );
 

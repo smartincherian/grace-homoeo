@@ -97,13 +97,13 @@ const lsmcRow = (id: string, location: string): LsmcRow => ({
 
 function renderNew() {
   return render(
-    <MemoryRouter initialEntries={["/patients/p1/consultations/new"]}>
+    <MemoryRouter initialEntries={["/c1/patients/p1/consultations/new"]}>
       <Routes>
         <Route
-          path="/patients/:patientId/consultations/new"
+          path="/:clinicSlug/patients/:patientId/consultations/new"
           element={<ConsultationFormPage />}
         />
-        <Route path="/patients/:id" element={<div>detail</div>} />
+        <Route path="/:clinicSlug/patients/:id" element={<div>detail</div>} />
       </Routes>
     </MemoryRouter>,
   );
@@ -111,14 +111,14 @@ function renderNew() {
 
 function renderEdit() {
   return render(
-    <MemoryRouter initialEntries={["/patients/p1/consultations/c1/edit"]}>
+    <MemoryRouter initialEntries={["/c1/patients/p1/consultations/c1/edit"]}>
       <Routes>
         <Route
-          path="/patients/:patientId/consultations/:cid/edit"
+          path="/:clinicSlug/patients/:patientId/consultations/:cid/edit"
           element={<ConsultationFormPage />}
         />
         <Route
-          path="/patients/:patientId/consultations/:cid"
+          path="/:clinicSlug/patients/:patientId/consultations/:cid"
           element={<div>detail</div>}
         />
       </Routes>
@@ -300,10 +300,10 @@ describe("ConsultationFormPage (edit)", () => {
     // A refetch brings in a row added elsewhere after the form loaded.
     state.visitLsmc = [lsmcRow("l1", "head"), lsmcRow("l9", "other device")];
     view.rerender(
-      <MemoryRouter initialEntries={["/patients/p1/consultations/c1/edit"]}>
+      <MemoryRouter initialEntries={["/c1/patients/p1/consultations/c1/edit"]}>
         <Routes>
           <Route
-            path="/patients/:patientId/consultations/:cid/edit"
+            path="/:clinicSlug/patients/:patientId/consultations/:cid/edit"
             element={<ConsultationFormPage />}
           />
         </Routes>

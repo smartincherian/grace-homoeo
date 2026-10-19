@@ -62,10 +62,10 @@ import ConsultationDetailPage from "./ConsultationDetailPage";
 
 function renderPage() {
   render(
-    <MemoryRouter initialEntries={["/patients/p1/consultations/c1"]}>
+    <MemoryRouter initialEntries={["/c1/patients/p1/consultations/c1"]}>
       <Routes>
         <Route
-          path="/patients/:patientId/consultations/:cid"
+          path="/:clinicSlug/patients/:patientId/consultations/:cid"
           element={<ConsultationDetailPage />}
         />
       </Routes>
@@ -103,7 +103,7 @@ describe("ConsultationDetailPage", () => {
     renderPage();
     expect(screen.getByRole("link", { name: /edit/i })).toHaveAttribute(
       "href",
-      "/patients/p1/consultations/c1/edit",
+      "/c1/patients/p1/consultations/c1/edit",
     );
   });
 });

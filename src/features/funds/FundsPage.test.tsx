@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const expenses = [
   { id: "e1", date: 1718000000000, category: "Rent", amount: 5000, note: "" },
@@ -30,8 +30,10 @@ import FundsPage from "./FundsPage";
 
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <FundsPage />
+    <MemoryRouter initialEntries={["/c1/funds"]}>
+      <Routes>
+        <Route path="/:clinicSlug/*" element={<FundsPage />} />
+      </Routes>
     </MemoryRouter>,
   );
 

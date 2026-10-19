@@ -16,13 +16,16 @@ vi.mock("firebase/auth", () => ({ signOut: vi.fn() }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));
 vi.mock("../lib/access", async (orig) => ({
   ...(await orig<typeof import("../lib/access")>()),
-  hasAccess: () => Promise.resolve(true),
+  getMembership: () => Promise.resolve({ superadmin: false, clinicId: "c1" }),
+}));
+vi.mock("../lib/clinicQueries", () => ({
+  useClinic: () => ({ data: { id: "c1", name: "Clinic One", createdAt: 0 } }),
 }));
 vi.mock("../features/patients/usePatients", () => ({
   usePatients: () => ({ status: "success", data: [] }),
 }));
 
-test("redirects to patients list", async () => {
+test("redirects a member from / to their clinic's patients list", async () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={qc}>

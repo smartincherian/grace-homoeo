@@ -17,7 +17,13 @@ import Inventory2Icon from "@mui/icons-material/Inventory2Outlined";
 import PaidIcon from "@mui/icons-material/CreditCardOutlined";
 import CalculateIcon from "@mui/icons-material/CalculateOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
-import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  Link,
+  Outlet,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../features/auth/useAuth";
@@ -26,12 +32,13 @@ import ScriptureBanner from "./ScriptureBanner";
 import logo from "../assets/logo.png";
 import { LINE, TOKENS, initials } from "../theme/theme";
 import { isSuperadmin } from "../lib/access";
+import { useClinic } from "../lib/clinicQueries";
 
 const NAV = [
-  { to: "/patients", label: "Patients", icon: <PeopleIcon /> },
-  { to: "/inventory", label: "Inventory", icon: <Inventory2Icon /> },
-  { to: "/calculator", label: "Calculator", icon: <CalculateIcon /> },
-  { to: "/funds", label: "Funds", icon: <PaidIcon /> },
+  { to: "patients", label: "Patients", icon: <PeopleIcon /> },
+  { to: "inventory", label: "Inventory", icon: <Inventory2Icon /> },
+  { to: "calculator", label: "Calculator", icon: <CalculateIcon /> },
+  { to: "funds", label: "Funds", icon: <PaidIcon /> },
 ];
 const SIDEBAR_WIDTH = 244;
 
@@ -60,10 +67,21 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const { pathname } = useLocation();
-  const current = NAV.find((n) => pathname.startsWith(n.to))?.to ?? "/patients";
-  const isRoot = NAV.some((n) => n.to === pathname);
+  // Undefined outside a clinic (the superadmin's /admin page): no clinic nav there.
+  const { clinicSlug } = useParams();
+  const sectionHref = (section: string) => `/${clinicSlug}/${section}`;
+  const section = pathname.split("/")[2];
+  const current = NAV.find((n) => n.to === section)?.to ?? "patients";
+  const isRoot = !clinicSlug || NAV.some((n) => sectionHref(n.to) === pathname);
+  const clinicName = useClinic(clinicSlug).data?.name;
   const navigate = useNavigate();
   const { user } = useAuth();
+  const superadmin = isSuperadmin(user?.email);
+  const homeHref = superadmin
+    ? "/admin"
+    : clinicSlug
+      ? sectionHref("patients")
+      : "/";
   const pageTitle = usePageTitle();
   const userName = user?.displayName || user?.email?.split("@")[0] || "Account";
 
@@ -102,14 +120,14 @@ function ShellInner({ children }: { children?: ReactNode }) {
           <MenuItemText primary={user.email} />
         </MenuItem>
       )}
-      {isSuperadmin(user?.email) && (
+      {superadmin && (
         <MenuItem
           onClick={() => {
             closeMenu();
-            navigate("/access");
+            navigate("/admin");
           }}
         >
-          Manage access
+          Admin
         </MenuItem>
       )}
       <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
@@ -144,7 +162,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
         >
           <Box
             component={Link}
-            to="/patients"
+            to={homeHref}
             sx={{ display: "block", px: 1.5, pt: 0.5 }}
           >
             <Box
@@ -159,43 +177,59 @@ function ShellInner({ children }: { children?: ReactNode }) {
                 mx: "auto",
               }}
             />
+            {clinicName && (
+              <Typography
+                noWrap
+                sx={{
+                  mt: 1,
+                  textAlign: "center",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: TOKENS.muted,
+                }}
+              >
+                {clinicName}
+              </Typography>
+            )}
           </Box>
-          <Box
-            component="nav"
-            sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
-          >
-            {NAV.map((n) => {
-              const active = current === n.to;
-              return (
-                <Box
-                  key={n.to}
-                  component={Link}
-                  to={n.to}
-                  aria-current={active ? "page" : undefined}
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1.5,
-                    px: 1.5,
-                    py: 1.25,
-                    borderRadius: "12px",
-                    fontSize: 14,
-                    fontWeight: active ? 700 : 500,
-                    color: active ? TOKENS.blue700 : TOKENS.muted,
-                    bgcolor: active ? TOKENS.blue50 : "transparent",
-                    textDecoration: "none",
-                    "& svg": { fontSize: 20 },
-                    "&:hover": {
-                      bgcolor: active ? TOKENS.blue50 : TOKENS.ground,
-                    },
-                  }}
-                >
-                  {n.icon}
-                  {n.label}
-                </Box>
-              );
-            })}
-          </Box>
+          {clinicSlug && (
+            <Box
+              component="nav"
+              sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+            >
+              {NAV.map((n) => {
+                const active = current === n.to;
+                return (
+                  <Box
+                    key={n.to}
+                    component={Link}
+                    to={sectionHref(n.to)}
+                    aria-current={active ? "page" : undefined}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1.5,
+                      px: 1.5,
+                      py: 1.25,
+                      borderRadius: "12px",
+                      fontSize: 14,
+                      fontWeight: active ? 700 : 500,
+                      color: active ? TOKENS.blue700 : TOKENS.muted,
+                      bgcolor: active ? TOKENS.blue50 : "transparent",
+                      textDecoration: "none",
+                      "& svg": { fontSize: 20 },
+                      "&:hover": {
+                        bgcolor: active ? TOKENS.blue50 : TOKENS.ground,
+                      },
+                    }}
+                  >
+                    {n.icon}
+                    {n.label}
+                  </Box>
+                );
+              })}
+            </Box>
+          )}
           <ButtonBase
             aria-label="account"
             onClick={openMenu}
@@ -334,13 +368,23 @@ function ShellInner({ children }: { children?: ReactNode }) {
             <ArrowBackIcon sx={{ fontSize: 16 }} />
           </IconButton>
         )}
-        <Typography
-          component="div"
-          noWrap
-          sx={{ flex: 1, minWidth: 0, fontWeight: 800, fontSize: 17 }}
-        >
-          {isRoot ? "Grace Homoeo" : pageTitle || "Grace Homoeo"}
-        </Typography>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography
+            component="div"
+            noWrap
+            sx={{ fontWeight: 800, fontSize: 17 }}
+          >
+            {isRoot ? "Grace Homoeo" : pageTitle || "Grace Homoeo"}
+          </Typography>
+          {isRoot && clinicName && (
+            <Typography
+              noWrap
+              sx={{ fontSize: 12, fontWeight: 600, color: TOKENS.muted }}
+            >
+              {clinicName}
+            </Typography>
+          )}
+        </Box>
         <IconButton aria-label="account" onClick={openMenu} sx={{ p: 0.5 }}>
           {avatar}
         </IconButton>
@@ -362,30 +406,32 @@ function ShellInner({ children }: { children?: ReactNode }) {
         <ScriptureBanner />
       </Box>
 
-      <BottomNavigation
-        value={current}
-        showLabels
-        sx={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          zIndex: (t) => t.zIndex.appBar,
-          pb: "env(safe-area-inset-bottom)",
-          boxSizing: "content-box",
-        }}
-      >
-        {NAV.map((n) => (
-          <BottomNavigationAction
-            key={n.to}
-            component={Link}
-            to={n.to}
-            value={n.to}
-            label={n.label}
-            icon={n.icon}
-          />
-        ))}
-      </BottomNavigation>
+      {clinicSlug && (
+        <BottomNavigation
+          value={current}
+          showLabels
+          sx={{
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: (t) => t.zIndex.appBar,
+            pb: "env(safe-area-inset-bottom)",
+            boxSizing: "content-box",
+          }}
+        >
+          {NAV.map((n) => (
+            <BottomNavigationAction
+              key={n.to}
+              component={Link}
+              to={sectionHref(n.to)}
+              value={n.to}
+              label={n.label}
+              icon={n.icon}
+            />
+          ))}
+        </BottomNavigation>
+      )}
     </Box>
   );
 }

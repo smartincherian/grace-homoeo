@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { ThemeProvider } from "@mui/material";
 import { theme } from "../theme/theme";
 
@@ -10,24 +10,65 @@ vi.mock("firebase/auth", () => ({
   signOut: (...a: unknown[]) => signOut(...a),
 }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));
+const authUser = vi.hoisted(() => ({ email: "doc@example.com" }));
 vi.mock("../features/auth/useAuth", () => ({
-  useAuth: () => ({ user: { email: "doc@example.com" }, loading: false }),
+  useAuth: () => ({ user: authUser, loading: false }),
+}));
+vi.mock("../lib/clinicQueries", () => ({
+  useClinic: (id: string | undefined) => ({
+    data: id ? { id, name: `Clinic ${id}`, createdAt: 0 } : undefined,
+  }),
 }));
 
 import AppShell from "./AppShell";
 import { useSetPageTitle } from "./PageChrome";
 
-test("renders navigation to all three modules", () => {
+/** Mounts the shell as the app does: a layout route above the clinic routes. */
+const renderShell = (entries: string[], children?: React.ReactNode) =>
   render(
     <ThemeProvider theme={theme}>
-      <MemoryRouter initialEntries={["/patients"]}>
-        <AppShell />
+      <MemoryRouter initialEntries={entries} initialIndex={entries.length - 1}>
+        <Routes>
+          <Route element={<AppShell>{children}</AppShell>}>
+            <Route path="/admin" element={null} />
+            <Route path="/:clinicSlug/*" element={null} />
+          </Route>
+        </Routes>
       </MemoryRouter>
     </ThemeProvider>,
   );
-  expect(screen.getByRole("link", { name: /patients/i })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /inventory/i })).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: /funds/i })).toBeInTheDocument();
+
+test("renders clinic-scoped navigation to every module", () => {
+  renderShell(["/c1/patients"]);
+  expect(screen.getByRole("link", { name: /patients/i })).toHaveAttribute(
+    "href",
+    "/c1/patients",
+  );
+  expect(screen.getByRole("link", { name: /inventory/i })).toHaveAttribute(
+    "href",
+    "/c1/inventory",
+  );
+  expect(screen.getByRole("link", { name: /funds/i })).toHaveAttribute(
+    "href",
+    "/c1/funds",
+  );
+  expect(screen.getByText("Clinic c1")).toBeInTheDocument();
+});
+
+test("hides the clinic navigation on the admin page", () => {
+  renderShell(["/admin"]);
+  expect(
+    screen.queryByRole("link", { name: /patients/i }),
+  ).not.toBeInTheDocument();
+});
+
+test("offers the superadmin an Admin menu item", async () => {
+  const user = userEvent.setup();
+  authUser.email = "smartin.cherian@gmail.com";
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  expect(screen.getByRole("menuitem", { name: "Admin" })).toBeInTheDocument();
+  authUser.email = "doc@example.com";
 });
 
 test("account menu signs the user out", async () => {
@@ -51,33 +92,14 @@ function TitleSetter() {
 
 test("shows a back button on a non-root route and navigates back on click", async () => {
   const user = userEvent.setup();
-  render(
-    <ThemeProvider theme={theme}>
-      <MemoryRouter
-        initialEntries={["/patients", "/patients/p1"]}
-        initialIndex={1}
-      >
-        <AppShell>
-          <TitleSetter />
-        </AppShell>
-      </MemoryRouter>
-    </ThemeProvider>,
-  );
+  renderShell(["/c1/patients", "/c1/patients/p1"], <TitleSetter />);
   const back = screen.getByRole("button", { name: /back/i });
   expect(back).toBeInTheDocument();
   await user.click(back);
 });
 
 test("hides the back button on a root tab", () => {
-  render(
-    <ThemeProvider theme={theme}>
-      <MemoryRouter initialEntries={["/patients"]}>
-        <AppShell>
-          <div />
-        </AppShell>
-      </MemoryRouter>
-    </ThemeProvider>,
-  );
+  renderShell(["/c1/patients"], <div />);
   expect(
     screen.queryByRole("button", { name: /back/i }),
   ).not.toBeInTheDocument();

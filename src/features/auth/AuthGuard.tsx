@@ -5,18 +5,28 @@ import { useQuery } from "@tanstack/react-query";
 import { signOut } from "firebase/auth";
 import { useAuth } from "./useAuth";
 import { auth } from "../../lib/firebase";
-import { hasAccess } from "../../lib/access";
+import { getMembership, type Membership } from "../../lib/access";
 
-export default function AuthGuard({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
-  // Re-checked per session so an account removed from the allow list is signed out.
-  const access = useQuery({
+/** The signed-in user's membership; re-checked per session so a removed account is signed out. */
+function useMembershipQuery() {
+  const { user } = useAuth();
+  return useQuery({
     queryKey: ["access", user?.uid],
-    queryFn: () => hasAccess(user!),
+    queryFn: () => getMembership(user!),
     enabled: !!user,
     staleTime: Infinity,
   });
-  const denied = access.data === false;
+}
+
+/** The current membership (undefined while unresolved, or when there is none). */
+export function useMembership(): Membership | undefined {
+  return useMembershipQuery().data ?? undefined;
+}
+
+export default function AuthGuard({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const access = useMembershipQuery();
+  const denied = access.data === null;
 
   useEffect(() => {
     if (denied) void signOut(auth);

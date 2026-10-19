@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const data = [
   {
@@ -38,8 +38,10 @@ import PatientListPage from "./PatientListPage";
 
 const renderPage = () =>
   render(
-    <MemoryRouter>
-      <PatientListPage />
+    <MemoryRouter initialEntries={["/c1/patients"]}>
+      <Routes>
+        <Route path="/:clinicSlug/*" element={<PatientListPage />} />
+      </Routes>
     </MemoryRouter>,
   );
 

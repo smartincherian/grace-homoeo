@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import AppShell from "./components/AppShell";
 import AuthGuard from "./features/auth/AuthGuard";
+import ClinicLayout from "./features/auth/ClinicLayout";
+import HomeRedirect from "./features/auth/HomeRedirect";
 import LoginPage from "./features/auth/LoginPage";
 import PatientListPage from "./features/patients/PatientListPage";
 import PatientDetailPage from "./features/patients/PatientDetailPage";
@@ -26,36 +28,40 @@ export default function App() {
           </AuthGuard>
         }
       >
-        <Route path="/patients" element={<PatientListPage />} />
-        <Route path="/patients/new" element={<PatientFormPage />} />
-        <Route path="/patients/:id" element={<PatientDetailPage />} />
-        <Route path="/patients/:id/edit" element={<PatientFormPage />} />
-        <Route
-          path="/patients/:id/generals"
-          element={<GeneralsHistoryPage />}
-        />
-        <Route
-          path="/patients/:patientId/consultations/new"
-          element={<ConsultationFormPage />}
-        />
-        <Route
-          path="/patients/:patientId/consultations/:cid"
-          element={<ConsultationDetailPage />}
-        />
-        <Route
-          path="/patients/:patientId/consultations/:cid/edit"
-          element={<ConsultationFormPage />}
-        />
-        <Route path="/inventory" element={<InventoryListPage />} />
-        <Route path="/inventory/new" element={<InventoryFormPage />} />
-        <Route path="/inventory/:id/edit" element={<InventoryFormPage />} />
-        <Route path="/funds" element={<FundsPage />} />
-        <Route path="/funds/expenses/new" element={<ExpenseFormPage />} />
-        <Route path="/funds/expenses/:id/edit" element={<ExpenseFormPage />} />
-        <Route path="/calculator" element={<CalculatorPage />} />
-        <Route path="/access" element={<AccessPage />} />
+        <Route path="/admin" element={<AccessPage />} />
+        <Route path="/:clinicSlug" element={<ClinicLayout />}>
+          <Route index element={<Navigate to="patients" replace />} />
+          <Route path="patients" element={<PatientListPage />} />
+          <Route path="patients/new" element={<PatientFormPage />} />
+          <Route path="patients/:id" element={<PatientDetailPage />} />
+          <Route path="patients/:id/edit" element={<PatientFormPage />} />
+          <Route
+            path="patients/:id/generals"
+            element={<GeneralsHistoryPage />}
+          />
+          <Route
+            path="patients/:patientId/consultations/new"
+            element={<ConsultationFormPage />}
+          />
+          <Route
+            path="patients/:patientId/consultations/:cid"
+            element={<ConsultationDetailPage />}
+          />
+          <Route
+            path="patients/:patientId/consultations/:cid/edit"
+            element={<ConsultationFormPage />}
+          />
+          <Route path="inventory" element={<InventoryListPage />} />
+          <Route path="inventory/new" element={<InventoryFormPage />} />
+          <Route path="inventory/:id/edit" element={<InventoryFormPage />} />
+          <Route path="funds" element={<FundsPage />} />
+          <Route path="funds/expenses/new" element={<ExpenseFormPage />} />
+          <Route path="funds/expenses/:id/edit" element={<ExpenseFormPage />} />
+          <Route path="calculator" element={<CalculatorPage />} />
+        </Route>
+        <Route path="/" element={<HomeRedirect />} />
+        <Route path="*" element={<HomeRedirect />} />
       </Route>
-      <Route path="*" element={<Navigate to="/patients" replace />} />
     </Routes>
   );
 }

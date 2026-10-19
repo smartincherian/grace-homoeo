@@ -19,6 +19,7 @@ import dayjs from "dayjs";
 import type { LsmcRow } from "./caseRecordSchema";
 import LsmcSummary from "./LsmcSummary";
 import { CARD_SX, PILL_SX, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 interface Props {
   consultations: Consultation[];
@@ -35,6 +36,7 @@ export default function ConsultationHistory({
   onSelect,
   lsmc,
 }: Props) {
+  const cp = useClinicPath();
   const [openId, setOpenId] = useState<string | null>(null);
   const open = consultations.find((c) => c.id === openId);
 
@@ -179,7 +181,7 @@ export default function ConsultationHistory({
                 <Button
                   variant="contained"
                   component={Link}
-                  to={`/patients/${patientId}/consultations/${open.id}`}
+                  to={cp(`/patients/${patientId}/consultations/${open.id}`)}
                 >
                   Open
                 </Button>
@@ -187,7 +189,7 @@ export default function ConsultationHistory({
                   startIcon={<EditIcon />}
                   variant="outlined"
                   component={Link}
-                  to={`/patients/${patientId}/consultations/${open.id}/edit`}
+                  to={cp(`/patients/${patientId}/consultations/${open.id}/edit`)}
                 >
                   Edit
                 </Button>

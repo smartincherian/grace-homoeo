@@ -19,6 +19,7 @@ import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { calcAge, daysAgoLabel, formatDate } from "../../lib/dates";
 import { CARD_SX, GRADIENT, LINE, PILL_SX, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 function SectionTitle({ title, note }: { title: string; note?: string }) {
   return (
@@ -42,6 +43,7 @@ function SectionTitle({ title, note }: { title: string; note?: string }) {
 }
 
 export default function PatientDetailPage() {
+  const cp = useClinicPath();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { data: patient } = usePatient(id);
@@ -53,7 +55,7 @@ export default function PatientDetailPage() {
   const { data: generalsList } = usePatientGenerals(id);
   const { data: lsmc } = usePatientLsmc(id);
   const openVisit = (cid: string) =>
-    navigate(`/patients/${id}/consultations/${cid}`);
+    navigate(cp(`/patients/${id}/consultations/${cid}`));
   const course = visits.filter((v) => v.remedy);
   const deletePatient = useDeletePatient();
   const { showToast } = useToast();
@@ -65,7 +67,7 @@ export default function PatientDetailPage() {
     deletePatient.mutate(id, {
       onSuccess: () => {
         showToast("Patient deleted", "success");
-        navigate("/patients", { replace: true });
+        navigate(cp("/patients"), { replace: true });
       },
       onError: () =>
         showToast("Could not delete patient. Please try again.", "error"),
@@ -131,7 +133,7 @@ export default function PatientDetailPage() {
           <Button
             variant="outlined"
             component={Link}
-            to={`/patients/${id}/edit`}
+            to={cp(`/patients/${id}/edit`)}
             sx={{ height: 46 }}
           >
             Edit
@@ -148,7 +150,7 @@ export default function PatientDetailPage() {
           <Button
             variant="contained"
             component={Link}
-            to={`/patients/${id}/consultations/new`}
+            to={cp(`/patients/${id}/consultations/new`)}
             startIcon={<AddIcon />}
             sx={{ height: 46, flex: { xs: 1, sm: "none" } }}
           >
@@ -210,7 +212,7 @@ export default function PatientDetailPage() {
                   </Typography>
                   <Button
                     component={Link}
-                    to={`/patients/${id}/generals`}
+                    to={cp(`/patients/${id}/generals`)}
                     size="small"
                     sx={{
                       minHeight: 32,

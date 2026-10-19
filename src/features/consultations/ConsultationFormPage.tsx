@@ -48,6 +48,7 @@ import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 import AvatarTile from "../../components/AvatarTile";
 import { CAPTION_SX, CARD_SX, LINE, PILL_SX, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 const formSchema = consultationFormSchema.extend({
   generals: generalsSchema,
@@ -130,6 +131,7 @@ function PillButton({
 }
 
 export default function ConsultationFormPage() {
+  const cp = useClinicPath();
   const { patientId, cid } = useParams<{ patientId: string; cid: string }>();
   const isEdit = !!cid;
   useSetPageTitle(isEdit ? "Edit consultation" : "Add consultation");
@@ -241,8 +243,8 @@ export default function ConsultationFormPage() {
       }
       navigate(
         isEdit
-          ? `/patients/${patientId}/consultations/${cid}`
-          : `/patients/${patientId}`,
+          ? cp(`/patients/${patientId}/consultations/${cid}`)
+          : cp(`/patients/${patientId}`),
       );
     } catch {
       showToast("Could not save consultation. Please try again.", "error");
@@ -423,7 +425,7 @@ export default function ConsultationFormPage() {
           {earlier.length > 0 && (
             <Typography
               component={Link}
-              to={`/patients/${patientId}`}
+              to={cp(`/patients/${patientId}`)}
               sx={{
                 fontSize: 13,
                 fontWeight: 600,

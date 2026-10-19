@@ -20,10 +20,10 @@ import PatientFormPage from "./PatientFormPage";
 
 function renderCreate() {
   return render(
-    <MemoryRouter initialEntries={["/patients/new"]}>
+    <MemoryRouter initialEntries={["/c1/patients/new"]}>
       <Routes>
-        <Route path="/patients/new" element={<PatientFormPage />} />
-        <Route path="/patients/:id" element={<div>detail</div>} />
+        <Route path="/:clinicSlug/patients/new" element={<PatientFormPage />} />
+        <Route path="/:clinicSlug/patients/:id" element={<div>detail</div>} />
       </Routes>
     </MemoryRouter>,
   );

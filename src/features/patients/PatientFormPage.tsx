@@ -33,6 +33,7 @@ import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 import AvatarTile from "../../components/AvatarTile";
 import { CARD_SX, LINE, PILL_SX, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 const DEFAULTS: Partial<PatientFormValues> = {
   name: "",
@@ -44,6 +45,7 @@ const DEFAULTS: Partial<PatientFormValues> = {
 const digits = (s: string) => s.replace(/\D/g, "");
 
 export default function PatientFormPage() {
+  const cp = useClinicPath();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
   useSetPageTitle(isEdit ? "Edit patient" : "Add patient");
@@ -109,14 +111,14 @@ export default function PatientFormPage() {
       if (isEdit) {
         await update.mutateAsync(values);
         showToast("Patient updated", "success");
-        navigate(`/patients/${id}`);
+        navigate(cp(`/patients/${id}`));
       } else {
         const newId = await create.mutateAsync(values);
         showToast("Patient added", "success");
         navigate(
           startConsultation.current
-            ? `/patients/${newId}/consultations/new`
-            : `/patients/${newId}`,
+            ? cp(`/patients/${newId}/consultations/new`)
+            : cp(`/patients/${newId}`),
         );
       }
     } catch {
@@ -395,7 +397,7 @@ export default function PatientFormPage() {
                 </Typography>
                 <Button
                   component={Link}
-                  to={`/patients/${p.id}`}
+                  to={cp(`/patients/${p.id}`)}
                   sx={{
                     height: 40,
                     bgcolor: TOKENS.blue50,

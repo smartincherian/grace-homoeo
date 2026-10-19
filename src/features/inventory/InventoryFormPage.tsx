@@ -27,6 +27,7 @@ import {
 } from "./useInventory";
 import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
+import { useClinicPath } from "../auth/useClinicPath";
 
 const DEFAULTS: InventoryFormValues = {
   name: "",
@@ -54,6 +55,7 @@ const LOT_LABEL: Record<MedicineForm, string> = {
 };
 
 export default function InventoryFormPage() {
+  const cp = useClinicPath();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
   useSetPageTitle(isEdit ? "Edit item" : "Add item");
@@ -111,7 +113,7 @@ export default function InventoryFormPage() {
         await create.mutateAsync(values);
         showToast("Item added", "success");
       }
-      navigate("/inventory");
+      navigate(cp("/inventory"));
     } catch {
       showToast("Could not save item. Please try again.", "error");
     }
@@ -122,7 +124,7 @@ export default function InventoryFormPage() {
     try {
       await remove.mutateAsync(id);
       showToast("Item deleted", "success");
-      navigate("/inventory");
+      navigate(cp("/inventory"));
     } catch {
       showToast("Could not delete item. Please try again.", "error");
     }

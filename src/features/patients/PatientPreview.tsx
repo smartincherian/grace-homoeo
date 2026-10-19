@@ -6,6 +6,7 @@ import { useConsultations } from "../consultations/useConsultations";
 import AvatarTile from "../../components/AvatarTile";
 import { calcAge, daysAgoLabel } from "../../lib/dates";
 import { CAPTION_SX, CARD_SX, LINE, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -28,6 +29,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 /** Summary card of the selected patient beside the desktop list. */
 export default function PatientPreview({ patient }: { patient: Patient }) {
+  const cp = useClinicPath();
   const { status, data } = useConsultations(patient.id);
   const visits = data ?? [];
   const latest = visits[0];
@@ -177,7 +179,7 @@ export default function PatientPreview({ patient }: { patient: Patient }) {
         <Button
           variant="contained"
           component={Link}
-          to={`/patients/${patient.id}/consultations/new`}
+          to={cp(`/patients/${patient.id}/consultations/new`)}
           sx={{ flex: 1, height: 46 }}
         >
           Start consultation
@@ -185,7 +187,7 @@ export default function PatientPreview({ patient }: { patient: Patient }) {
         <Button
           variant="outlined"
           component={Link}
-          to={`/patients/${patient.id}`}
+          to={cp(`/patients/${patient.id}`)}
           sx={{ height: 46 }}
         >
           Open record

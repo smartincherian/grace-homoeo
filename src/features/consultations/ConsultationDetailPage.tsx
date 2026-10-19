@@ -21,8 +21,10 @@ import ConsultationHistory from "./ConsultationHistory";
 import QueryStates from "../../components/QueryStates";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { daysAgoLabel, formatDate } from "../../lib/dates";
+import { useClinicPath } from "../auth/useClinicPath";
 
 export default function ConsultationDetailPage() {
+  const cp = useClinicPath();
   const { patientId, cid } = useParams<{ patientId: string; cid: string }>();
   const { status, data: c } = useConsultation(cid);
   const { data: history } = useConsultations(patientId);
@@ -100,7 +102,7 @@ export default function ConsultationDetailPage() {
                     startIcon={<EditIcon />}
                     variant="outlined"
                     component={Link}
-                    to={`/patients/${patientId}/consultations/${cid}/edit`}
+                    to={cp(`/patients/${patientId}/consultations/${cid}/edit`)}
                   >
                     Edit
                   </Button>

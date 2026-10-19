@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 vi.mock("./useCaseRecord", () => ({
   useConsultationGenerals: () => ({ data: null }),
@@ -45,8 +45,15 @@ const visits: Consultation[] = [
 
 function renderHistory() {
   render(
-    <MemoryRouter>
-      <ConsultationHistory consultations={visits} patientId="p1" />
+    <MemoryRouter initialEntries={["/c1/patients/p1"]}>
+      <Routes>
+        <Route
+          path="/:clinicSlug/*"
+          element={
+            <ConsultationHistory consultations={visits} patientId="p1" />
+          }
+        />
+      </Routes>
     </MemoryRouter>,
   );
 }
@@ -64,12 +71,19 @@ describe("ConsultationHistory", () => {
     const user = userEvent.setup();
     const onSelect = vi.fn();
     render(
-      <MemoryRouter>
-        <ConsultationHistory
-          consultations={visits}
-          patientId="p1"
-          onSelect={onSelect}
-        />
+      <MemoryRouter initialEntries={["/c1/patients/p1"]}>
+        <Routes>
+          <Route
+            path="/:clinicSlug/*"
+            element={
+              <ConsultationHistory
+                consultations={visits}
+                patientId="p1"
+                onSelect={onSelect}
+              />
+            }
+          />
+        </Routes>
       </MemoryRouter>,
     );
     await user.click(screen.getByText("Drosera 200"));
@@ -86,11 +100,11 @@ describe("ConsultationHistory", () => {
     expect(within(drawer).getByText("Thirstless")).toBeInTheDocument();
     expect(within(drawer).getByRole("link", { name: /open/i })).toHaveAttribute(
       "href",
-      "/patients/p1/consultations/c2",
+      "/c1/patients/p1/consultations/c2",
     );
     expect(within(drawer).getByRole("link", { name: /edit/i })).toHaveAttribute(
       "href",
-      "/patients/p1/consultations/c2/edit",
+      "/c1/patients/p1/consultations/c2/edit",
     );
   });
 });

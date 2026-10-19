@@ -68,11 +68,11 @@ import { EMPTY_GENERALS } from "../consultations/caseRecordSchema";
 
 function renderPage() {
   render(
-    <MemoryRouter initialEntries={["/patients/p1"]}>
+    <MemoryRouter initialEntries={["/c1/patients/p1"]}>
       <Routes>
-        <Route path="/patients/:id" element={<PatientDetailPage />} />
+        <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
         <Route
-          path="/patients/:id/consultations/:cid"
+          path="/:clinicSlug/patients/:id/consultations/:cid"
           element={<div>consultation page</div>}
         />
       </Routes>
@@ -89,9 +89,9 @@ beforeEach(() => {
 describe("PatientDetailPage", () => {
   it("shows the patient profile and their consultation history", () => {
     render(
-      <MemoryRouter initialEntries={["/patients/p1"]}>
+      <MemoryRouter initialEntries={["/c1/patients/p1"]}>
         <Routes>
-          <Route path="/patients/:id" element={<PatientDetailPage />} />
+          <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -103,9 +103,9 @@ describe("PatientDetailPage", () => {
 
   it("shows the last consultation date and how long ago", () => {
     render(
-      <MemoryRouter initialEntries={["/patients/p1"]}>
+      <MemoryRouter initialEntries={["/c1/patients/p1"]}>
         <Routes>
-          <Route path="/patients/:id" element={<PatientDetailPage />} />
+          <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -146,7 +146,7 @@ describe("PatientDetailPage", () => {
     expect(screen.queryByText("thirstless")).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: "View past history" }),
-    ).toHaveAttribute("href", "/patients/p1/generals");
+    ).toHaveAttribute("href", "/c1/patients/p1/generals");
   });
 
   it("lists the patient's LSMC rows and opens the linked consultation on click", async () => {

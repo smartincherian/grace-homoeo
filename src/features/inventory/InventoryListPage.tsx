@@ -22,8 +22,10 @@ import { PageHeader } from "../../components/PageLayout";
 import AvatarTile from "../../components/AvatarTile";
 import { CARD_SX, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
+import { useClinicPath } from "../auth/useClinicPath";
 
 export default function InventoryListPage() {
+  const cp = useClinicPath();
   useSetPageTitle("Inventory");
   const { status, data } = useInventory();
   const setQuantity = useSetQuantity();
@@ -112,7 +114,7 @@ export default function InventoryListPage() {
           <Box sx={{ flex: 1 }} />
           <Button
             component={Link}
-            to="/inventory/new"
+            to={cp("/inventory/new")}
             variant="contained"
             startIcon={<AddIcon />}
             sx={{ height: 40 }}
@@ -128,7 +130,7 @@ export default function InventoryListPage() {
           {filtered.map((i) => (
             <ListCard
               key={i.id}
-              onClick={() => navigate(`/inventory/${i.id}/edit`)}
+              onClick={() => navigate(cp(`/inventory/${i.id}/edit`))}
               edgeColor={isLowStock(i) ? TOKENS.warn : undefined}
               avatar={<AvatarTile name={i.name} seed={i.name.length} />}
               primary={
@@ -189,7 +191,7 @@ export default function InventoryListPage() {
               menu={
                 <RowMenu
                   label={i.name}
-                  onEdit={() => navigate(`/inventory/${i.id}/edit`)}
+                  onEdit={() => navigate(cp(`/inventory/${i.id}/edit`))}
                   onDelete={() => setToDelete(i)}
                 />
               }

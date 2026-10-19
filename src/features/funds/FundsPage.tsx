@@ -20,6 +20,7 @@ import { useSetPageTitle } from "../../components/PageChrome";
 import { PageHeader } from "../../components/PageLayout";
 import { CARD_SX, GRADIENT, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
+import { useClinicPath } from "../auth/useClinicPath";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -58,6 +59,7 @@ function StatCard({
 }
 
 export default function FundsPage() {
+  const cp = useClinicPath();
   useSetPageTitle("Funds");
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -177,7 +179,7 @@ export default function FundsPage() {
         {(expenses.data ?? []).map((e) => (
           <ListCard
             key={e.id}
-            onClick={() => navigate(`/funds/expenses/${e.id}/edit`)}
+            onClick={() => navigate(cp(`/funds/expenses/${e.id}/edit`))}
             primary={e.category}
             secondary={`${formatDate(e.date)}${e.note ? ` · ${e.note}` : ""}`}
             trailing={
@@ -188,7 +190,7 @@ export default function FundsPage() {
             menu={
               <RowMenu
                 label={e.category}
-                onEdit={() => navigate(`/funds/expenses/${e.id}/edit`)}
+                onEdit={() => navigate(cp(`/funds/expenses/${e.id}/edit`))}
                 onDelete={() => setToDelete(e)}
               />
             }
@@ -196,7 +198,7 @@ export default function FundsPage() {
         ))}
       </QueryStates>
 
-      <AddButton label="Add expense" to="/funds/expenses/new" />
+      <AddButton label="Add expense" to={cp("/funds/expenses/new")} />
       <ConfirmDialog
         open={!!toDelete}
         title="Delete expense?"

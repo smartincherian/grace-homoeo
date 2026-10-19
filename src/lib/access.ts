@@ -40,7 +40,3 @@ export function homePath(m: Membership): string {
   return m.superadmin ? "/admin" : `/${m.clinicId}/patients`;
 }
 
-/** Temporary: removed in Task 4 once AuthGuard/LoginPage use getMembership. */
-export async function hasAccess(user: User): Promise<boolean> {
-  return Boolean(await getMembership(user));
-}

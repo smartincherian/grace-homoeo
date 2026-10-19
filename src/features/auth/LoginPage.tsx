@@ -19,7 +19,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
-import { hasAccess } from "../../lib/access";
+import { getMembership, homePath } from "../../lib/access";
 import { ensureUserDoc } from "./ensureUserDoc";
 import { useToast } from "../../components/useToast";
 import { TOKENS } from "../../theme/theme";
@@ -55,14 +55,15 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const { user } = await attempt();
-      if (!(await hasAccess(user))) {
+      const membership = await getMembership(user);
+      if (!membership) {
         await signOut(auth);
         showToast(`${user.email ?? "This account"} is not allowed to sign in.`, "error");
         return;
       }
-      queryClient.setQueryData(["access", user.uid], true);
+      queryClient.setQueryData(["access", user.uid], membership);
       await ensureUserDoc(user);
-      navigate("/patients", { replace: true });
+      navigate(homePath(membership), { replace: true });
     } catch (err) {
       if (!(err instanceof FirebaseError && CANCELLED.includes(err.code))) {
         showToast(failMessage, "error");

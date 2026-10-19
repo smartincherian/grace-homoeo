@@ -23,6 +23,7 @@ import { PageHeader } from "../../components/PageLayout";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { calcAge, daysAgoLabel } from "../../lib/dates";
 import { CARD_SX, LINE, TOKENS } from "../../theme/theme";
+import { useClinicPath } from "../auth/useClinicPath";
 
 type Filter = "all" | "today" | "week";
 
@@ -36,6 +37,7 @@ const isTyping = (t: EventTarget | null) =>
 const COLUMNS = "1.9fr 70px 1fr 1fr";
 
 export default function PatientListPage() {
+  const cp = useClinicPath();
   useSetPageTitle("Patients");
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
@@ -94,10 +96,10 @@ export default function PatientListPage() {
         e.preventDefault();
         searchRef.current?.focus();
       } else if (e.key === "n" || e.key === "N") {
-        navigate("/patients/new");
+        navigate(cp("/patients/new"));
       } else if (isDesktop && selected && nav) {
         e.preventDefault();
-        if (e.key === "Enter") return navigate(`/patients/${selected.id}`);
+        if (e.key === "Enter") return navigate(cp(`/patients/${selected.id}`));
         const i = filtered.findIndex((p) => p.id === selected.id);
         const next = filtered[i + (e.key === "ArrowDown" ? 1 : -1)];
         if (next) setSelectedId(next.id);
@@ -105,7 +107,7 @@ export default function PatientListPage() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [filtered, selected, isDesktop, navigate]);
+  }, [filtered, selected, isDesktop, navigate, cp]);
 
   const FILTERS: { key: Filter; label: string; count: number }[] = [
     { key: "all", label: "All", count: counts.all },
@@ -169,7 +171,7 @@ export default function PatientListPage() {
             role="listitem"
             aria-current={isSel ? "true" : undefined}
             onClick={() => setSelectedId(p.id)}
-            onDoubleClick={() => navigate(`/patients/${p.id}`)}
+            onDoubleClick={() => navigate(cp(`/patients/${p.id}`))}
             sx={{
               display: "grid",
               gridTemplateColumns: COLUMNS,
@@ -240,7 +242,7 @@ export default function PatientListPage() {
         <ButtonBase
           key={p.id}
           role="listitem"
-          onClick={() => navigate(`/patients/${p.id}`)}
+          onClick={() => navigate(cp(`/patients/${p.id}`))}
           sx={{
             width: "100%",
             display: "flex",
@@ -284,7 +286,7 @@ export default function PatientListPage() {
               <Button
                 variant="contained"
                 component={Link}
-                to="/patients/new"
+                to={cp("/patients/new")}
                 startIcon={<AddIcon />}
                 sx={{ height: 46, flex: "none" }}
               >
@@ -369,7 +371,7 @@ export default function PatientListPage() {
         {isDesktop && selected && <PatientPreview patient={selected} />}
       </Box>
 
-      {!isDesktop && <AddButton label="Add patient" to="/patients/new" />}
+      {!isDesktop && <AddButton label="Add patient" to={cp("/patients/new")} />}
     </Box>
   );
 }

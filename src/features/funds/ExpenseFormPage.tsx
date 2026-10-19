@@ -26,6 +26,7 @@ import {
 import { msToDateInput, dateInputToMs } from "../../lib/dates";
 import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
+import { useClinicPath } from "../auth/useClinicPath";
 
 const DEFAULTS: Partial<ExpenseFormValues> = {
   category: "Other",
@@ -34,6 +35,7 @@ const DEFAULTS: Partial<ExpenseFormValues> = {
 };
 
 export default function ExpenseFormPage() {
+  const cp = useClinicPath();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
   useSetPageTitle(isEdit ? "Edit expense" : "Add expense");
@@ -75,7 +77,7 @@ export default function ExpenseFormPage() {
         await create.mutateAsync(values);
         showToast("Expense added", "success");
       }
-      navigate("/funds");
+      navigate(cp("/funds"));
     } catch {
       showToast("Could not save expense. Please try again.", "error");
     }
@@ -86,7 +88,7 @@ export default function ExpenseFormPage() {
     try {
       await remove.mutateAsync(id);
       showToast("Expense deleted", "success");
-      navigate("/funds");
+      navigate(cp("/funds"));
     } catch {
       showToast("Could not delete expense. Please try again.", "error");
     }
