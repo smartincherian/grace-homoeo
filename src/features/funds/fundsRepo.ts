@@ -1,8 +1,6 @@
 import {
   addDoc,
-  collection,
   deleteDoc,
-  doc,
   getDoc,
   getDocs,
   query,
@@ -12,7 +10,7 @@ import {
   type QueryDocumentSnapshot,
   type DocumentSnapshot,
 } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { clinicCollection, clinicDoc } from "../../lib/clinic";
 import type { Expense, ExpenseFormValues, IncomeRecord } from "./fundsSchema";
 
 const EXPENSES = "expenses";
@@ -41,7 +39,7 @@ export async function listExpenses(
 ): Promise<Expense[]> {
   const snap = await getDocs(
     query(
-      collection(db, EXPENSES),
+      clinicCollection(EXPENSES),
       where("date", ">=", startMs),
       where("date", "<=", endMs),
     ),
@@ -56,7 +54,7 @@ export async function listIncome(
 ): Promise<IncomeRecord[]> {
   const snap = await getDocs(
     query(
-      collection(db, CONSULTATIONS),
+      clinicCollection(CONSULTATIONS),
       where("date", ">=", startMs),
       where("date", "<=", endMs),
     ),
@@ -72,14 +70,14 @@ export async function listIncome(
 }
 
 export async function getExpense(id: string): Promise<Expense | null> {
-  const snap = await getDoc(doc(db, EXPENSES, id));
+  const snap = await getDoc(clinicDoc(EXPENSES, id));
   return snap.exists() ? toExpense(snap) : null;
 }
 
 export async function createExpense(
   values: ExpenseFormValues,
 ): Promise<string> {
-  const ref = await addDoc(collection(db, EXPENSES), {
+  const ref = await addDoc(clinicCollection(EXPENSES), {
     ...values,
     createdAt: Date.now(),
   });
@@ -90,9 +88,9 @@ export async function updateExpense(
   id: string,
   values: ExpenseFormValues,
 ): Promise<void> {
-  await updateDoc(doc(db, EXPENSES, id), { ...values });
+  await updateDoc(clinicDoc(EXPENSES, id), { ...values });
 }
 
 export async function deleteExpense(id: string): Promise<void> {
-  await deleteDoc(doc(db, EXPENSES, id));
+  await deleteDoc(clinicDoc(EXPENSES, id));
 }

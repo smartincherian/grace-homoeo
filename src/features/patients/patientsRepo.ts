@@ -1,7 +1,5 @@
 import {
   addDoc,
-  collection,
-  doc,
   getDoc,
   getDocs,
   orderBy,
@@ -15,6 +13,7 @@ import {
   type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { clinicCollection, clinicDoc } from "../../lib/clinic";
 import { nextPatientSerial } from "../../lib/serial";
 import type { Patient, PatientFormValues } from "./patientSchema";
 
@@ -40,13 +39,13 @@ function toPatient(
 
 export async function listPatients(): Promise<Patient[]> {
   const snap = await getDocs(
-    query(collection(db, COLLECTION), orderBy("nameLower")),
+    query(clinicCollection(COLLECTION), orderBy("nameLower")),
   );
   return snap.docs.map(toPatient);
 }
 
 export async function getPatient(id: string): Promise<Patient | null> {
-  const snap = await getDoc(doc(db, COLLECTION, id));
+  const snap = await getDoc(clinicDoc(COLLECTION, id));
   return snap.exists() ? toPatient(snap) : null;
 }
 
@@ -54,7 +53,7 @@ export async function createPatient(
   values: PatientFormValues,
 ): Promise<string> {
   const serialNo = await nextPatientSerial();
-  const ref = await addDoc(collection(db, COLLECTION), {
+  const ref = await addDoc(clinicCollection(COLLECTION), {
     ...values,
     nameLower: values.name.toLowerCase(),
     serialNo,
@@ -68,7 +67,7 @@ export async function updatePatient(
   id: string,
   values: PatientFormValues,
 ): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, id), {
+  await updateDoc(clinicDoc(COLLECTION, id), {
     ...values,
     nameLower: values.name.toLowerCase(),
   });
@@ -87,13 +86,13 @@ const BATCH_LIMIT = 500;
 export async function deletePatient(id: string): Promise<void> {
   const owned = await Promise.all(
     PATIENT_OWNED.map((name) =>
-      getDocs(query(collection(db, name), where("patientId", "==", id))),
+      getDocs(query(clinicCollection(name), where("patientId", "==", id))),
     ),
   );
   const refs: DocumentReference[] = [
     ...owned.flatMap((snap) => snap.docs.map((d) => d.ref)),
     // Patient last, so a partial failure never leaves visits without a patient.
-    doc(db, COLLECTION, id),
+    clinicDoc(COLLECTION, id),
   ];
   for (let i = 0; i < refs.length; i += BATCH_LIMIT) {
     const batch = writeBatch(db);

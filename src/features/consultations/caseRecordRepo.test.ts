@@ -12,6 +12,10 @@ vi.mock("firebase/firestore", () => ({
   where: (...a: unknown[]) => ({ where: a }),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+vi.mock("../../lib/clinic", () => ({
+  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
+  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+}));
 
 import {
   fieldHistory,
@@ -30,6 +34,16 @@ const snap = (id: string, data: Record<string, unknown>) => ({
 beforeEach(() => {
   getDocs.mockReset();
   getDoc.mockReset();
+});
+
+describe("clinic scoping", () => {
+  it("reads the patient's generals from the active clinic", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    await listPatientGenerals("p1");
+    expect((getDocs.mock.calls[0][0] as unknown[])[0]).toEqual({
+      path: "clinics/c1/generals",
+    });
+  });
 });
 
 describe("listPatientGenerals", () => {

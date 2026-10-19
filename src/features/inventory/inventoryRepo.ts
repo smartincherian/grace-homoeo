@@ -1,8 +1,6 @@
 import {
   addDoc,
-  collection,
   deleteDoc,
-  doc,
   getDoc,
   getDocs,
   orderBy,
@@ -12,7 +10,7 @@ import {
   type QueryDocumentSnapshot,
   type DocumentSnapshot,
 } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { clinicCollection, clinicDoc } from "../../lib/clinic";
 import type { InventoryItem, InventoryFormValues } from "./inventorySchema";
 
 const COLLECTION = "inventory";
@@ -38,18 +36,18 @@ function toItem(
 
 export async function listInventory(): Promise<InventoryItem[]> {
   const snap = await getDocs(
-    query(collection(db, COLLECTION), orderBy("nameLower")),
+    query(clinicCollection(COLLECTION), orderBy("nameLower")),
   );
   return snap.docs.map(toItem);
 }
 
 export async function getItem(id: string): Promise<InventoryItem | null> {
-  const snap = await getDoc(doc(db, COLLECTION, id));
+  const snap = await getDoc(clinicDoc(COLLECTION, id));
   return snap.exists() ? toItem(snap) : null;
 }
 
 export async function createItem(values: InventoryFormValues): Promise<string> {
-  const ref = await addDoc(collection(db, COLLECTION), {
+  const ref = await addDoc(clinicCollection(COLLECTION), {
     ...values,
     nameLower: values.name.toLowerCase(),
     updatedAt: Date.now(),
@@ -61,7 +59,7 @@ export async function updateItem(
   id: string,
   values: InventoryFormValues,
 ): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, id), {
+  await updateDoc(clinicDoc(COLLECTION, id), {
     ...values,
     nameLower: values.name.toLowerCase(),
     updatedAt: Date.now(),
@@ -69,9 +67,12 @@ export async function updateItem(
 }
 
 export async function setQuantity(id: string, quantity: number): Promise<void> {
-  await updateDoc(doc(db, COLLECTION, id), { quantity, updatedAt: Date.now() });
+  await updateDoc(clinicDoc(COLLECTION, id), {
+    quantity,
+    updatedAt: Date.now(),
+  });
 }
 
 export async function deleteItem(id: string): Promise<void> {
-  await deleteDoc(doc(db, COLLECTION, id));
+  await deleteDoc(clinicDoc(COLLECTION, id));
 }

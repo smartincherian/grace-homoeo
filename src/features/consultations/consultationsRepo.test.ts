@@ -36,6 +36,10 @@ vi.mock("firebase/firestore", () => ({
   where: (...a: unknown[]) => where(...a),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+vi.mock("../../lib/clinic", () => ({
+  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
+  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+}));
 
 import {
   createConsultation,
@@ -110,7 +114,9 @@ describe("createConsultation case record", () => {
       generals: { ...EMPTY_GENERALS, thirst: "thirstless" },
       lsmc: [],
     });
-    const g = calls(batchSet).find(([p]) => p === "generals/generated-id");
+    const g = calls(batchSet).find(
+      ([p]) => p === "clinics/c1/generals/generated-id",
+    );
     expect(g).toBeDefined();
     expect(g![1]).toMatchObject({
       consultationId: "generated-id",
@@ -122,9 +128,9 @@ describe("createConsultation case record", () => {
 
   it("writes no generals when record.generals is null", async () => {
     await createConsultation(PATIENT, values, NO_RECORD);
-    expect(pathsOf(batchSet).some((p) => p.startsWith("generals/"))).toBe(
-      false,
-    );
+    expect(
+      pathsOf(batchSet).some((p) => p.startsWith("clinics/c1/generals/")),
+    ).toBe(false);
   });
 
   it("skips all-blank generals and blank LSMC rows", async () => {
@@ -133,8 +139,8 @@ describe("createConsultation case record", () => {
       lsmc: [row({ location: "head" }), row({ sensation: "  " })],
     });
     expect(pathsOf(batchSet)).toEqual([
-      "consultations/generated-id",
-      "lsmc/generated-id",
+      "clinics/c1/consultations/generated-id",
+      "clinics/c1/lsmc/generated-id",
     ]);
     const lsmc = batchSet.mock.calls[1][1] as Record<string, unknown>;
     expect(lsmc).toMatchObject({
@@ -150,7 +156,7 @@ describe("createConsultation case record", () => {
 describe("LSMC entry order", () => {
   const createdAts = () =>
     calls(batchSet)
-      .filter(([p]) => p.startsWith("lsmc/"))
+      .filter(([p]) => p.startsWith("clinics/c1/lsmc/"))
       .map(([, d]) => (d as { createdAt: number }).createdAt);
 
   it("stamps rows created together in the order they were entered", async () => {
@@ -188,7 +194,7 @@ describe("updateConsultation", () => {
   it("keeps legacy text fields untouched", async () => {
     await updateConsultation("c1", "p1", values, NO_RECORD, []);
     const [path, payload] = calls(batchUpdate)[0];
-    expect(path).toBe("consultations/c1");
+    expect(path).toBe("clinics/c1/consultations/c1");
     expect(payload).not.toHaveProperty("generals");
     expect(payload).not.toHaveProperty("allergy");
     expect(payload).not.toHaveProperty("history");
@@ -207,18 +213,18 @@ describe("updateConsultation", () => {
       ["l1", "l2"],
     );
     expect(calls(batchUpdate)).toContainEqual([
-      "lsmc/l1",
+      "clinics/c1/lsmc/l1",
       expect.objectContaining({ location: "knee", date: 500 }),
     ]);
     expect(calls(batchSet)).toContainEqual([
-      "lsmc/generated-id",
+      "clinics/c1/lsmc/generated-id",
       expect.objectContaining({
         location: "new",
         patientId: "p1",
         consultationId: "c1",
       }),
     ]);
-    expect(pathsOf(batchDelete)).toEqual(["lsmc/l2"]);
+    expect(pathsOf(batchDelete)).toEqual(["clinics/c1/lsmc/l2"]);
   });
 
   it("deletes an LSMC row that was blanked out", async () => {
@@ -229,8 +235,8 @@ describe("updateConsultation", () => {
       { generals: null, lsmc: [row({ id: "l1" })] },
       ["l1"],
     );
-    expect(pathsOf(batchDelete)).toEqual(["lsmc/l1"]);
-    expect(pathsOf(batchUpdate)).not.toContain("lsmc/l1");
+    expect(pathsOf(batchDelete)).toEqual(["clinics/c1/lsmc/l1"]);
+    expect(pathsOf(batchUpdate)).not.toContain("clinics/c1/lsmc/l1");
   });
 
   it("deletes the generals doc when all fields are blank", async () => {
@@ -241,7 +247,7 @@ describe("updateConsultation", () => {
       { generals: EMPTY_GENERALS, lsmc: [] },
       [],
     );
-    expect(pathsOf(batchDelete)).toContain("generals/c1");
+    expect(pathsOf(batchDelete)).toContain("clinics/c1/generals/c1");
   });
 
   it("leaves generals alone when record.generals is null", async () => {
@@ -251,7 +257,7 @@ describe("updateConsultation", () => {
       ...pathsOf(batchUpdate),
       ...pathsOf(batchDelete),
     ];
-    expect(all.some((p) => p.startsWith("generals/"))).toBe(false);
+    expect(all.some((p) => p.startsWith("clinics/c1/generals/"))).toBe(false);
   });
 
   it("writes the new date onto generals and LSMC rows", async () => {
@@ -266,11 +272,11 @@ describe("updateConsultation", () => {
       ["l1"],
     );
     expect(calls(batchSet)).toContainEqual([
-      "generals/c1",
+      "clinics/c1/generals/c1",
       expect.objectContaining({ date: 900, patientId: "p1", thirst: "low" }),
     ]);
     expect(calls(batchUpdate)).toContainEqual([
-      "lsmc/l1",
+      "clinics/c1/lsmc/l1",
       expect.objectContaining({ date: 900 }),
     ]);
   });

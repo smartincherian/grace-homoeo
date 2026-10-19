@@ -1,11 +1,5 @@
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-  type DocumentData,
-} from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { getDocs, orderBy, query, type DocumentData } from "firebase/firestore";
+import { clinicCollection } from "../../lib/clinic";
 import {
   baseUnitLabel,
   isPriced,
@@ -29,7 +23,7 @@ export interface PricedItem {
 /** Inventory items that carry cost data, lightest-form, sorted by name. */
 export async function listPricedItems(): Promise<PricedItem[]> {
   const snap = await getDocs(
-    query(collection(db, INVENTORY), orderBy("nameLower")),
+    query(clinicCollection(INVENTORY), orderBy("nameLower")),
   );
   return snap.docs
     .map((d) => {

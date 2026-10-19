@@ -24,6 +24,10 @@ vi.mock("firebase/firestore", () => ({
   writeBatch: () => ({ delete: batchDelete, commit }),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+vi.mock("../../lib/clinic", () => ({
+  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
+  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+}));
 const nextPatientSerial = vi.fn();
 vi.mock("../../lib/serial", () => ({
   nextPatientSerial: () => nextPatientSerial(),
@@ -86,6 +90,7 @@ describe("listPatients", () => {
       ],
     });
     const list = await listPatients();
+    expect(query.mock.calls[0][0]).toEqual({ path: "clinics/c1/patients" });
     expect(list).toEqual([
       {
         id: "p1",
@@ -126,8 +131,14 @@ describe("deletePatient", () => {
       .mockResolvedValueOnce({ docs: [{ ref: "l1" }] });
     commit.mockResolvedValue(undefined);
     await deletePatient("p1");
-    expect(collection.mock.calls.map((c) => c[1])).toEqual(
-      expect.arrayContaining(["consultations", "generals", "lsmc"]),
+    expect(
+      query.mock.calls.map((c) => (c[0] as { path: string }).path),
+    ).toEqual(
+      expect.arrayContaining([
+        "clinics/c1/consultations",
+        "clinics/c1/generals",
+        "clinics/c1/lsmc",
+      ]),
     );
     expect(where).toHaveBeenCalledWith("patientId", "==", "p1");
     expect(batchDelete.mock.calls.map((c) => c[0])).toEqual([
@@ -135,9 +146,8 @@ describe("deletePatient", () => {
       "c2",
       "g1",
       "l1",
-      { id: "doc-ref" },
+      { path: "clinics/c1/patients/p1" },
     ]);
-    expect(doc).toHaveBeenLastCalledWith({}, "patients", "p1");
     expect(commit).toHaveBeenCalledTimes(1);
   });
 });

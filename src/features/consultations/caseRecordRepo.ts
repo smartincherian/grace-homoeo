@@ -1,13 +1,11 @@
 import {
-  collection,
-  doc,
   getDoc,
   getDocs,
   query,
   where,
   type DocumentData,
 } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { clinicCollection, clinicDoc } from "../../lib/clinic";
 import {
   EMPTY_GENERALS,
   GENERALS_KEYS,
@@ -52,7 +50,7 @@ function toLsmc(id: string, d: DocumentData): LsmcRow {
 export async function getConsultationGenerals(
   cid: string,
 ): Promise<GeneralsRecord | null> {
-  const snap = await getDoc(doc(db, GENERALS, cid));
+  const snap = await getDoc(clinicDoc(GENERALS, cid));
   return snap.exists() ? toGenerals(snap.id, snap.data()) : null;
 }
 
@@ -61,7 +59,7 @@ export async function listPatientGenerals(
   patientId: string,
 ): Promise<GeneralsRecord[]> {
   const snap = await getDocs(
-    query(collection(db, GENERALS), where("patientId", "==", patientId)),
+    query(clinicCollection(GENERALS), where("patientId", "==", patientId)),
   );
   return snap.docs
     .map((s) => toGenerals(s.id, s.data()))
@@ -110,7 +108,7 @@ export function priorRecords<
 /** Newest visit first; rows within a visit in entry order. */
 export async function listLsmcByPatient(patientId: string): Promise<LsmcRow[]> {
   const snap = await getDocs(
-    query(collection(db, LSMC), where("patientId", "==", patientId)),
+    query(clinicCollection(LSMC), where("patientId", "==", patientId)),
   );
   return snap.docs
     .map((s) => toLsmc(s.id, s.data()))
@@ -119,7 +117,7 @@ export async function listLsmcByPatient(patientId: string): Promise<LsmcRow[]> {
 
 export async function listLsmcByConsultation(cid: string): Promise<LsmcRow[]> {
   const snap = await getDocs(
-    query(collection(db, LSMC), where("consultationId", "==", cid)),
+    query(clinicCollection(LSMC), where("consultationId", "==", cid)),
   );
   return snap.docs
     .map((s) => toLsmc(s.id, s.data()))

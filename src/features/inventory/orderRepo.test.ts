@@ -20,6 +20,10 @@ vi.mock("firebase/firestore", () => ({
   orderBy: (...a: unknown[]) => orderBy(...a),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+vi.mock("../../lib/clinic", () => ({
+  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
+  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+}));
 
 import {
   createOrderItem,
@@ -33,6 +37,20 @@ beforeEach(() => {
   getDocs.mockReset();
   updateDoc.mockReset();
   deleteDoc.mockReset();
+});
+
+describe("clinic scoping", () => {
+  it("lists from and writes to the active clinic", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    await listOrderItems();
+    expect((query.mock.calls[0][0] as { path: string }).path).toBe(
+      "clinics/c1/orderItems",
+    );
+    await deleteOrderItem("o1");
+    expect(deleteDoc).toHaveBeenCalledWith({
+      path: "clinics/c1/orderItems/o1",
+    });
+  });
 });
 
 describe("createOrderItem", () => {
@@ -58,7 +76,11 @@ describe("listOrderItems", () => {
       docs: [
         {
           id: "o1",
-          data: () => ({ category: "bottles", variant: "1 dram", createdAt: 5 }),
+          data: () => ({
+            category: "bottles",
+            variant: "1 dram",
+            createdAt: 5,
+          }),
         },
       ],
     });

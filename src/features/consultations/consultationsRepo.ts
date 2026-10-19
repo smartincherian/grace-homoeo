@@ -1,5 +1,4 @@
 import {
-  collection,
   doc,
   getDoc,
   getDocs,
@@ -12,6 +11,7 @@ import {
   type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { clinicCollection, clinicDoc } from "../../lib/clinic";
 import type {
   Consultation,
   ConsultationFormValues,
@@ -42,7 +42,7 @@ function addNewLsmcRow(
   link: { patientId: string; consultationId: string; date: number },
   createdAt: number,
 ) {
-  batch.set(doc(collection(db, LSMC)), {
+  batch.set(doc(clinicCollection(LSMC)), {
     ...toLsmcCells(r),
     ...link,
     createdAt,
@@ -79,7 +79,7 @@ export async function listConsultationsByPatient(
   patientId: string,
 ): Promise<Consultation[]> {
   const snap = await getDocs(
-    query(collection(db, COLLECTION), where("patientId", "==", patientId)),
+    query(clinicCollection(COLLECTION), where("patientId", "==", patientId)),
   );
   return snap.docs.map(toConsultation).sort((a, b) => b.date - a.date);
 }
@@ -87,7 +87,7 @@ export async function listConsultationsByPatient(
 export async function getConsultation(
   id: string,
 ): Promise<Consultation | null> {
-  const snap = await getDoc(doc(db, COLLECTION, id));
+  const snap = await getDoc(clinicDoc(COLLECTION, id));
   return snap.exists() ? toConsultation(snap) : null;
 }
 
@@ -98,7 +98,7 @@ export async function createConsultation(
 ): Promise<string> {
   const now = Date.now();
   const batch = writeBatch(db);
-  const ref = doc(collection(db, COLLECTION));
+  const ref = doc(clinicCollection(COLLECTION));
   batch.set(ref, {
     ...values,
     patientId: patient.id,
@@ -112,7 +112,7 @@ export async function createConsultation(
     date: values.date,
   };
   if (record.generals && !isGeneralsBlank(record.generals)) {
-    batch.set(doc(db, GENERALS, ref.id), {
+    batch.set(clinicDoc(GENERALS, ref.id), {
       ...record.generals,
       ...link,
       updatedAt: now,
@@ -125,7 +125,7 @@ export async function createConsultation(
   }
   // Stamp the patient's last visit in the same atomic batch (write by path,
   // not by importing the patients feature, to respect feature boundaries).
-  batch.update(doc(db, PATIENTS, patient.id), { lastVisitAt: values.date });
+  batch.update(clinicDoc(PATIENTS, patient.id), { lastVisitAt: values.date });
   await batch.commit();
   return ref.id;
 }
@@ -145,11 +145,11 @@ export async function updateConsultation(
 ): Promise<void> {
   const now = Date.now();
   const batch = writeBatch(db);
-  batch.update(doc(db, COLLECTION, id), { ...values });
+  batch.update(clinicDoc(COLLECTION, id), { ...values });
   const link = { patientId, consultationId: id, date: values.date };
 
   if (record.generals) {
-    const ref = doc(db, GENERALS, id);
+    const ref = clinicDoc(GENERALS, id);
     if (isGeneralsBlank(record.generals)) batch.delete(ref);
     else batch.set(ref, { ...record.generals, ...link, updatedAt: now });
   }
@@ -160,7 +160,7 @@ export async function updateConsultation(
     if (isLsmcRowBlank(r)) continue;
     if (r.id && existingLsmcIds.includes(r.id)) {
       kept.add(r.id);
-      batch.update(doc(db, LSMC, r.id), {
+      batch.update(clinicDoc(LSMC, r.id), {
         ...toLsmcCells(r),
         date: values.date,
       });
@@ -169,7 +169,7 @@ export async function updateConsultation(
     }
   }
   for (const lid of existingLsmcIds) {
-    if (!kept.has(lid)) batch.delete(doc(db, LSMC, lid));
+    if (!kept.has(lid)) batch.delete(clinicDoc(LSMC, lid));
   }
   await batch.commit();
 }

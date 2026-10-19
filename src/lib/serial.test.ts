@@ -8,6 +8,10 @@ vi.mock("firebase/firestore", () => ({
   doc: (...a: unknown[]) => doc(...a),
 }));
 vi.mock("./firebase", () => ({ db: {} }));
+vi.mock("./clinic", () => ({
+  clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
+  clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
+}));
 
 import { nextPatientSerial } from "./serial";
 
@@ -17,14 +21,16 @@ describe("nextPatientSerial", () => {
   });
 
   it("returns 1 when no counter doc exists yet", async () => {
+    const get = vi.fn(async () => ({ exists: () => false, data: () => ({}) }));
     runTransaction.mockImplementation(
       async (_db: unknown, fn: (tx: unknown) => unknown) =>
         fn({
-          get: async () => ({ exists: () => false, data: () => ({}) }),
+          get,
           set: vi.fn(),
         }),
     );
     await expect(nextPatientSerial()).resolves.toBe(1);
+    expect(get).toHaveBeenCalledWith({ path: "clinics/c1/counters/patients" });
   });
 
   it("increments and persists the existing counter", async () => {
@@ -41,7 +47,7 @@ describe("nextPatientSerial", () => {
     );
     await expect(nextPatientSerial()).resolves.toBe(42);
     expect(set).toHaveBeenCalledWith(
-      expect.anything(),
+      { path: "clinics/c1/counters/patients" },
       { lastSerial: 42 },
       { merge: true },
     );
