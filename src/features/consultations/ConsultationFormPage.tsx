@@ -1,12 +1,14 @@
 // src/features/consultations/ConsultationFormPage.tsx
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import {
   Box,
   Button,
   Card,
   CardContent,
+  Divider,
   MenuItem,
   Stack,
   TextField,
@@ -23,12 +25,40 @@ import {
   useCreateConsultation,
   useUpdateConsultation,
 } from "./useConsultations";
+import {
+  EMPTY_GENERALS,
+  GENERALS_KEYS,
+  generalsEqual,
+  generalsSchema,
+  lsmcRowSchema,
+  toBaseline,
+  type Generals,
+  type LsmcRowInput,
+} from "./caseRecordSchema";
+import { latestGenerals, latestGeneralsBefore } from "./caseRecordRepo";
+import {
+  useConsultationGenerals,
+  useConsultationLsmc,
+  usePatientGenerals,
+} from "./useCaseRecord";
+import GeneralsFormSection from "./GeneralsFormSection";
+import LsmcEditor from "./LsmcEditor";
 import { usePatient } from "../patients/usePatients";
 import { msToDateInput, dateInputToMs } from "../../lib/dates";
 import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 
-const DEFAULTS: Partial<ConsultationFormValues> = {
+const formSchema = consultationFormSchema.extend({
+  generals: generalsSchema,
+  lsmc: z.array(lsmcRowSchema),
+});
+
+type FormValues = ConsultationFormValues & {
+  generals: Generals;
+  lsmc: LsmcRowInput[];
+};
+
+const DEFAULTS: Partial<FormValues> = {
   complaint: "",
   diagnosis: "",
   testsRequired: "",
@@ -38,6 +68,8 @@ const DEFAULTS: Partial<ConsultationFormValues> = {
   remarks: "",
   amount: 0,
   paymentMode: "Cash",
+  generals: EMPTY_GENERALS,
+  lsmc: [],
 };
 
 const TEXT_FIELDS: {
@@ -54,6 +86,15 @@ const TEXT_FIELDS: {
   { name: "remarks", label: "Remarks" },
 ];
 
+function SectionHeading({ children }: { children: string }) {
+  return (
+    <Box sx={{ pt: 1 }}>
+      <Typography variant="h6">{children}</Typography>
+      <Divider />
+    </Box>
+  );
+}
+
 export default function ConsultationFormPage() {
   const { patientId, cid } = useParams<{ patientId: string; cid: string }>();
   const isEdit = !!cid;
@@ -62,6 +103,9 @@ export default function ConsultationFormPage() {
   const { showToast } = useToast();
   const { data: patient } = usePatient(patientId);
   const { data: existing } = useConsultation(cid);
+  const patientGenerals = usePatientGenerals(patientId);
+  const visitGenerals = useConsultationGenerals(cid);
+  const visitLsmc = useConsultationLsmc(cid);
   const create = useCreateConsultation(patientId ?? "");
   const update = useUpdateConsultation(patientId ?? "");
 
@@ -70,37 +114,100 @@ export default function ConsultationFormPage() {
     handleSubmit,
     reset,
     register,
-    formState: { errors },
-  } = useForm<ConsultationFormValues>({
-    resolver: zodResolver(consultationFormSchema),
-    defaultValues: { ...DEFAULTS, date: Date.now() } as ConsultationFormValues,
+    setValue,
+    formState: { errors, dirtyFields },
+  } = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: { ...DEFAULTS, date: Date.now() } as FormValues,
   });
 
-  useEffect(() => {
-    if (existing) {
-      reset({
-        date: existing.date,
-        complaint: existing.complaint,
-        diagnosis: existing.diagnosis,
-        testsRequired: existing.testsRequired,
-        remedy: existing.remedy,
-        differentialRemedy: existing.differentialRemedy,
-        followupCriteria: existing.followupCriteria,
-        remarks: existing.remarks,
-        amount: existing.amount,
-        paymentMode: existing.paymentMode,
-      });
-    }
-  }, [existing, reset]);
+  // Generals are saved for a visit only when they differ from what was
+  // pre-filled (the baseline), unless the visit already has its own record.
+  const baseline = useRef<Generals>(EMPTY_GENERALS);
+  const hasOwnGenerals = useRef(false);
+  const loaded = useRef(false);
 
-  const onSubmit = handleSubmit(async (values) => {
+  // New visit: pre-fill from the patient's latest generals (LMP excluded),
+  // without touching fields the doctor has already typed into.
+  const dirtyGenerals = dirtyFields.generals as
+    | Partial<Record<keyof Generals, boolean>>
+    | undefined;
+  useEffect(() => {
+    if (isEdit || loaded.current || !patientGenerals.data) return;
+    loaded.current = true;
+    baseline.current = toBaseline(latestGenerals(patientGenerals.data));
+    for (const k of GENERALS_KEYS) {
+      if (!dirtyGenerals?.[k]) {
+        setValue(`generals.${k}`, baseline.current[k] as never);
+      }
+    }
+  }, [isEdit, patientGenerals.data, dirtyGenerals, setValue]);
+
+  // Edit: load the consultation together with its case record.
+  useEffect(() => {
+    if (
+      loaded.current ||
+      !existing ||
+      visitGenerals.isPending ||
+      visitLsmc.isPending ||
+      patientGenerals.isPending
+    ) {
+      return;
+    }
+    loaded.current = true;
+    const own = visitGenerals.data ?? null;
+    hasOwnGenerals.current = !!own;
+    baseline.current = own
+      ? generalsSchema.parse(own)
+      : toBaseline(
+          latestGeneralsBefore(patientGenerals.data ?? [], existing.date),
+        );
+    reset({
+      generals: baseline.current,
+      lsmc: (visitLsmc.data ?? []).map((r) => ({
+        id: r.id,
+        location: r.location,
+        sensation: r.sensation,
+        modality: r.modality,
+        concomitant: r.concomitant,
+      })),
+      date: existing.date,
+      complaint: existing.complaint,
+      diagnosis: existing.diagnosis,
+      testsRequired: existing.testsRequired,
+      remedy: existing.remedy,
+      differentialRemedy: existing.differentialRemedy,
+      followupCriteria: existing.followupCriteria,
+      remarks: existing.remarks,
+      amount: existing.amount,
+      paymentMode: existing.paymentMode,
+    });
+  }, [
+    existing,
+    visitGenerals.isPending,
+    visitGenerals.data,
+    visitLsmc.isPending,
+    visitLsmc.data,
+    patientGenerals.isPending,
+    patientGenerals.data,
+    reset,
+  ]);
+
+  const onSubmit = handleSubmit(async ({ generals, lsmc, ...values }) => {
+    const record = {
+      generals:
+        hasOwnGenerals.current || !generalsEqual(generals, baseline.current)
+          ? generals
+          : null,
+      lsmc,
+    };
     try {
       if (isEdit && cid) {
         await update.mutateAsync({
           id: cid,
           values,
-          record: { generals: null, lsmc: [] },
-          existingLsmcIds: [],
+          record,
+          existingLsmcIds: (visitLsmc.data ?? []).map((r) => r.id),
         });
         showToast("Consultation updated", "success");
       } else if (patient) {
@@ -111,7 +218,7 @@ export default function ConsultationFormPage() {
             serialNo: patient.serialNo,
           },
           values,
-          record: { generals: null, lsmc: [] },
+          record,
         });
         showToast("Consultation added", "success");
       } else {
@@ -224,6 +331,16 @@ export default function ConsultationFormPage() {
                 </TextField>
               )}
             />
+
+            <SectionHeading>Generals</SectionHeading>
+            <GeneralsFormSection
+              control={control}
+              register={register}
+              showMenstrual={patient?.gender === "Female"}
+            />
+
+            <SectionHeading>LSMC</SectionHeading>
+            <LsmcEditor control={control} register={register} />
 
             <Stack direction="row" spacing={2} justifyContent="flex-end">
               <Button onClick={() => navigate(-1)} disabled={busy}>

@@ -5,7 +5,8 @@ export type GeneralsGroup = {
   title?: string;
   /** Menstrual group: only collected for Female patients. */
   menstrual?: boolean;
-  fields: { key: keyof Generals; label: string }[];
+  /** `formLabel` disambiguates a field on the consultation form. */
+  fields: { key: keyof Generals; label: string; formLabel?: string }[];
 };
 
 export const GENERALS_GROUPS: GeneralsGroup[] = [
@@ -36,7 +37,11 @@ export const GENERALS_GROUPS: GeneralsGroup[] = [
     fields: [
       { key: "perspirationOdour", label: "Odour" },
       { key: "perspirationStaining", label: "Staining" },
-      { key: "perspirationRemarks", label: "Remarks" },
+      {
+        key: "perspirationRemarks",
+        label: "Remarks",
+        formLabel: "Perspiration remarks",
+      },
     ],
   },
   {
