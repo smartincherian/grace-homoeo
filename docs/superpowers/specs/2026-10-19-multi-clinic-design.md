@@ -114,7 +114,7 @@ Default Credentials). Arguments: `--clinic grace-homoeo --name "Grace Homoeo"
 4. Set `clinicId: "grace-homoeo"` on every `allowedEmails` doc lacking one.
 5. Print source vs destination counts per collection; `--dry-run` prints counts only.
 
-Re-running is safe (same IDs, `set` overwrites with identical data).
+The script aborts (exit 1) if the destination already has data, because a re-run would overwrite live edits with stale legacy copies. `--resync` overrides this and is only for a re-run BEFORE the new rules are deployed; never after cutover. The counter is written as max(source, existing destination) `lastSerial`. Verification compares every source doc ID against the destination and exits 1 on any missing doc; a missing source counter with existing patients is a hard error. `--project` is mandatory unless `FIRESTORE_EMULATOR_HOST` is set.
 
 **Cutover order:** run script → verify counts → deploy rules + hosting together
 (`firebase deploy --only firestore:rules,hosting`) → check the app → delete legacy

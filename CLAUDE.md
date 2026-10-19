@@ -22,7 +22,7 @@ npm run format       # prettier --write .
 npm run emulators    # firebase emulators:start --only firestore,auth
 npm run release      # build + firebase deploy --only hosting
 npm run test:rules   # Firestore rules tests (needs the Firestore emulator)
-npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-run] [--project ...]  # copy legacy data into clinics/{id}
+npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-run] [--resync] --project grace-homoeo  # copy legacy data into clinics/{id}
 ```
 
 ## Architecture
@@ -37,7 +37,7 @@ npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-ru
 
 ## Data model (Firestore)
 
-**Multi-clinic:** all clinic data lives under `clinics/{clinicId}/…` (`patients, consultations, generals, lsmc, inventory, orderItems, expenses, counters/patients`); `clinics/{clinicId}` holds `{ name, createdAt }` and the slug is the doc ID. `allowedEmails/{email}` carries `clinicId` (one clinic per email); `users/{uid}` stays top-level. Collection descriptions below are per clinic. See `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`. Cutover order: `npm run migrate:clinics` (dry run, then real) -> verify counts -> `firebase deploy --only firestore:rules,hosting` immediately -> delete legacy top-level collections later.
+**Multi-clinic:** all clinic data lives under `clinics/{clinicId}/…` (`patients, consultations, generals, lsmc, inventory, orderItems, expenses, counters/patients`); `clinics/{clinicId}` holds `{ name, createdAt }` and the slug is the doc ID. `allowedEmails/{email}` carries `clinicId` (one clinic per email); `users/{uid}` stays top-level. Collection descriptions below are per clinic. See `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`. Cutover order: `npm run migrate:clinics` (dry run, then real) -> verify (every source doc ID must exist at the destination; re-run only with `--resync`, only BEFORE deploying, never after) -> `firebase deploy --only firestore:rules,hosting` immediately -> delete legacy top-level collections later.
 
 Target collections (see the design spec for full field lists):
 

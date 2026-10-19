@@ -119,7 +119,7 @@ Spec: `docs/superpowers/specs/2026-10-19-multi-clinic-design.md`; plan: `docs/su
 
 0. Pre-check: in Firebase Console -> Authentication -> Sign-in method, confirm Email/Password **self sign-up is disabled**. The rules trust password accounts without email verification, so open sign-up would let someone register an allow-listed email that has no account yet.
 1. `gcloud auth application-default login` (or a service-account key) for the `grace-homoeo` project.
-2. `npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" --dry-run`, then again without `--dry-run`; confirm source vs destination counts match (exit code 1 if any destination is short). Re-running is safe.
+2. `npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" --project grace-homoeo --dry-run`, then again without `--dry-run`; the table must show `missing 0` everywhere (exit 1 otherwise). `--project` is required for real Firestore. The script aborts if the destination already has data; use `--resync` only for a re-run BEFORE deploying the new rules, never after cutover (it would overwrite live edits).
 3. Immediately `npm run build && firebase deploy --only firestore:rules,hosting`. Between the script and the deploy new writes still go to the old collections, so deploy straight after (or re-run the script right before deploying).
 4. Sign in as the doctor -> lands on `/grace-homoeo/patients` with all data; sign in as superadmin -> `/admin`.
 5. After a few days of normal use, delete the legacy top-level collections in the Firebase console.
