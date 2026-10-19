@@ -25,6 +25,7 @@ import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import ScriptureBanner from "./ScriptureBanner";
 import logo from "../assets/logo.png";
 import { LINE, TOKENS, initials } from "../theme/theme";
+import { isSuperadmin } from "../lib/access";
 
 const NAV = [
   { to: "/patients", label: "Patients", icon: <PeopleIcon /> },
@@ -99,6 +100,16 @@ function ShellInner({ children }: { children?: ReactNode }) {
       {user?.email && (
         <MenuItem disabled>
           <MenuItemText primary={user.email} />
+        </MenuItem>
+      )}
+      {isSuperadmin(user?.email) && (
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            navigate("/access");
+          }}
+        >
+          Manage access
         </MenuItem>
       )}
       <MenuItem onClick={handleSignOut}>Sign out</MenuItem>

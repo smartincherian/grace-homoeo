@@ -1,6 +1,7 @@
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "../../lib/firebase";
+import { isSuperadmin } from "../../lib/access";
 
 export async function ensureUserDoc(user: User): Promise<void> {
   const ref = doc(db, "users", user.uid);
@@ -10,6 +11,6 @@ export async function ensureUserDoc(user: User): Promise<void> {
     uid: user.uid,
     email: user.email ?? "",
     displayName: user.displayName ?? "",
-    role: "admin",
+    role: isSuperadmin(user.email) ? "superadmin" : "admin",
   });
 }

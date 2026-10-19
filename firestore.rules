@@ -2,11 +2,34 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function authEmail() { return request.auth.token.get('email', '').lower(); }
+    // Google accounts carry a verified email; password accounts are created by
+    // the superadmin, so they are trusted without verification.
+    function verified() {
+      return request.auth.token.get('email_verified', false) == true
+        || request.auth.token.firebase.sign_in_provider == 'password';
+    }
+    // Keep in sync with SUPERADMIN_EMAIL in src/lib/access.ts.
+    function superadmin() {
+      return signedIn() && verified() && authEmail() == 'smartin.cherian@gmail.com';
+    }
+    function allowed() {
+      return signedIn() && verified() && (
+        superadmin()
+        || exists(/databases/$(database)/documents/allowedEmails/$(authEmail()))
+      );
+    }
     // role() reserved for future per-collection tightening:
     // function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
 
-    match /{document=**} {
-      allow read, write: if signedIn();
+    // The allow list: anyone may check their own entry; only the superadmin manages it.
+    match /allowedEmails/{email} {
+      allow get: if signedIn() && verified() && email == authEmail();
+      allow read, write: if superadmin();
+    }
+
+    match /{collection}/{document=**} {
+      allow read, write: if collection != 'allowedEmails' && allowed();
     }
   }
 }
