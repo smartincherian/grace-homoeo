@@ -23,45 +23,13 @@ import ConsultationFields from "./ConsultationFields";
 import type { Consultation } from "./consultationSchema";
 import { daysAgoLabel, formatDate } from "../../lib/dates";
 import { accentFor } from "../../theme/theme";
+import { Cell, tableSx, WIDE_ONLY } from "./tableStyles";
 
 interface Props {
   consultations: Consultation[];
   patientId: string;
   /** When given, a row click calls this instead of opening the details drawer. */
   onSelect?: (id: string) => void;
-}
-
-// Columns hidden on phones so the table fits without sideways scrolling.
-const WIDE_ONLY = { display: { xs: "none", sm: "table-cell" } };
-
-// Header labels match the overline labels used on the cards above.
-const TABLE_SX = {
-  "& th": {
-    fontSize: 11,
-    fontWeight: 700,
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "text.secondary",
-    bgcolor: "rgba(46,115,214,0.04)",
-    py: 1.25,
-  },
-  "& td": { py: 1.25, verticalAlign: "top" },
-  "& tbody tr": { cursor: "pointer" },
-  "& tbody tr:hover": { bgcolor: "rgba(46,115,214,0.06) !important" },
-  "& tbody tr:last-of-type td": { borderBottom: 0 },
-};
-
-function Cell({ value, strong }: { value: string; strong?: boolean }) {
-  return value ? (
-    <Typography
-      sx={{ fontSize: 14, fontWeight: strong ? 600 : 400 }}
-      color={strong ? "primary" : "text.primary"}
-    >
-      {value}
-    </Typography>
-  ) : (
-    <Typography sx={{ fontSize: 14, color: "text.disabled" }}>—</Typography>
-  );
 }
 
 export default function ConsultationHistory({
@@ -76,7 +44,7 @@ export default function ConsultationHistory({
     <>
       <Card>
         <TableContainer>
-          <Table size="small" sx={TABLE_SX}>
+          <Table size="small" sx={tableSx(true)}>
             <TableHead>
               <TableRow>
                 <TableCell>Date</TableCell>

@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+
+vi.mock("./useCaseRecord", () => ({
+  useConsultationGenerals: () => ({ data: null }),
+  useConsultationLsmc: () => ({ data: [] }),
+}));
 import ConsultationHistory from "./ConsultationHistory";
 import type { Consultation } from "./consultationSchema";
 

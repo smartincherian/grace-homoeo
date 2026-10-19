@@ -4,6 +4,11 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
+vi.mock("./useCaseRecord", () => ({
+  useConsultationGenerals: () => ({ data: null }),
+  useConsultationLsmc: () => ({ data: [] }),
+}));
+
 const { current, DAY } = vi.hoisted(() => ({
   DAY: 86_400_000,
   current: {
