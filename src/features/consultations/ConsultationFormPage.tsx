@@ -30,9 +30,6 @@ import { useSetPageTitle } from "../../components/PageChrome";
 
 const DEFAULTS: Partial<ConsultationFormValues> = {
   complaint: "",
-  generals: "",
-  allergy: "",
-  history: "",
   diagnosis: "",
   testsRequired: "",
   remedy: "",
@@ -49,9 +46,6 @@ const TEXT_FIELDS: {
   helper?: string;
 }[] = [
   { name: "complaint", label: "Complaint" },
-  { name: "generals", label: "Generals" },
-  { name: "allergy", label: "Allergy" },
-  { name: "history", label: "History" },
   { name: "diagnosis", label: "Diagnosis" },
   { name: "testsRequired", label: "Tests required" },
   { name: "remedy", label: "Prescription", helper: "Medicine with dosage" },
@@ -87,9 +81,6 @@ export default function ConsultationFormPage() {
       reset({
         date: existing.date,
         complaint: existing.complaint,
-        generals: existing.generals,
-        allergy: existing.allergy,
-        history: existing.history,
         diagnosis: existing.diagnosis,
         testsRequired: existing.testsRequired,
         remedy: existing.remedy,

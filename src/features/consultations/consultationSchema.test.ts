@@ -18,7 +18,7 @@ describe("consultationFormSchema", () => {
       ...CLINICAL,
     });
     expect(parsed.amount).toBe(200);
-    expect(parsed.generals).toBe(""); // defaulted
+    expect(parsed.remarks).toBe(""); // defaulted
     expect(parsed.differentialRemedy).toBe(""); // optional, defaulted
   });
   it("defaults every clinical field to empty when omitted", () => {
@@ -32,6 +32,19 @@ describe("consultationFormSchema", () => {
     expect(parsed.remedy).toBe("");
     expect(parsed.differentialRemedy).toBe("");
     expect(parsed.followupCriteria).toBe("");
+  });
+  it("no longer carries the legacy generals/allergy/history fields", () => {
+    const parsed = consultationFormSchema.parse({
+      date: 1,
+      amount: 0,
+      paymentMode: "Cash",
+      generals: "x",
+      allergy: "y",
+      history: "z",
+    });
+    expect(parsed).not.toHaveProperty("generals");
+    expect(parsed).not.toHaveProperty("allergy");
+    expect(parsed).not.toHaveProperty("history");
   });
   it("rejects a negative amount", () => {
     expect(() =>

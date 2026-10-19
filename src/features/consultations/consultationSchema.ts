@@ -12,9 +12,6 @@ export const consultationFormSchema = z.object({
     .int()
     .nonnegative(),
   complaint: z.string().trim().default(""),
-  generals: z.string().trim().default(""),
-  allergy: z.string().trim().default(""),
-  history: z.string().trim().default(""),
   diagnosis: z.string().trim().default(""),
   testsRequired: z.string().trim().default(""),
   // Stored as `remedy` for backward compatibility; shown as "Prescription"
@@ -34,6 +31,10 @@ export const consultationFormSchema = z.object({
 export type ConsultationFormValues = z.infer<typeof consultationFormSchema>;
 
 export interface Consultation extends ConsultationFormValues {
+  // Legacy per-visit text, no longer collected by the form but still displayed.
+  generals?: string;
+  allergy?: string;
+  history?: string;
   id: string;
   patientId: string;
   patientName: string;
