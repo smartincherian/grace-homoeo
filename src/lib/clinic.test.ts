@@ -12,6 +12,7 @@ import {
   clinicCollection,
   clinicDoc,
   getActiveClinic,
+  peekActiveClinic,
   isValidSlug,
   setActiveClinic,
   slugify,
@@ -30,6 +31,12 @@ describe("active clinic", () => {
     expect(getActiveClinic()).toBe("grace-homoeo");
     setActiveClinic(null);
     expect(() => getActiveClinic()).toThrow("No active clinic");
+  });
+
+  it("peeks at the active clinic without throwing", () => {
+    expect(peekActiveClinic()).toBeNull();
+    setActiveClinic("grace-homoeo");
+    expect(peekActiveClinic()).toBe("grace-homoeo");
   });
 
   it("scopes collection and doc refs under the active clinic", () => {

@@ -113,3 +113,22 @@ test("sends the superadmin at a reserved word like /access to admin", () => {
   expect(spy).not.toHaveBeenCalledWith("access");
   spy.mockRestore();
 });
+
+test("switching clinics through /admin still clears clinic data", async () => {
+  state.membership = { superadmin: true, clinicId: null };
+  const qc = new QueryClient();
+  qc.setQueryData(["access", "uid1"], state.membership);
+  qc.setQueryData(["patients"], [{ id: "p1" }]);
+  renderAt("/c1/patients", qc);
+  expect(screen.getByText("child of c1")).toBeInTheDocument();
+
+  act(() => navigateTo("/admin"));
+  expect(screen.getByText("admin page")).toBeInTheDocument();
+  expect(qc.getQueryData(["patients"])).toBeDefined();
+
+  act(() => navigateTo("/c2/patients"));
+
+  expect(await screen.findByText("child of c2")).toBeInTheDocument();
+  expect(qc.getQueryData(["patients"])).toBeUndefined();
+  expect(qc.getQueryData(["access", "uid1"])).toEqual(state.membership);
+});

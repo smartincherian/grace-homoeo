@@ -34,6 +34,11 @@ export function getActiveClinic(): string {
   return active;
 }
 
+/** The active clinic, or null when none is set (never throws). */
+export function peekActiveClinic(): string | null {
+  return active;
+}
+
 export function clinicCollection(name: string): CollectionReference {
   return collection(db, CLINICS, getActiveClinic(), name);
 }

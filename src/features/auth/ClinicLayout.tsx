@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useReducer } from "react";
 import {
   Link as RouterLink,
   Navigate,
@@ -7,7 +7,11 @@ import {
 } from "react-router-dom";
 import { Box, Link, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
-import { RESERVED_SLUGS, setActiveClinic } from "../../lib/clinic";
+import {
+  RESERVED_SLUGS,
+  peekActiveClinic,
+  setActiveClinic,
+} from "../../lib/clinic";
 import { useClinic } from "../../lib/clinicQueries";
 import { useMembership } from "./AuthGuard";
 import HomeRedirect from "./HomeRedirect";
@@ -28,18 +32,20 @@ export default function ClinicLayout() {
     !!clinicSlug &&
     !reserved &&
     (membership.superadmin || clinicSlug === membership.clinicId);
-  // The clinic whose data the cache holds; children render only once it matches.
-  const [readySlug, setReadySlug] = useState(allowed ? clinicSlug : undefined);
+  // The module-level active clinic survives leaving clinic routes (e.g. via /admin),
+  // so it tells us whose data the cache holds. Children wait until it is cleared.
+  const previous = peekActiveClinic();
+  const switching = allowed && previous !== null && previous !== clinicSlug;
+  const [, rerender] = useReducer((n: number) => n + 1, 0);
 
   useEffect(() => {
-    if (!allowed || readySlug === clinicSlug) return;
-    if (readySlug) {
-      queryClient.removeQueries({
-        predicate: (q) => !GLOBAL_QUERIES.includes(String(q.queryKey[0])),
-      });
-    }
-    setReadySlug(clinicSlug);
-  }, [allowed, clinicSlug, readySlug, queryClient]);
+    if (!switching) return;
+    queryClient.removeQueries({
+      predicate: (q) => !GLOBAL_QUERIES.includes(String(q.queryKey[0])),
+    });
+    setActiveClinic(clinicSlug!);
+    rerender();
+  }, [switching, clinicSlug, queryClient]);
 
   if (!membership || !clinicSlug) return null;
   if (reserved) return <HomeRedirect />;
@@ -58,7 +64,7 @@ export default function ClinicLayout() {
       </Box>
     );
   }
-  if (readySlug !== clinicSlug) return null;
+  if (switching) return null;
 
   // Set during render so the child's queries in this same render see the clinic.
   setActiveClinic(clinicSlug);
