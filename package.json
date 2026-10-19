@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "emulators": "firebase emulators:start --only firestore,auth",
-    "release": "npm run build && firebase deploy --only hosting"
+    "release": "npm run build && firebase deploy --only hosting",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-grace \"vitest run --config vitest.rules.config.ts\""
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
@@ -30,6 +31,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^3.0.4",
     "@testing-library/jest-dom": "^6.5.0",
     "@testing-library/react": "^16.0.1",
     "@testing-library/user-event": "^14.5.2",
