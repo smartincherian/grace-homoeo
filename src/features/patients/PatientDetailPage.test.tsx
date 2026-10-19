@@ -58,6 +58,22 @@ describe("PatientDetailPage", () => {
     expect(screen.getByText(/Asha/)).toBeInTheDocument();
     expect(screen.getByText(/#7/)).toBeInTheDocument();
     expect(screen.getByText(/fever/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bryonia/)).toBeInTheDocument();
+    expect(screen.getByRole("table")).toHaveTextContent("Bryonia");
+  });
+
+  it("shows the last consultation date, how long ago, and the last prescription", () => {
+    render(
+      <MemoryRouter initialEntries={["/patients/p1"]}>
+        <Routes>
+          <Route path="/patients/:id" element={<PatientDetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("Last consultation")).toBeInTheDocument();
+    // Once in the header, once in the history table.
+    expect(screen.getAllByText("1 Jan 2000")).toHaveLength(2);
+    expect(screen.getAllByText(/days ago/)).toHaveLength(2);
+    expect(screen.getByText("Last prescribed")).toBeInTheDocument();
+    expect(screen.getAllByText(/Bryonia/).length).toBeGreaterThan(1);
   });
 });

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calcAge, formatDate, msToDateInput, dateInputToMs } from "./dates";
+import {
+  calcAge,
+  formatDate,
+  msToDateInput,
+  dateInputToMs,
+  daysAgoLabel,
+} from "./dates";
 
 const ms = (s: string) => dateInputToMs(s);
 
@@ -25,5 +31,21 @@ describe("date <-> input round trip", () => {
   it("msToDateInput then dateInputToMs is stable", () => {
     const start = ms("2024-02-29");
     expect(dateInputToMs(msToDateInput(start))).toBe(start);
+  });
+});
+
+describe("daysAgoLabel", () => {
+  const now = ms("2026-10-19") + 15 * 3600 * 1000; // 3 PM
+  it("says Today for the same calendar day", () => {
+    expect(daysAgoLabel(ms("2026-10-19"), now)).toBe("Today");
+  });
+  it("says Yesterday for the previous calendar day", () => {
+    expect(daysAgoLabel(ms("2026-10-18"), now)).toBe("Yesterday");
+  });
+  it("counts whole calendar days otherwise", () => {
+    expect(daysAgoLabel(ms("2026-10-12"), now)).toBe("7 days ago");
+  });
+  it("handles a future date", () => {
+    expect(daysAgoLabel(ms("2026-10-21"), now)).toBe("In 2 days");
   });
 });

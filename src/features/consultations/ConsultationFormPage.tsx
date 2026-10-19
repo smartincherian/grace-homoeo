@@ -33,18 +33,30 @@ const DEFAULTS: Partial<ConsultationFormValues> = {
   generals: "",
   allergy: "",
   history: "",
+  diagnosis: "",
+  testsRequired: "",
   remedy: "",
+  differentialRemedy: "",
+  followupCriteria: "",
   remarks: "",
   amount: 0,
   paymentMode: "Cash",
 };
 
-const TEXT_FIELDS: { name: keyof ConsultationFormValues; label: string }[] = [
+const TEXT_FIELDS: {
+  name: keyof ConsultationFormValues;
+  label: string;
+  helper?: string;
+}[] = [
   { name: "complaint", label: "Complaint" },
   { name: "generals", label: "Generals" },
   { name: "allergy", label: "Allergy" },
   { name: "history", label: "History" },
-  { name: "remedy", label: "Remedy" },
+  { name: "diagnosis", label: "Diagnosis" },
+  { name: "testsRequired", label: "Tests required" },
+  { name: "remedy", label: "Prescription", helper: "Medicine with dosage" },
+  { name: "differentialRemedy", label: "Differential remedy" },
+  { name: "followupCriteria", label: "Followup criteria" },
   { name: "remarks", label: "Remarks" },
 ];
 
@@ -78,7 +90,11 @@ export default function ConsultationFormPage() {
         generals: existing.generals,
         allergy: existing.allergy,
         history: existing.history,
+        diagnosis: existing.diagnosis,
+        testsRequired: existing.testsRequired,
         remedy: existing.remedy,
+        differentialRemedy: existing.differentialRemedy,
+        followupCriteria: existing.followupCriteria,
         remarks: existing.remarks,
         amount: existing.amount,
         paymentMode: existing.paymentMode,
@@ -104,7 +120,11 @@ export default function ConsultationFormPage() {
       } else {
         return; // patient not loaded yet
       }
-      navigate(`/patients/${patientId}`);
+      navigate(
+        isEdit
+          ? `/patients/${patientId}/consultations/${cid}`
+          : `/patients/${patientId}`,
+      );
     } catch {
       showToast("Could not save consultation. Please try again.", "error");
     }
@@ -162,6 +182,7 @@ export default function ConsultationFormPage() {
                 multiline
                 minRows={1}
                 {...register(f.name)}
+                helperText={f.helper}
               />
             ))}
 

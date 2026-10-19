@@ -6,6 +6,7 @@ import PatientListPage from "./features/patients/PatientListPage";
 import PatientDetailPage from "./features/patients/PatientDetailPage";
 import PatientFormPage from "./features/patients/PatientFormPage";
 import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
+import ConsultationDetailPage from "./features/consultations/ConsultationDetailPage";
 import InventoryListPage from "./features/inventory/InventoryListPage";
 import InventoryFormPage from "./features/inventory/InventoryFormPage";
 import FundsPage from "./features/funds/FundsPage";
@@ -30,6 +31,10 @@ export default function App() {
         <Route
           path="/patients/:patientId/consultations/new"
           element={<ConsultationFormPage />}
+        />
+        <Route
+          path="/patients/:patientId/consultations/:cid"
+          element={<ConsultationDetailPage />}
         />
         <Route
           path="/patients/:patientId/consultations/:cid/edit"

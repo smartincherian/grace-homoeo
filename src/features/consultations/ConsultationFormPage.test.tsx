@@ -42,6 +42,7 @@ describe("ConsultationFormPage (create)", () => {
       target: { value: "2026-06-17" },
     });
     await user.type(screen.getByLabelText(/complaint/i), "fever");
+    await user.type(screen.getByLabelText(/^prescription/i), "Bryonia 30");
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(mutateAsync).toHaveBeenCalledTimes(1);
     const arg = mutateAsync.mock.calls[0][0];
@@ -49,5 +50,7 @@ describe("ConsultationFormPage (create)", () => {
     expect(arg.values.complaint).toBe("fever");
     expect(arg.values.paymentMode).toBe("Cash");
     expect(arg.values.date).toBe(dateInputToMs("2026-06-17"));
+    expect(arg.values.remedy).toBe("Bryonia 30");
+    expect(arg.values.differentialRemedy).toBe("");
   });
 });
