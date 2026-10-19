@@ -24,7 +24,7 @@ const emailSchema = z.string().trim().email();
 
 export default function AccessPage() {
   useSetPageTitle("Manage access");
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { status, data } = useAllowedEmails();
   const add = useAddAllowedEmail();
   const remove = useRemoveAllowedEmail();
@@ -33,6 +33,8 @@ export default function AccessPage() {
   const [error, setError] = useState("");
   const [toRemove, setToRemove] = useState<string | null>(null);
 
+  // useAuth starts with no user, so wait for it before deciding to redirect.
+  if (loading) return null;
   if (!isSuperadmin(user?.email)) return <Navigate to="/patients" replace />;
 
   const submit = (e: React.FormEvent) => {
