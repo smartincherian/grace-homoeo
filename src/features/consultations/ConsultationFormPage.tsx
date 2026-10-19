@@ -96,7 +96,12 @@ export default function ConsultationFormPage() {
   const onSubmit = handleSubmit(async (values) => {
     try {
       if (isEdit && cid) {
-        await update.mutateAsync({ id: cid, values });
+        await update.mutateAsync({
+          id: cid,
+          values,
+          record: { generals: null, lsmc: [] },
+          existingLsmcIds: [],
+        });
         showToast("Consultation updated", "success");
       } else if (patient) {
         await create.mutateAsync({
@@ -106,6 +111,7 @@ export default function ConsultationFormPage() {
             serialNo: patient.serialNo,
           },
           values,
+          record: { generals: null, lsmc: [] },
         });
         showToast("Consultation added", "success");
       } else {
