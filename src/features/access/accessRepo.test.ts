@@ -29,10 +29,11 @@ beforeEach(() => {
 
 describe("accessRepo", () => {
   it("adds an email keyed by its lowercased form", async () => {
-    await addAllowedEmail(" Dr@Clinic.com ", "smartin.cherian@gmail.com");
+    await addAllowedEmail(" Dr@Clinic.com ", "c1", "smartin.cherian@gmail.com");
     expect(doc).toHaveBeenCalledWith({}, "allowedEmails", "dr@clinic.com");
     const payload = setDoc.mock.calls[0][1] as Record<string, unknown>;
     expect(payload.email).toBe("dr@clinic.com");
+    expect(payload.clinicId).toBe("c1");
     expect(payload.addedBy).toBe("smartin.cherian@gmail.com");
     expect(typeof payload.addedAt).toBe("number");
   });
@@ -46,6 +47,14 @@ describe("accessRepo", () => {
     });
     const list = await listAllowedEmails();
     expect(list.map((e) => e.email)).toEqual(["amy@x.com", "zed@x.com"]);
+  });
+
+  it("maps a missing clinicId to an empty string", async () => {
+    getDocs.mockResolvedValue({
+      docs: [{ id: "a@x.com", data: () => ({ addedAt: 1, addedBy: "s" }) }],
+    });
+    const list = await listAllowedEmails();
+    expect(list[0].clinicId).toBe("");
   });
 
   it("removes by lowercased email", async () => {

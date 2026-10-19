@@ -15,8 +15,8 @@ export function useAllowedEmails() {
 export function useAddAllowedEmail() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ email, addedBy }: { email: string; addedBy: string }) =>
-      addAllowedEmail(email, addedBy),
+    mutationFn: ({ email, clinicId, addedBy }: { email: string; clinicId: string; addedBy: string }) =>
+      addAllowedEmail(email, clinicId, addedBy),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["allowedEmails"] });
     },

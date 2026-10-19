@@ -16,15 +16,31 @@ export function isSuperadmin(email: string | null | undefined): boolean {
   return !!email && normalizeEmail(email) === SUPERADMIN_EMAIL;
 }
 
-/** True when the signed-in user is the superadmin or their email is on the allow list. */
-export async function hasAccess(user: User): Promise<boolean> {
-  if (!user.email) return false;
-  if (isSuperadmin(user.email)) return true;
+export type Membership = { superadmin: boolean; clinicId: string | null };
+
+/**
+ * Resolves what the signed-in user may access: superadmin, a member of one clinic
+ * (via their allow-list entry), or null (no access, or the read was denied).
+ */
+export async function getMembership(user: User): Promise<Membership | null> {
+  if (!user.email) return null;
+  if (isSuperadmin(user.email)) return { superadmin: true, clinicId: null };
   try {
     const snap = await getDoc(doc(db, ALLOWED_EMAILS, normalizeEmail(user.email)));
-    return snap.exists();
+    if (!snap.exists()) return null;
+    const clinicId = snap.data()?.clinicId;
+    return typeof clinicId === "string" && clinicId ? { superadmin: false, clinicId } : null;
   } catch {
     // Rules deny the read for unverified accounts — treat as no access.
-    return false;
+    return null;
   }
+}
+
+export function homePath(m: Membership): string {
+  return m.superadmin ? "/admin" : `/${m.clinicId}/patients`;
+}
+
+/** Temporary: removed in Task 4 once AuthGuard/LoginPage use getMembership. */
+export async function hasAccess(user: User): Promise<boolean> {
+  return Boolean(await getMembership(user));
 }

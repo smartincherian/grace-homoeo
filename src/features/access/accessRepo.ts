@@ -11,6 +11,7 @@ import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
 
 export interface AllowedEmail {
   email: string;
+  clinicId: string;
   addedAt: number;
   addedBy: string;
 }
@@ -23,6 +24,7 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
       const data = d.data() as DocumentData;
       return {
         email: d.id,
+        clinicId: data.clinicId ?? "",
         addedAt: data.addedAt ?? 0,
         addedBy: data.addedBy ?? "",
       };
@@ -32,11 +34,13 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
 
 export async function addAllowedEmail(
   email: string,
+  clinicId: string,
   addedBy: string,
 ): Promise<void> {
   const id = normalizeEmail(email);
   await setDoc(doc(db, ALLOWED_EMAILS, id), {
     email: id,
+    clinicId,
     addedAt: Date.now(),
     addedBy,
   });

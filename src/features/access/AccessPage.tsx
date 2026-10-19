@@ -49,7 +49,7 @@ export default function AccessPage() {
       return;
     }
     add.mutate(
-      { email: value, addedBy: user?.email ?? "" },
+      { email: value, clinicId: "", addedBy: user?.email ?? "" },
       {
         onSuccess: () => {
           setEmail("");

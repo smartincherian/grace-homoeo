@@ -8,7 +8,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("./firebase", () => ({ db: {} }));
 
-import { hasAccess, isSuperadmin, normalizeEmail } from "./access";
+import { getMembership, homePath, isSuperadmin, normalizeEmail } from "./access";
 
 const user = (email: string | null) => ({ uid: "u1", email }) as never;
 
@@ -28,26 +28,44 @@ describe("normalizeEmail / isSuperadmin", () => {
   });
 });
 
-describe("hasAccess", () => {
-  it("lets the superadmin in without a lookup", async () => {
-    expect(await hasAccess(user("smartin.cherian@gmail.com"))).toBe(true);
+describe("getMembership", () => {
+  it("treats the superadmin as superadmin without a lookup", async () => {
+    expect(await getMembership(user("smartin.cherian@gmail.com"))).toEqual({
+      superadmin: true,
+      clinicId: null,
+    });
     expect(getDoc).not.toHaveBeenCalled();
   });
 
-  it("checks the allow list by lowercased email", async () => {
-    getDoc.mockResolvedValue({ exists: () => true });
-    expect(await hasAccess(user("Dr@Clinic.com"))).toBe(true);
+  it("returns the clinic from the allow-list entry", async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ clinicId: "grace-homoeo" }) });
+    expect(await getMembership(user("Dr@Clinic.com"))).toEqual({
+      superadmin: false,
+      clinicId: "grace-homoeo",
+    });
     expect(doc).toHaveBeenCalledWith({}, "allowedEmails", "dr@clinic.com");
   });
 
-  it("denies emails not on the list", async () => {
-    getDoc.mockResolvedValue({ exists: () => false });
-    expect(await hasAccess(user("stranger@gmail.com"))).toBe(false);
+  it("returns null for an entry without clinicId", async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => ({}) });
+    expect(await getMembership(user("a@b.com"))).toBeNull();
   });
 
-  it("denies when the lookup is rejected or there is no email", async () => {
+  it("returns null for a missing entry", async () => {
+    getDoc.mockResolvedValue({ exists: () => false, data: () => undefined });
+    expect(await getMembership(user("stranger@gmail.com"))).toBeNull();
+  });
+
+  it("returns null when the lookup rejects or there is no email", async () => {
     getDoc.mockRejectedValue(new Error("permission-denied"));
-    expect(await hasAccess(user("x@y.com"))).toBe(false);
-    expect(await hasAccess(user(null))).toBe(false);
+    expect(await getMembership(user("x@y.com"))).toBeNull();
+    expect(await getMembership(user(null))).toBeNull();
+  });
+});
+
+describe("homePath", () => {
+  it("routes superadmin to /admin and members to their clinic", () => {
+    expect(homePath({ superadmin: true, clinicId: null })).toBe("/admin");
+    expect(homePath({ superadmin: false, clinicId: "c1" })).toBe("/c1/patients");
   });
 });
