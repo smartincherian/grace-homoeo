@@ -27,6 +27,10 @@ const useClinic = vi.hoisted(() => vi.fn());
 vi.mock("../lib/clinicQueries", () => ({
   useClinic: (id: string | undefined) => useClinic(id),
 }));
+const useBranding = vi.hoisted(() => vi.fn());
+vi.mock("../lib/useBranding", () => ({
+  useBranding: (id: string | undefined) => useBranding(id),
+}));
 const membership = vi.hoisted(() => ({
   value: { superadmin: true, clinicId: null, owner: false } as {
     superadmin: boolean;
@@ -45,6 +49,8 @@ vi.mock("../lib/clinic", () => ({
 beforeEach(() => {
   membership.value = { superadmin: true, clinicId: null, owner: false };
   setActiveClinic.mockClear();
+  useBranding.mockReset();
+  useBranding.mockReturnValue({ data: undefined });
   useClinic.mockReset();
   useClinic.mockImplementation((id: string | undefined) => ({
     data: id ? { id, name: `Clinic ${id}`, createdAt: 0 } : undefined,
@@ -190,4 +196,48 @@ test("hides People from a non-owner member", async () => {
   renderShell(["/c1/patients"]);
   await user.click(screen.getByRole("button", { name: /account/i }));
   expect(screen.queryByRole("menuitem", { name: "People" })).toBeNull();
+});
+
+const branded = (over: object) => ({
+  data: {
+    displayName: "Teal Clinic",
+    logoDataUrl: "",
+    primaryColor: "#0f766e",
+    showScripture: true,
+    contact: {},
+    ...over,
+  },
+});
+
+test("shows the branding display name and an initial tile without a logo", () => {
+  useBranding.mockReturnValue(branded({}));
+  renderShell(["/c1/patients"]);
+  expect(screen.getAllByText("Teal Clinic").length).toBeGreaterThan(0);
+  expect(screen.getByText("T")).toBeInTheDocument();
+  expect(screen.queryByText("Clinic c1")).toBeNull();
+});
+
+test("shows the clinic logo image when one is set", () => {
+  useBranding.mockReturnValue(
+    branded({ logoDataUrl: "data:image/png;base64,AA" }),
+  );
+  renderShell(["/c1/patients"]);
+  expect(screen.getByRole("img", { name: "Teal Clinic" })).toHaveAttribute(
+    "src",
+    "data:image/png;base64,AA",
+  );
+});
+
+test("hides scripture but keeps the footer when branding turns it off", () => {
+  useBranding.mockReturnValue(branded({ showScripture: false }));
+  renderShell(["/c1/patients"]);
+  expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  expect(screen.queryByText(/—/)).toBeNull();
+});
+
+test("shows HomoeoDesk and no clinic name on the admin page", () => {
+  renderShell(["/admin"]);
+  expect(screen.getAllByText("HomoeoDesk").length).toBeGreaterThan(0);
+  expect(screen.queryByText(/^Clinic /)).toBeNull();
+  expect(useBranding).not.toHaveBeenCalledWith("admin");
 });

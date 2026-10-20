@@ -35,7 +35,11 @@ import SetPasswordDialog, {
 import { setActiveClinic } from "../lib/clinic";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import BottomDock from "./BottomDock";
-import logo from "../assets/logo.png";
+import BrandScope from "./BrandScope";
+import ClinicMark from "./ClinicMark";
+import ProductMark from "./ProductMark";
+import { DEFAULT_BRANDING, displayNameOf } from "../lib/branding";
+import { useBranding } from "../lib/useBranding";
 import { LINE, TOKENS, initials } from "../theme/theme";
 import { canManageClinic, isSuperadmin } from "../lib/access";
 import { useClinic } from "../lib/clinicQueries";
@@ -48,28 +52,13 @@ const NAV = [
 ];
 const SIDEBAR_WIDTH = 244;
 
-function LogoTile({ size = 36 }: { size?: number }) {
-  return (
-    <Box
-      sx={{
-        width: size,
-        height: size,
-        flex: "none",
-        borderRadius: `${Math.round(size * 0.3)}px`,
-        background: "linear-gradient(135deg, var(--brand-300), var(--brand))",
-        color: "#fff",
-        display: "grid",
-        placeItems: "center",
-        fontWeight: 800,
-        fontSize: size * 0.44,
-      }}
-    >
-      G
-    </Box>
-  );
-}
-
-function ShellInner({ children }: { children?: ReactNode }) {
+function ShellInner({
+  children,
+  clinicId,
+}: {
+  children?: ReactNode;
+  clinicId: string | undefined;
+}) {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const { pathname } = useLocation();
@@ -80,12 +69,23 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const current = NAV.find((n) => n.to === section)?.to ?? "patients";
   const isRoot = !clinicSlug || NAV.some((n) => sectionHref(n.to) === pathname);
   const membership = useMembership();
-  // A member's read of another clinic would be denied; skip it.
-  const canReadClinic =
-    !!membership &&
-    (membership.superadmin || membership.clinicId === clinicSlug);
-  const clinicName = useClinic(canReadClinic ? clinicSlug : undefined).data
-    ?.name;
+  const clinicName = useClinic(clinicId).data?.name;
+  const branding = useBranding(clinicId).data;
+  const shownName = clinicId
+    ? displayNameOf(branding, clinicName)
+    : "HomoeoDesk";
+  const mark = (size: number) =>
+    clinicId ? (
+      <ClinicMark
+        branding={branding ?? DEFAULT_BRANDING}
+        name={shownName}
+        size={size}
+      />
+    ) : (
+      <ProductMark size={size} />
+    );
+  const showScripture =
+    !clinicId || (branding ?? DEFAULT_BRANDING).showScripture;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -209,32 +209,21 @@ function ShellInner({ children }: { children?: ReactNode }) {
             to={homeHref}
             sx={{ display: "block", px: 1.5, pt: 0.5 }}
           >
-            <Box
-              component="img"
-              src={logo}
-              alt="Grace Homoeo Clinic"
+            <Box sx={{ display: "flex", justifyContent: "center" }}>
+              {mark(56)}
+            </Box>
+            <Typography
+              noWrap
               sx={{
-                display: "block",
-                width: "100%",
-                maxWidth: 176,
-                height: "auto",
-                mx: "auto",
+                mt: 1,
+                textAlign: "center",
+                fontSize: 15,
+                fontWeight: 800,
+                color: TOKENS.ink,
               }}
-            />
-            {clinicName && (
-              <Typography
-                noWrap
-                sx={{
-                  mt: 1,
-                  textAlign: "center",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: TOKENS.muted,
-                }}
-              >
-                {clinicName}
-              </Typography>
-            )}
+            >
+              {shownName}
+            </Typography>
           </Box>
           {clinicSlug && (
             <Box
@@ -372,7 +361,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
             </ButtonBase>
           )}
           <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
-          <BottomDock showScripture />
+          <BottomDock showScripture={showScripture} />
         </Box>
       </Box>
     );
@@ -396,7 +385,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
         }}
       >
         {isRoot ? (
-          <LogoTile size={32} />
+          mark(32)
         ) : (
           <IconButton
             aria-label="back"
@@ -419,16 +408,8 @@ function ShellInner({ children }: { children?: ReactNode }) {
             noWrap
             sx={{ fontWeight: 800, fontSize: 17 }}
           >
-            {isRoot ? "HomoeoDesk" : pageTitle || "HomoeoDesk"}
+            {isRoot ? shownName : pageTitle || shownName}
           </Typography>
-          {isRoot && clinicName && (
-            <Typography
-              noWrap
-              sx={{ fontSize: 12, fontWeight: 600, color: TOKENS.muted }}
-            >
-              {clinicName}
-            </Typography>
-          )}
         </Box>
         <IconButton aria-label="account" onClick={openMenu} sx={{ p: 0.5 }}>
           {avatar}
@@ -449,7 +430,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
         }}
       >
         <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
-        <BottomDock showScripture />
+        <BottomDock showScripture={showScripture} />
       </Box>
 
       {clinicSlug && (
@@ -483,9 +464,18 @@ function ShellInner({ children }: { children?: ReactNode }) {
 }
 
 export default function AppShell({ children }: { children?: ReactNode }) {
+  const { clinicSlug } = useParams();
+  const membership = useMembership();
+  // A member's read of another clinic would be denied; skip it.
+  const canReadClinic =
+    !!membership &&
+    (membership.superadmin || membership.clinicId === clinicSlug);
+  const clinicId = canReadClinic ? clinicSlug : undefined;
   return (
-    <PageChromeProvider>
-      <ShellInner>{children}</ShellInner>
-    </PageChromeProvider>
+    <BrandScope clinicId={clinicId}>
+      <PageChromeProvider>
+        <ShellInner clinicId={clinicId}>{children}</ShellInner>
+      </PageChromeProvider>
+    </BrandScope>
   );
 }
