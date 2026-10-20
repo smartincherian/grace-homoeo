@@ -11,6 +11,7 @@ import PatientFormPage from "./features/patients/PatientFormPage";
 import GeneralsHistoryPage from "./features/patients/GeneralsHistoryPage";
 import ConsultationFormPage from "./features/consultations/ConsultationFormPage";
 import ConsultationDetailPage from "./features/consultations/ConsultationDetailPage";
+import BookingsPage from "./features/bookings/BookingsPage";
 import InventoryListPage from "./features/inventory/InventoryListPage";
 import InventoryFormPage from "./features/inventory/InventoryFormPage";
 import FundsPage from "./features/funds/FundsPage";
@@ -61,6 +62,7 @@ export default function App() {
             path="patients/:patientId/consultations/:cid/edit"
             element={<ConsultationFormPage />}
           />
+          <Route path="bookings" element={<BookingsPage />} />
           <Route path="inventory" element={<InventoryListPage />} />
           <Route path="inventory/new" element={<InventoryFormPage />} />
           <Route path="inventory/:id/edit" element={<InventoryFormPage />} />

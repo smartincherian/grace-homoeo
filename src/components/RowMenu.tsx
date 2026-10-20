@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import {
   IconButton,
   ListItemIcon,
@@ -10,13 +10,21 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 
-interface Props {
+export interface RowAction {
   label: string;
-  onEdit: () => void;
-  onDelete?: () => void;
+  icon?: ReactNode;
+  onClick: () => void;
 }
 
-export default function RowMenu({ label, onEdit, onDelete }: Props) {
+interface Props {
+  label: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  /** Extra items, listed before Edit and Delete. */
+  actions?: RowAction[];
+}
+
+export default function RowMenu({ label, onEdit, onDelete, actions }: Props) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = (e: MouseEvent<HTMLElement>) => {
     e.stopPropagation();
@@ -38,12 +46,20 @@ export default function RowMenu({ label, onEdit, onDelete }: Props) {
         <MoreVertIcon fontSize="small" />
       </IconButton>
       <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={close}>
-        <MenuItem onClick={run(onEdit)}>
-          <ListItemIcon>
-            <EditIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText>Edit</ListItemText>
-        </MenuItem>
+        {actions?.map((a) => (
+          <MenuItem key={a.label} onClick={run(a.onClick)}>
+            {a.icon && <ListItemIcon>{a.icon}</ListItemIcon>}
+            <ListItemText>{a.label}</ListItemText>
+          </MenuItem>
+        ))}
+        {onEdit && (
+          <MenuItem onClick={run(onEdit)}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>Edit</ListItemText>
+          </MenuItem>
+        )}
         {onDelete && (
           <MenuItem onClick={run(onDelete)} sx={{ color: "error.main" }}>
             <ListItemIcon>

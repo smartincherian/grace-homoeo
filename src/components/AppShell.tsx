@@ -13,6 +13,7 @@ import {
   useTheme,
 } from "@mui/material";
 import PeopleIcon from "@mui/icons-material/PeopleOutline";
+import EventIcon from "@mui/icons-material/EventOutlined";
 import Inventory2Icon from "@mui/icons-material/Inventory2Outlined";
 import PaidIcon from "@mui/icons-material/CreditCardOutlined";
 import BadgeIcon from "@mui/icons-material/BadgeOutlined";
@@ -47,12 +48,21 @@ import { useClinic } from "../lib/clinicQueries";
 
 const NAV = [
   { to: "patients", label: "Patients", icon: <PeopleIcon /> },
+  { to: "bookings", label: "Bookings", icon: <EventIcon /> },
   { to: "inventory", label: "Inventory", icon: <Inventory2Icon /> },
   { to: "calculator", label: "Calculator", icon: <CalculateIcon /> },
   { to: "funds", label: "Funds", icon: <PaidIcon /> },
 ];
 const STAFF_NAV = { to: "staff", label: "Staff", icon: <BadgeIcon /> };
 const SIDEBAR_WIDTH = 244;
+/** Six owner items must fit a 360px phone: drop MUI's 80px min width. */
+const BOTTOM_ACTION_SX = {
+  minWidth: 0,
+  px: 0.5,
+  flex: 1,
+  "& .MuiBottomNavigationAction-label, & .MuiBottomNavigationAction-label.Mui-selected":
+    { fontSize: 11 },
+};
 
 function ShellInner({
   children,
@@ -473,6 +483,7 @@ function ShellInner({
               value={n.to}
               label={n.label}
               icon={n.icon}
+              sx={BOTTOM_ACTION_SX}
             />
           ))}
         </BottomNavigation>

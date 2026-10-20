@@ -302,7 +302,7 @@ export function buildTheme(hex: string = DEFAULT_BRAND): Theme {
             "&.Mui-selected .MuiSvgIcon-root": {
               backgroundColor: TOKENS.blue50,
               borderRadius: 99,
-              padding: "2px 16px",
+              padding: "2px 10px",
               boxSizing: "content-box",
             },
           },

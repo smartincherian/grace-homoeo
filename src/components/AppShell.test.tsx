@@ -274,3 +274,21 @@ test("shows a Staff nav link to the owner, selected on /c1/staff, and hides it f
   renderShell(["/c1/patients"]);
   expect(screen.queryByRole("link", { name: /staff/i })).toBeNull();
 });
+
+test("shows a Bookings nav link to members, after Patients", () => {
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
+  renderShell(["/c1/bookings"]);
+  const link = screen.getByRole("link", { name: /bookings/i });
+  expect(link).toHaveAttribute("href", "/c1/bookings");
+  expect(link).toHaveClass("Mui-selected");
+  const labels = screen.getAllByRole("link").map((l) => l.textContent);
+  expect(labels.indexOf("Bookings")).toBe(labels.indexOf("Patients") + 1);
+});
+
+test("the owner's mobile bottom bar fits 6 compact actions", () => {
+  membership.value = { superadmin: false, clinicId: "c1", owner: true };
+  const { container } = renderShell(["/c1/patients"]);
+  const actions = container.querySelectorAll(".MuiBottomNavigationAction-root");
+  expect(actions).toHaveLength(6);
+  actions.forEach((a) => expect(a).toHaveStyle("min-width: 0"));
+});
