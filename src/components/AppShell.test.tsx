@@ -11,7 +11,15 @@ vi.mock("firebase/auth", () => ({
   signOut: (...a: unknown[]) => signOut(...a),
 }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));
-const authUser = vi.hoisted(() => ({ email: "doc@example.com" }));
+const authUser = vi.hoisted(() => ({
+  email: "doc@example.com",
+  providerData: [] as { providerId: string }[],
+}));
+vi.mock("../features/auth/SetPasswordDialog", () => ({
+  default: () => <div role="dialog">Set a password</div>,
+  hasPassword: (u: { providerData: { providerId: string }[] }) =>
+    u.providerData.some((p) => p.providerId === "password"),
+}));
 vi.mock("../features/auth/useAuth", () => ({
   useAuth: () => ({ user: authUser, loading: false }),
 }));
@@ -112,6 +120,25 @@ test("offers the superadmin an Admin menu item", async () => {
   await user.click(screen.getByRole("button", { name: /account/i }));
   expect(screen.getByRole("menuitem", { name: "Admin" })).toBeInTheDocument();
   authUser.email = "doc@example.com";
+});
+
+test("offers Set password to an account without a password", async () => {
+  const user = userEvent.setup();
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  await user.click(screen.getByRole("menuitem", { name: /set password/i }));
+  expect(screen.getByRole("dialog")).toHaveTextContent(/set a password/i);
+});
+
+test("hides Set password once the account has one", async () => {
+  const user = userEvent.setup();
+  authUser.providerData = [{ providerId: "password" }];
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  expect(
+    screen.queryByRole("menuitem", { name: /set password/i }),
+  ).not.toBeInTheDocument();
+  authUser.providerData = [];
 });
 
 test("account menu signs the user out", async () => {

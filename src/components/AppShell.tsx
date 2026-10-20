@@ -29,6 +29,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../lib/firebase";
 import { useAuth } from "../features/auth/useAuth";
 import { useMembership } from "../features/auth/AuthGuard";
+import SetPasswordDialog, {
+  hasPassword,
+} from "../features/auth/SetPasswordDialog";
 import { setActiveClinic } from "../lib/clinic";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import ScriptureBanner from "./ScriptureBanner";
@@ -98,6 +101,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const openMenu = (e: MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
   const closeMenu = () => setAnchorEl(null);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const handleSignOut = async () => {
     closeMenu();
     await signOut(auth);
@@ -142,8 +146,26 @@ function ShellInner({ children }: { children?: ReactNode }) {
           Admin
         </MenuItem>
       )}
+      {user && !hasPassword(user) && (
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            setPasswordOpen(true);
+          }}
+        >
+          Set password
+        </MenuItem>
+      )}
       <MenuItem onClick={handleSignOut}>Sign out</MenuItem>
     </Menu>
+  );
+  // Mounted only while open, so the shell itself never needs the toast context.
+  const passwordDialog = user && passwordOpen && (
+    <SetPasswordDialog
+      open
+      user={user}
+      onClose={() => setPasswordOpen(false)}
+    />
   );
 
   if (isDesktop) {
@@ -270,6 +292,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
             </Box>
           </ButtonBase>
           {accountMenu}
+          {passwordDialog}
         </Box>
 
         <Box
@@ -401,6 +424,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
           {avatar}
         </IconButton>
         {accountMenu}
+        {passwordDialog}
       </Box>
 
       <Box
