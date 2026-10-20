@@ -120,7 +120,10 @@ test("Create account toggle creates the account, emails a verification link and 
   await openCreate(user);
   await user.click(screen.getByRole("button", { name: "Create account" }));
   await waitFor(() =>
-    expect(h.navigate).toHaveBeenCalledWith("/verify-email", { replace: true }),
+    expect(h.navigate).toHaveBeenCalledWith("/verify-email", {
+      replace: true,
+      state: { justSent: true },
+    }),
   );
   expect(h.createUserWithEmailAndPassword).toHaveBeenCalledWith(
     { name: "auth" },
@@ -128,6 +131,33 @@ test("Create account toggle creates the account, emails a verification link and 
     "secret1",
   );
   expect(h.sendEmailVerification).toHaveBeenCalledWith(created);
+});
+
+test("Create account still goes to /verify-email when the verification send fails", async () => {
+  h.createUserWithEmailAndPassword.mockResolvedValue({
+    user: { uid: "u2", email: "new@gmail.com" },
+  });
+  h.sendEmailVerification.mockRejectedValue(new Error("boom"));
+  const user = userEvent.setup();
+  renderLogin();
+  await openCreate(user);
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+  await waitFor(() =>
+    expect(h.navigate).toHaveBeenCalledWith("/verify-email", {
+      replace: true,
+      state: { justSent: false },
+    }),
+  );
+  expect(showToast).not.toHaveBeenCalled();
+});
+
+test("password field autocomplete follows the mode", async () => {
+  const user = userEvent.setup();
+  renderLogin();
+  const pw = () => screen.getByLabelText(/password/i);
+  expect(pw()).toHaveAttribute("autocomplete", "current-password");
+  await user.click(screen.getByRole("button", { name: /create account/i }));
+  expect(pw()).toHaveAttribute("autocomplete", "new-password");
 });
 
 test.each([

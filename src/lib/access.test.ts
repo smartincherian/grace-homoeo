@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { FirebaseError } from "firebase/app";
 
 const getDoc = vi.fn();
 const doc = vi.fn((...a: unknown[]) => ({ path: a.slice(1).join("/") }));
@@ -91,7 +92,7 @@ describe("getMembership", () => {
   it("returns a non-owner membership when the clinic doc read throws", async () => {
     getDoc
       .mockResolvedValueOnce(allowed)
-      .mockRejectedValueOnce(new Error("denied"));
+      .mockRejectedValueOnce(new FirebaseError("permission-denied", "denied"));
     expect(await getMembership(user("dr@clinic.com"))).toEqual({
       superadmin: false,
       clinicId: "c1",
@@ -109,10 +110,26 @@ describe("getMembership", () => {
     expect(await getMembership(user("stranger@gmail.com"))).toBeNull();
   });
 
-  it("returns null when the lookup rejects or there is no email", async () => {
-    getDoc.mockRejectedValue(new Error("permission-denied"));
+  it("returns null when the lookup is permission-denied or there is no email", async () => {
+    getDoc.mockRejectedValue(new FirebaseError("permission-denied", "no"));
     expect(await getMembership(user("x@y.com"))).toBeNull();
     expect(await getMembership(user(null))).toBeNull();
+  });
+
+  it("rethrows a network error from the allow-list lookup", async () => {
+    getDoc.mockRejectedValue(new FirebaseError("unavailable", "offline"));
+    await expect(getMembership(user("x@y.com"))).rejects.toMatchObject({
+      code: "unavailable",
+    });
+  });
+
+  it("rethrows a non-permission error from the clinic doc read", async () => {
+    getDoc
+      .mockResolvedValueOnce(allowed)
+      .mockRejectedValueOnce(new FirebaseError("unavailable", "offline"));
+    await expect(getMembership(user("dr@clinic.com"))).rejects.toMatchObject({
+      code: "unavailable",
+    });
   });
 });
 

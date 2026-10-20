@@ -6,6 +6,7 @@ import {
   focusManager,
 } from "@tanstack/react-query";
 import { act } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
@@ -98,4 +99,47 @@ it("sends an unverified user to /verify-email without checking membership", asyn
   expect(await screen.findByText("verify page")).toBeInTheDocument();
   expect(h.getMembership).not.toHaveBeenCalled();
   expect(h.signOut).not.toHaveBeenCalled();
+});
+
+it("keeps rendering children when a focus refetch fails with a network error", async () => {
+  const qc = new QueryClient();
+  h.getMembership.mockResolvedValueOnce({
+    superadmin: false,
+    clinicId: "c1",
+    owner: false,
+  });
+  renderGuard(qc);
+  expect(await screen.findByText("app")).toBeInTheDocument();
+
+  h.getMembership.mockRejectedValueOnce(new Error("unavailable"));
+  act(() => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+  await waitFor(() => expect(h.getMembership).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(qc.getQueryState(["access", "u1"])?.status).toBe("error"),
+  );
+  expect(screen.getByText("app")).toBeInTheDocument();
+  expect(h.signOut).not.toHaveBeenCalled();
+});
+
+it("shows a retry state on a first-load error without signing out", async () => {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  h.getMembership.mockRejectedValueOnce(new Error("unavailable"));
+  renderGuard(qc);
+  expect(
+    await screen.findByText(
+      "Couldn't check your access. Check your connection.",
+    ),
+  ).toBeInTheDocument();
+  expect(h.signOut).not.toHaveBeenCalled();
+
+  h.getMembership.mockResolvedValueOnce({
+    superadmin: false,
+    clinicId: "c1",
+    owner: false,
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Retry" }));
+  expect(await screen.findByText("app")).toBeInTheDocument();
 });

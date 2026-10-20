@@ -1,6 +1,6 @@
 import { ReactNode, useEffect } from "react";
 import { Navigate } from "react-router-dom";
-import { Box, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { signOut } from "firebase/auth";
 import { useAuth } from "./useAuth";
@@ -35,6 +35,18 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (user && !user.emailVerified) {
     return <Navigate to="/verify-email" replace />;
+  }
+  if (user && access.isError && !access.data && !denied) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 8, px: 2 }}>
+        <Typography sx={{ mb: 2 }}>
+          Couldn't check your access. Check your connection.
+        </Typography>
+        <Button variant="contained" onClick={() => void access.refetch()}>
+          Retry
+        </Button>
+      </Box>
+    );
   }
   if (loading || (user && !access.data && !denied)) {
     return (

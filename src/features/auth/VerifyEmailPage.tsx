@@ -1,10 +1,12 @@
-import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { sendEmailVerification, signOut } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
+import { getMembership, homePath } from "../../lib/access";
+import { ensureUserDoc } from "./ensureUserDoc";
 import { useAuth } from "./useAuth";
 import { useToast } from "../../components/useToast";
 import { CARD_SX, TOKENS } from "../../theme/theme";
@@ -15,6 +17,19 @@ export default function VerifyEmailPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const autoSent = useRef(false);
+
+  // Sign-in and saved-session paths land here without having sent anything.
+  useEffect(() => {
+    if (loading || !user || autoSent.current) return;
+    autoSent.current = true;
+    if ((location.state as { justSent?: boolean } | null)?.justSent === true)
+      return;
+    sendEmailVerification(user).catch(() => {
+      // Silent: the copy tells them to check their inbox or resend.
+    });
+  }, [loading, user, location.state]);
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
@@ -43,9 +58,19 @@ export default function VerifyEmailPage() {
       // Refresh the token so Firestore rules see email_verified == true.
       await user.getIdToken(true);
       if (auth.currentUser?.emailVerified) {
-        // Drop any stale membership denial cached before verifying.
-        queryClient.removeQueries({ queryKey: ["access"] });
-        navigate("/", { replace: true });
+        const membership = await getMembership(user);
+        if (!membership) {
+          showToast(
+            `${user.email ?? "This account"} is not allowed to sign in.`,
+            "error",
+          );
+          await signOut(auth);
+          navigate("/login", { replace: true });
+          return;
+        }
+        queryClient.setQueryData(["access", user.uid], membership);
+        await ensureUserDoc(user);
+        navigate(homePath(membership), { replace: true });
       } else {
         showToast(
           "Not verified yet. Check your inbox and spam folder.",

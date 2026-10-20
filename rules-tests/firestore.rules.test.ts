@@ -295,6 +295,16 @@ describe("clinic owner (o@x.com, clinic c1)", () => {
     await assertSucceeds(removeUser(dbFor("o@x.com"), "c1", "2", "a@x.com"));
   });
 
+  it("cannot remove with only half of the batch", async () => {
+    const db = dbFor("o@x.com");
+    await assertFails(deleteDoc(doc(db, "clinics/c1/seats/2")));
+    await assertFails(deleteDoc(doc(db, "allowedEmails/a@x.com")));
+  });
+
+  it("cannot remove a user of another clinic", async () => {
+    await assertFails(removeUser(dbFor("o@x.com"), "c2", "1", "t@x.com"));
+  });
+
   it("cannot delete an orphan allow-list entry", async () => {
     const db = dbFor("o@x.com");
     await assertFails(deleteDoc(doc(db, "allowedEmails/empty@x.com")));
@@ -315,6 +325,11 @@ describe("clinic owner (o@x.com, clinic c1)", () => {
 });
 
 describe("seats and subcollections", () => {
+  it("a plain member cannot remove anyone", async () => {
+    await assertFails(removeUser(dbFor("a@x.com"), "c1", "2", "a@x.com"));
+    await assertFails(removeUser(dbFor("a@x.com"), "c1", "1", "o@x.com"));
+  });
+
   it("a plain member cannot add a user", async () => {
     await assertFails(addUser(dbFor("a@x.com"), "c1", "3", "n@x.com"));
   });

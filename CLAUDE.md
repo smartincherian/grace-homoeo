@@ -44,7 +44,7 @@ npm run backfill:seats -- --clinic grace-homoeo --owner <email> [--dry-run] --pr
 
 Target collections (see the design spec for full field lists):
 
-- `users` — `{ uid, email, displayName, role }` (`role: "admin"` today).
+- `users` — `{ uid, email, displayName, role }` (`ensureUserDoc` writes `role: "superadmin"` for the superadmin email, else `"admin"`; self-written and never grants permission).
 - `patients` — `serialNo`, `name`, `nameLower`, `dob`, `gender`, `place`, `phone`, `createdAt`, `lastVisitAt`.
 - `consultations` — **top-level** (not nested), with `patientId` + denormalized `patientName`/`serialNo` so Funds can total income across all visits while a patient's history stays a simple query.
 - `inventory` — `name`, `nameLower`, `quantity`, `unit`, `reorderLevel`, `notes`, `updatedAt`.

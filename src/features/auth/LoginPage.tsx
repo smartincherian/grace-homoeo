@@ -111,8 +111,14 @@ export default function LoginPage() {
         email,
         password,
       );
-      await sendEmailVerification(user);
-      navigate("/verify-email", { replace: true });
+      // The account exists now; a failed send is recoverable via Resend.
+      let justSent = true;
+      try {
+        await sendEmailVerification(user);
+      } catch {
+        justSent = false;
+      }
+      navigate("/verify-email", { replace: true, state: { justSent } });
     } catch (err) {
       const code = err instanceof FirebaseError ? err.code : "";
       showToast(
@@ -243,6 +249,7 @@ export default function LoginPage() {
           <TextField
             label="Password"
             type="password"
+            autoComplete={creating ? "new-password" : "current-password"}
             fullWidth
             required
             sx={{ mb: 1 }}

@@ -21,6 +21,16 @@ vi.mock("../../lib/firebase", () => ({ auth: h.fbAuth }));
 vi.mock("./useAuth", () => ({
   useAuth: () => ({ user: h.authUser, loading: false }),
 }));
+const access = vi.hoisted(() => ({ getMembership: vi.fn() }));
+const eud = vi.hoisted(() => ({ ensureUserDoc: vi.fn() }));
+vi.mock("../../lib/access", () => ({
+  getMembership: (...a: unknown[]) => access.getMembership(...a),
+  homePath: (m: { superadmin: boolean; clinicId: string | null }) =>
+    m.superadmin ? "/admin" : `/${m.clinicId}/patients`,
+}));
+vi.mock("./ensureUserDoc", () => ({
+  ensureUserDoc: (...a: unknown[]) => eud.ensureUserDoc(...a),
+}));
 const showToast = vi.fn();
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast }),
@@ -28,14 +38,15 @@ vi.mock("../../components/useToast", () => ({
 
 import VerifyEmailPage from "./VerifyEmailPage";
 
-const renderPage = (qc = new QueryClient()) =>
+const renderPage = (qc = new QueryClient(), state?: unknown) =>
   render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={["/verify-email"]}>
+      <MemoryRouter initialEntries={[{ pathname: "/verify-email", state }]}>
         <Routes>
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/login" element={<div>login page</div>} />
           <Route path="/" element={<div>home page</div>} />
+          <Route path="/c1/patients" element={<div>clinic page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -46,6 +57,9 @@ beforeEach(() => {
     .filter((v): v is ReturnType<typeof vi.fn> => typeof v === "function")
     .forEach((f) => f.mockReset());
   showToast.mockReset();
+  access.getMembership.mockReset();
+  eud.ensureUserDoc.mockReset();
+  h.sendEmailVerification.mockResolvedValue(undefined);
   h.reload.mockResolvedValue(undefined);
   h.getIdToken.mockResolvedValue("tok");
   h.fbAuth.currentUser = { emailVerified: false };
@@ -70,7 +84,7 @@ test("shows the email being verified", () => {
 
 test("Resend email sends a verification email and toasts", async () => {
   h.sendEmailVerification.mockResolvedValue(undefined);
-  renderPage();
+  renderPage(new QueryClient(), { justSent: true });
   await userEvent.click(screen.getByRole("button", { name: "Resend email" }));
   await waitFor(() =>
     expect(showToast).toHaveBeenCalledWith(
@@ -85,7 +99,7 @@ test("Resend email maps too-many-requests", async () => {
   h.sendEmailVerification.mockRejectedValue(
     new FirebaseError("auth/too-many-requests", "x"),
   );
-  renderPage();
+  renderPage(new QueryClient(), { justSent: true });
   await userEvent.click(screen.getByRole("button", { name: "Resend email" }));
   await waitFor(() =>
     expect(showToast).toHaveBeenCalledWith(
@@ -95,18 +109,58 @@ test("Resend email maps too-many-requests", async () => {
   );
 });
 
-test("I've verified reloads, refreshes the token, clears cached access and goes home", async () => {
+const verifyNow = () =>
   h.reload.mockImplementation(async () => {
     h.fbAuth.currentUser = { emailVerified: true };
   });
+
+test("I've verified with a membership caches it, ensures the user doc and goes to the clinic", async () => {
+  verifyNow();
+  const m = { superadmin: false, clinicId: "c1", owner: false };
+  access.getMembership.mockResolvedValue(m);
   const qc = new QueryClient();
-  qc.setQueryData(["access", "u1"], null);
   renderPage(qc);
   await userEvent.click(screen.getByRole("button", { name: "I've verified" }));
-  expect(await screen.findByText("home page")).toBeInTheDocument();
+  expect(await screen.findByText("clinic page")).toBeInTheDocument();
   expect(h.reload).toHaveBeenCalled();
   expect(h.getIdToken).toHaveBeenCalledWith(true);
-  expect(qc.getQueryData(["access", "u1"])).toBeUndefined();
+  expect(qc.getQueryData(["access", "u1"])).toEqual(m);
+  expect(eud.ensureUserDoc).toHaveBeenCalledWith(h.authUser);
+});
+
+test("I've verified without a membership toasts and signs out", async () => {
+  verifyNow();
+  access.getMembership.mockResolvedValue(null);
+  h.signOut.mockResolvedValue(undefined);
+  renderPage();
+  await userEvent.click(screen.getByRole("button", { name: "I've verified" }));
+  expect(await screen.findByText("login page")).toBeInTheDocument();
+  expect(showToast).toHaveBeenCalledWith(
+    "new@gmail.com is not allowed to sign in.",
+    "error",
+  );
+  expect(h.signOut).toHaveBeenCalledWith(h.fbAuth);
+  expect(eud.ensureUserDoc).not.toHaveBeenCalled();
+});
+
+test("sends the verification email once on mount", async () => {
+  renderPage();
+  await waitFor(() => expect(h.sendEmailVerification).toHaveBeenCalledTimes(1));
+  expect(h.sendEmailVerification).toHaveBeenCalledWith(h.authUser);
+});
+
+test("does not auto-send when the create-account path just sent it", () => {
+  renderPage(new QueryClient(), { justSent: true });
+  expect(h.sendEmailVerification).not.toHaveBeenCalled();
+});
+
+test("auto-send swallows too-many-requests silently", async () => {
+  h.sendEmailVerification.mockRejectedValue(
+    new FirebaseError("auth/too-many-requests", "x"),
+  );
+  renderPage();
+  await waitFor(() => expect(h.sendEmailVerification).toHaveBeenCalled());
+  expect(showToast).not.toHaveBeenCalled();
 });
 
 test("I've verified toasts when still unverified", async () => {

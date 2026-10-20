@@ -1,5 +1,6 @@
 import { doc, getDoc } from "firebase/firestore";
 import type { User } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import { db } from "./firebase";
 import { CLINICS } from "./clinic";
 
@@ -23,9 +24,13 @@ export type Membership = {
   owner: boolean;
 };
 
+const isDenied = (err: unknown) =>
+  err instanceof FirebaseError && err.code === "permission-denied";
+
 /**
  * Resolves what the signed-in user may access: superadmin, a member of one clinic
- * (via their allow-list entry), or null (no access, or the read was denied).
+ * (via their allow-list entry), or null (no access, or the read was permission-denied).
+ * Any other failure (e.g. offline) is rethrown so callers don't mistake it for no access.
  */
 export async function getMembership(user: User): Promise<Membership | null> {
   if (!user.email) return null;
@@ -45,13 +50,15 @@ export async function getMembership(user: User): Promise<Membership | null> {
       owner =
         typeof ownerEmail === "string" &&
         normalizeEmail(ownerEmail) === normalizeEmail(user.email);
-    } catch {
-      // A failed clinic read just means not owner; membership itself is intact.
+    } catch (err) {
+      // A denied clinic read just means not owner; anything else is transient.
+      if (!isDenied(err)) throw err;
     }
     return { superadmin: false, clinicId, owner };
-  } catch {
+  } catch (err) {
     // Rules deny the read for unverified accounts — treat as no access.
-    return null;
+    if (isDenied(err)) return null;
+    throw err;
   }
 }
 
