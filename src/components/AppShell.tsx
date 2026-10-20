@@ -56,7 +56,7 @@ function LogoTile({ size = 36 }: { size?: number }) {
         height: size,
         flex: "none",
         borderRadius: `${Math.round(size * 0.3)}px`,
-        background: "linear-gradient(135deg,#4f86ff,#2f6bff)",
+        background: "linear-gradient(135deg, var(--brand-300), var(--brand))",
         color: "#fff",
         display: "grid",
         placeItems: "center",
@@ -363,7 +363,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
                   color: "#fff",
                   display: "grid",
                   placeItems: "center",
-                  boxShadow: "0 3px 8px rgba(47,107,255,.35)",
+                  boxShadow: "0 3px 8px rgba(var(--brand-rgb), .35)",
                 }}
               >
                 <ArrowBackIcon sx={{ fontSize: 13 }} />

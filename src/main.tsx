@@ -6,12 +6,12 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { queryClient } from "./lib/queryClient";
 import { ToastProvider } from "./components/ToastProvider";
-import { theme } from "./theme/theme";
+import { buildTheme } from "./theme/theme";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
+      <ThemeProvider theme={buildTheme()}>
         <CssBaseline />
         <ToastProvider>
           <BrowserRouter>

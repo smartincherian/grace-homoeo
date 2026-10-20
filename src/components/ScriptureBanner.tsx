@@ -23,7 +23,7 @@ const VERSES = [
 const SERIF = "'Noto Serif Malayalam', serif";
 const GOLD = "#c9962b";
 // Night-blue to gold, drawn as a 1.5px gradient border around a pale card.
-const FRAME = `linear-gradient(135deg, #1b3aa8, ${TOKENS.blue} 45%, ${GOLD})`;
+const FRAME = `linear-gradient(135deg, var(--brand-700), ${TOKENS.blue} 45%, ${GOLD})`;
 const ROTATE_MS = 10_000;
 
 function Verse({ text, reference }: { text: string; reference: string }) {
