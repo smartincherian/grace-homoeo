@@ -72,6 +72,13 @@ describe("getMembership", () => {
     expect(doc).toHaveBeenCalledWith({}, "clinics", "c1");
   });
 
+  it("normalizes a mixed-case stored ownerEmail", async () => {
+    getDoc
+      .mockResolvedValueOnce(allowed)
+      .mockResolvedValueOnce(clinicDoc(" Dr@CLINIC.com "));
+    expect((await getMembership(user("dr@clinic.com")))?.owner).toBe(true);
+  });
+
   it("is not owner when ownerEmail differs or is missing", async () => {
     getDoc
       .mockResolvedValueOnce(allowed)

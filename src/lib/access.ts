@@ -44,7 +44,7 @@ export async function getMembership(user: User): Promise<Membership | null> {
       const ownerEmail = clinicSnap.data()?.ownerEmail;
       owner =
         typeof ownerEmail === "string" &&
-        ownerEmail === normalizeEmail(user.email);
+        normalizeEmail(ownerEmail) === normalizeEmail(user.email);
     } catch {
       // A failed clinic read just means not owner; membership itself is intact.
     }

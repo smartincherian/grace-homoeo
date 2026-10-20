@@ -1,7 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { vi } from "vitest";
+import {
+  QueryClient,
+  QueryClientProvider,
+  focusManager,
+} from "@tanstack/react-query";
+import { act } from "@testing-library/react";
+import { afterEach, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   signOut: vi.fn(),
@@ -52,6 +57,34 @@ it("signs out and redirects to /login when a previously valid membership resolve
   h.getMembership.mockResolvedValueOnce(null);
   await qc.refetchQueries({ queryKey: ["access", "u1"] });
 
+  expect(await screen.findByText("login page")).toBeInTheDocument();
+  await waitFor(() => expect(h.signOut).toHaveBeenCalled());
+});
+
+afterEach(() => {
+  focusManager.setFocused(undefined);
+  h.getMembership.mockReset();
+  h.signOut.mockReset();
+});
+
+it("re-checks membership on window focus and signs out a removed user", async () => {
+  const qc = new QueryClient();
+  h.getMembership.mockResolvedValueOnce({
+    superadmin: false,
+    clinicId: "c1",
+    owner: false,
+  });
+  renderGuard(qc);
+  expect(await screen.findByText("app")).toBeInTheDocument();
+  expect(h.getMembership).toHaveBeenCalledTimes(1);
+
+  h.getMembership.mockResolvedValueOnce(null);
+  act(() => {
+    focusManager.setFocused(false);
+    focusManager.setFocused(true);
+  });
+
+  await waitFor(() => expect(h.getMembership).toHaveBeenCalledTimes(2));
   expect(await screen.findByText("login page")).toBeInTheDocument();
   await waitFor(() => expect(h.signOut).toHaveBeenCalled());
 });
