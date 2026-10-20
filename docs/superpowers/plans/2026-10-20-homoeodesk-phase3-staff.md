@@ -45,7 +45,11 @@
 - `base` is rounded with `Math.round` so every stored amount is a whole rupee.
 - `paidDays = daysEmployed − unpaidDays`.
 - Unpaid days are clipped to the employment range, so leave before `joinedOn` or after `leftOn` is ignored.
-- `active` is stored as `leftOn === null`.
+- `active` is stored as `leftOn === null`. Someone with a future `leftOn` is still employed until then; the list shows "Leaving <date>" when `leftOn` is in the future (clinic zone) and "Left <date>" otherwise.
+- Overlapping leaves for the same staff member are rejected, so unpaid days can't be double-counted.
+- A payment can be undone ("Undo payment", with confirm), which deletes the payment doc.
+- Payroll recomputes from the *current* `monthlySalary`, so "Now ₹…" on a paid row appears only when `needsReview` is true (a later raise must not flag every past month).
+- The Funds expense category `"Salary"` stays (non-staff salary costs), but ExpenseFormPage shows this helper when it's picked: "Staff salaries marked paid in Payroll are added to Funds automatically — don't enter them here."
 - Staff are never deleted; set `leftOn` instead.
 - Payroll lists every staff member employed for at least one day of the month, plus anyone who already has a payment for that month.
 - "Mark paid" writes the whole payment doc with `setDoc`, which clears `needsReview`. Paying again after a review overwrites the same doc.
@@ -80,7 +84,7 @@
   - `formatMonth(month: string): string`, e.g. `"Feb 2026"`.
 - Produces, in `src/lib/clinicQueries.ts`:
   - `DEFAULT_TIME_ZONE = "Asia/Kolkata"`.
-  - `Clinic.timeZone: string`. `getClinic` falls back to `DEFAULT_TIME_ZONE` when the field is missing or not a string.
+  - `Clinic.timeZone?: string` (optional, so `features/access/clinicsRepo.ts` `listClinics` and its exact-`toEqual` tests stay untouched). `getClinic` sets it only when the stored field is a string.
   - `useClinicTimeZone(clinicId: string | undefined): string` returns `useClinic(clinicId).data?.timeZone ?? DEFAULT_TIME_ZONE`.
 
 - [ ] **Step 1: Write failing tests** in `zonedDates.test.ts`. Use `const TZ = "Asia/Kolkata"` (UTC+5:30) and exact epochs:
@@ -112,7 +116,7 @@ test("dayStartInZone, addDaysInZone, daysBetweenInclusive", () => {
 test("formatMonth", () => expect(formatMonth("2026-02")).toBe("Feb 2026"));
 ```
 
-  In `clinicQueries.test.ts`, add: `getClinic` returns `timeZone: "Asia/Kolkata"` for a doc without the field, and returns the stored value when it is present. Follow the existing mocking in that file.
+  In `clinicQueries.test.ts`, add: `getClinic` returns the stored `timeZone` when present and `undefined` when absent. Follow the existing mocking in that file.
 
 - [ ] **Step 2: Run** `npm test -- zonedDates clinicQueries`. Expected: FAIL (module or exports missing).
 - [ ] **Step 3: Implement** the functions listed under Interfaces. Use `dayjs.tz(value, tz)` for parsing and `dayjs(ms).tz(tz)` for reading.
@@ -131,15 +135,15 @@ test("formatMonth", () => expect(formatMonth("2026-02")).toBe("Feb 2026"));
   - `match /staff/{id}` and `match /leaves/{id}`: `allow read, write: if manager(clinicId);`
   - `match /salaryPayments/{paymentId}`:
     - `allow read, delete: if manager(clinicId);`
-    - `allow create, update: if manager(clinicId) && request.resource.data.month.matches('^[0-9]{4}-[0-9]{2}$') && paymentId == request.resource.data.staffId + '_' + request.resource.data.month && request.resource.data.needsReview is bool;`
+    - `allow create, update: if manager(clinicId) && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$') && paymentId == request.resource.data.staffId + '_' + request.resource.data.month && request.resource.data.needsReview is bool;`
 
-- [ ] **Step 1: Write failing tests.** Add a new `describe("staff, leaves and salary payments")` that uses the existing fixtures: owner `o@x.com` and member `a@x.com` in c1, owner `t@x.com` in c2. In `beforeEach` of the describe, seed with rules disabled: `clinics/c1/staff/s1`, `clinics/c1/leaves/l1`, `clinics/c1/salaryPayments/s1_2026-02`. Tests:
+- [ ] **Step 1: Write failing tests.** Add a new `describe("staff, leaves and salary payments")` that uses the existing fixtures: owner `o@x.com` and member `a@x.com` in c1, owner `t@x.com` in c2. In `beforeEach` of the describe, seed with rules disabled: `clinics/c1/staff/s1`, `clinics/c1/leaves/l1`, `clinics/c1/salaryPayments/s1_2026-02` = `{ staffId: "s1", month: "2026-02", needsReview: false, net: 1 }`. Tests:
   - The owner reads and writes all three. For example `setDoc(clinics/c1/salaryPayments/s1_2026-03, { staffId: "s1", month: "2026-03", needsReview: false, net: 1 })` succeeds.
   - The member is denied `getDoc`, `getDocs` and `setDoc` on each of the three.
   - The c2 owner (`t@x.com`) is denied on c1's three collections.
   - The superadmin reads and writes all three.
   - The owner is denied a payment whose id doesn't match: id `s1_2026-04` with data `month: "2026-03"`. Also denied: id `s1_bad`, `month: "bad"`.
-  - The owner can update `needsReview: true` on an existing payment when the rest of the data is kept, using a `setDoc` with merged full data.
+  - The owner's `updateDoc(clinics/c1/salaryPayments/s1_2026-02, { needsReview: true })` succeeds (the repo flags payments this way); the member's same update fails; month `"2026-13"` is denied.
 - [ ] **Step 2: Run** the rules-test command from Global Constraints. Expected: the new owner and superadmin cases FAIL; the member and other-clinic denials already pass.
 - [ ] **Step 3: Implement** the rules from Interfaces, and add `"staff"` to both reserved-slug lists.
 - [ ] **Step 4: Run** the rules tests and `npm test -- clinic`. Expected: all PASS.
@@ -262,11 +266,14 @@ test("yearly leave totals split at the year boundary", () => {
   - `updateStaff(id: string, v: StaffFormValues): Promise<void>`. Rewrites `nameLower` and `active`.
   - `listLeavesForStaff(staffId: string): Promise<Leave[]>`. Uses `where("staffId","==",staffId)`; returns newest `from` first.
   - `listLeavesForMonth(month: string, tz: string): Promise<Leave[]>`. Queries `where("from","<=", monthRange(month,tz).end)`, then keeps `to >= start` on the client.
-  - `saveLeave(values: LeaveFormValues, tz: string, previous?: Leave): Promise<string>`. Creates the leave when `previous` is absent and updates it otherwise.
+  - `class LeaveOverlapError extends Error {}`.
+  - `saveLeave(values: LeaveFormValues, tz: string, previous?: Leave): Promise<string>`. Creates the leave when `previous` is absent and updates it otherwise. It first loads `listLeavesForStaff(values.staffId)`; if any leave other than `previous` has `from <= values.to && to >= values.from`, it throws `LeaveOverlapError` and writes nothing.
   - `deleteLeave(leave: Leave, tz: string): Promise<void>`
   - `listPaymentsForStaff(staffId: string): Promise<SalaryPayment[]>`, newest `month` first.
   - `listPaymentsForMonth(month: string): Promise<SalaryPayment[]>`, using `where("month","==",month)`.
   - `markPaid(p: Omit<SalaryPayment,"id"|"needsReview">): Promise<void>`. Calls `setDoc(clinicDoc("salaryPayments", paymentId(p.staffId,p.month)), { ...p, needsReview: false })`.
+  - `deletePayment(staffId: string, month: string): Promise<void>`. Calls `deleteDoc` on that payment.
+  - `listLeavesForMonth` carries a comment: it returns every leave that starts before month end (grows slowly; fine at clinic scale; avoids a composite index).
   - `saveLeave` and `deleteLeave` share one rule:
     - Compute the months `monthsSpanned` of the new range ∪ the previous (or deleted) range.
     - `getDoc` each `salaryPayments/{staffId}_{month}`. Use `previous.staffId` for the previous range; staff can't change on edit.
@@ -283,7 +290,7 @@ test("yearly leave totals split at the year boundary", () => {
   - Mutations:
     - `useCreateStaff()` and `useUpdateStaff(id)` invalidate `["staff"]`.
     - `useSaveLeave(tz)` takes `{ values, previous? }`; `useDeleteLeave(tz)` takes a `Leave`. Both invalidate `["staff"]` and `["funds"]`.
-    - `useMarkPaid()` invalidates `["staff"]` and `["funds"]`.
+    - `useMarkPaid()` and `useDeletePayment()` (takes `{ staffId, month }`) invalidate `["staff"]` and `["funds"]`.
 
 - [ ] **Step 1: Write failing tests** in `staffRepo.test.ts`. Mock `firebase/firestore` and `../../lib/clinic` the way `src/lib/seats.test.ts` does, with a fake batch that records `set`, `update` and `delete` calls. Test that:
   - `listLeavesForMonth("2026-02", "Asia/Kolkata")` queries `where("from","<=", Date.UTC(2026,1,28,18,30)-1)` and drops a returned leave whose `to` is before `Date.UTC(2026,0,31,18,30)`.
@@ -293,7 +300,9 @@ test("yearly leave totals split at the year boundary", () => {
     - the batch is committed once.
   - `saveLeave` edit moving a leave from Jan 10 to Mar 10, with both `s1_2026-01` and `s1_2026-03` paid, updates both payments. This pins Review Focus 3.
   - `deleteLeave` of a Feb leave with Feb paid deletes the leave and flags `s1_2026-02` in one batch.
-  - `markPaid` calls `setDoc` on id `s1_2026-02` with `needsReview: false`.
+  - `markPaid` calls `setDoc` on id `s1_2026-02` with `needsReview: false`; `deletePayment("s1","2026-02")` deletes that id.
+  - `saveLeave` throws `LeaveOverlapError` (and commits no batch) when an existing leave of the staff overlaps; editing a leave over its own previous range does not throw.
+  - Mock note: `doc(collectionRef)` with no id must return a ref with a generated id (e.g. `{ id: "gen1" }`); `seats.test.ts` doesn't cover that call shape.
   - `createStaff` writes `nameLower` lowercase, `active: true` when `leftOn` is null, and `active: false` when it is set.
 - [ ] **Step 2: Run** `npm test -- staffRepo`. Expected: FAIL.
 - [ ] **Step 3: Implement** `staffRepo.ts` and `useStaff.ts`.
@@ -308,7 +317,7 @@ test("yearly leave totals split at the year boundary", () => {
 - Create: `src/features/staff/StaffListPage.tsx` and `.test.tsx`, `src/features/staff/StaffFormPage.tsx` and `.test.tsx`
 - Modify:
   - `src/App.tsx`: add the routes, each wrapped in `<OwnerOnly>`.
-  - `src/components/AppShell.tsx`: add a `Staff` NAV item using `BadgeIcon`, shown only when `canManageClinic(membership, clinicSlug)`, in both the bottom nav and the sidebar.
+  - `src/components/AppShell.tsx`: keep `NAV` for everyone and add `STAFF_NAV = { to: "staff", label: "Staff", icon: <BadgeIcon /> }`. Inside the component, build `navItems = [...NAV, ...(canManageClinic(membership, clinicSlug) ? [STAFF_NAV] : [])]` and use `navItems` everywhere `NAV` is used today (bottom nav, sidebar, `current`, `isRoot`).
   - `src/components/AppShell.test.tsx`.
 
 **Interfaces:**
@@ -327,7 +336,7 @@ test("yearly leave totals split at the year boundary", () => {
 - StaffListPage:
   - `PageHeader` title "Staff", subtitle "Leave and salary — visible only to you".
   - A "Payroll" button linking to `staff/payroll`.
-  - Cards: primary is the name; secondary is `designation · ₹<salary>/month`, plus `· Left <date>` when `leftOn` is set.
+  - Cards: primary is the name; secondary is `designation · ₹<salary>/month`, plus `· Left <date>` or `· Leaving <date>` (see Decisions) when `leftOn` is set.
   - Active staff first, then those who left.
   - `AddButton` label "Add staff".
 - StaffFormPage:
@@ -341,7 +350,7 @@ test("yearly leave totals split at the year boundary", () => {
   - StaffListPage shows "Ravi" with "Assistant · ₹12,000/month" and links to the add page via the "Add staff" link.
   - The form submits `{ name: "Ravi", joinedOn: dateInputToZonedMs("2026-02-01","Asia/Kolkata"), leftOn: null, monthlySalary: 12000, phone: "", designation: "" }` to the create mutation.
   - The form shows "Leaving date can't be before joining date" when left < joined, and doesn't submit.
-  - AppShell shows a "Staff" nav link for the owner membership and none for a member. Use the existing AppShell test membership mocks.
+  - AppShell shows a "Staff" nav link for the owner membership and none for a member, and at `/c1/staff` the Staff item is the selected one. Use the existing AppShell test membership mocks.
 - [ ] **Step 2: Run** `npm test -- StaffListPage StaffFormPage AppShell`. Expected: FAIL.
 - [ ] **Step 3: Implement** the pages, routes and nav.
 - [ ] **Step 4: Run** `npm test -- StaffListPage StaffFormPage AppShell OwnerOnly`. Expected: PASS.
@@ -371,7 +380,7 @@ test("yearly leave totals split at the year boundary", () => {
   - Fields: From, To, Half day (checkbox, disabled and cleared unless From == To), Type (select `LEAVE_TYPES`, default "Casual"), Note.
   - `staffId` and `staffName` come from the loaded staff member.
   - On edit, it loads the leave from `useStaffLeaves(staffId)` by `leaveId` and passes it as `previous`.
-  - On success, toast "Leave saved" and go back to `staff/:id`.
+  - On success, toast "Leave saved" and go back to `staff/:id`. On `LeaveOverlapError`, show "This overlaps another leave" on the From field (no toast).
 
 - [ ] **Step 1: Write failing tests**, mocking the hooks:
   - Detail shows "Casual 2" for the year containing a 2-day Casual leave.
@@ -380,6 +389,7 @@ test("yearly leave totals split at the year boundary", () => {
   - On the leave form, the Half day checkbox is disabled when From ≠ To.
   - Submitting a single-day half-day Unpaid leave calls the save mutation with `{ values: { staffId: "s1", staffName: "Ravi", from: X, to: X, halfDay: true, type: "Unpaid", note: "" }, previous: undefined }`, where `X = dateInputToZonedMs("2026-02-25","Asia/Kolkata")`.
   - Editing passes `previous` as the loaded leave.
+  - When the save mutation rejects with `LeaveOverlapError`, "This overlaps another leave" is shown.
 - [ ] **Step 2: Run** `npm test -- StaffDetailPage LeaveFormPage`. Expected: FAIL.
 - [ ] **Step 3: Implement** both pages and their routes.
 - [ ] **Step 4: Run** `npm test -- StaffDetailPage LeaveFormPage`. Expected: PASS.
@@ -391,19 +401,19 @@ test("yearly leave totals split at the year boundary", () => {
 
 **Files:**
 - Create: `src/features/staff/PayrollPage.tsx` and `.test.tsx`, `src/features/staff/MarkPaidDialog.tsx`
-- Modify: `src/App.tsx` (route `staff/payroll` inside `<OwnerOnly>`, declared before `staff/:id`)
+- Modify: `src/App.tsx` (route `staff/payroll` inside `<OwnerOnly>`)
 
 **Interfaces:**
 - Consumes:
-  - Task 4 `useStaffList`, `useMonthLeaves`, `useMonthPayments`, `useMarkPaid`.
+  - Task 4 `useStaffList`, `useMonthLeaves`, `useMonthPayments`, `useMarkPaid`, `useDeletePayment`.
   - Task 3 `computePayroll` and `PAYMENT_MODES`.
   - Task 1 `monthKeyOf`, `monthRange`, `formatMonth`, `dateInputToZonedMs`, `zonedMsToDateInput`, `dayStartInZone`, `useClinicTimeZone`.
 - PayrollPage:
   - Month picker (`<input type="month">`), defaulting to `monthKeyOf(Date.now(), tz)`.
   - Rows: staff with `computePayroll(...).employedDays > 0`, plus anyone with a payment this month. Each row shows the name, `Base ₹…`, `Unpaid <n> days (−₹…)`, and `Net ₹…`.
   - An unpaid row has a "Mark paid" button.
-  - A paid row shows a "Paid ₹<stored net> on <date> · <mode>" chip and a "Pay again" button.
-  - When `needsReview` is true, a warning chip reads "Leave changed — review", and when the recomputed net differs from the stored one, the row also shows "Now ₹<recomputed>".
+  - A paid row shows a "Paid ₹<stored net> on <date> · <mode>" chip, a "Pay again" button, and an "Undo payment" button (ConfirmDialog → `useDeletePayment`, toast "Payment undone").
+  - When `needsReview` is true, a warning chip reads "Leave changed — review", and when the recomputed net differs from the stored one, the row also shows "Now ₹<recomputed>" (only when `needsReview`).
   - A total row: `Total net ₹…` over the computed lines.
 - MarkPaidDialog:
   - Shows the base and deduction.
@@ -420,7 +430,7 @@ test("yearly leave totals split at the year boundary", () => {
   - only Ravi is listed;
   - his row shows "Net ₹26,000";
   - with adjustment 500, Paid on 2026-02-28 and mode UPI, the dialog calls `markPaid` with `{ staffId: "r1", month: "2026-02", base: 28000, unpaidDays: 2, deduction: 2000, adjustment: 500, net: 26500, paymentMode: "UPI", paidOn: dateInputToZonedMs("2026-02-28","Asia/Kolkata") }`, using `expect.objectContaining`;
-  - a paid month with `needsReview: true` shows "Leave changed — review" and "Pay again".
+  - a paid month with `needsReview: true` shows "Leave changed — review" and "Pay again"; "Undo payment" → confirm calls the delete mutation with `{ staffId: "r1", month: "2026-02" }`.
 - [ ] **Step 2: Run** `npm test -- PayrollPage`. Expected: FAIL.
 - [ ] **Step 3: Implement** the page, the dialog and the route.
 - [ ] **Step 4: Run** `npm test -- PayrollPage`. Expected: PASS.
@@ -436,6 +446,7 @@ test("yearly leave totals split at the year boundary", () => {
   - `src/features/funds/fundsRepo.ts`: `listSalaryTotals`.
   - `src/features/funds/useFunds.ts`: `useSalaries`.
   - `src/features/funds/FundsPage.tsx` and `FundsPage.test.tsx`.
+  - `src/features/funds/ExpenseFormPage.tsx` (+ test): picking category "Salary" shows the helper text from Decisions.
   - `src/features/funds/fundsSchema.test.ts`, if it exists; otherwise create it.
   - `CLAUDE.md`.
   - Memory file `homoeodesk.md`: this one is for the controller, not the implementer.
@@ -464,7 +475,7 @@ test("yearly leave totals split at the year boundary", () => {
   - rules now owner-only for these collections;
   - `src/lib/zonedDates.ts` as the place for clinic-zone dates;
   - the Funds Salaries line;
-  - Phase 3 ships as its own release (rules + hosting deploy).
+  - Phase 3 ships as its own release (rules + hosting deploy); Funds periods still use the device zone while `paidOn` is a clinic-zone day start (harmless for India).
 - [ ] **Step 4: Run full verification**:
   - `npm test`, then `npm run lint`, then `npm run build`. Expected: all pass, no type errors.
   - The rules-test command. Expected: all pass.
