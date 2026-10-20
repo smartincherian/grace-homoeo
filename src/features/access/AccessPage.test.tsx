@@ -7,23 +7,35 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("../auth/useAuth", () => ({ useAuth: () => auth.value }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
+type Entry = { email: string; clinicId: string; seat: string; addedAt: number };
 const m = vi.hoisted(() => ({
-  addEmail: vi.fn(),
+  addUser: vi.fn(),
+  removeUser: vi.fn(),
+  setOwner: vi.fn(),
   createClinic: vi.fn(),
   toast: vi.fn(),
-  emails: [] as { email: string; clinicId: string; addedAt: number }[],
+  emails: [] as Entry[],
+  clinics: [] as {
+    id: string;
+    name: string;
+    createdAt: number;
+    ownerEmail?: string;
+  }[],
 }));
 vi.mock("./useClinics", () => ({
   useClinics: () => ({
     status: "success",
-    data: [{ id: "c1", name: "Sunrise", createdAt: 1 }],
+    data: m.clinics,
   }),
   useCreateClinic: () => ({ mutate: m.createClinic, isPending: false }),
 }));
 vi.mock("./useAllowedEmails", () => ({
   useAllowedEmails: () => ({ status: "success", data: m.emails }),
-  useAddAllowedEmail: () => ({ mutate: m.addEmail, isPending: false }),
-  useRemoveAllowedEmail: () => ({ mutate: vi.fn(), isPending: false }),
+}));
+vi.mock("../../lib/useSeats", () => ({
+  useAddUser: () => ({ mutate: m.addUser, isPending: false }),
+  useRemoveUser: () => ({ mutate: m.removeUser, isPending: false }),
+  useSetOwner: () => ({ mutate: m.setOwner, isPending: false }),
 }));
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast: m.toast }),
@@ -62,21 +74,56 @@ test("redirects other users home", () => {
 
 const asAdmin = () => {
   auth.value = { user: { email: "smartin.cherian@gmail.com" }, loading: false };
-  m.addEmail.mockReset();
-  m.createClinic.mockReset();
-  m.emails = [];
+  for (const f of [
+    m.addUser,
+    m.removeUser,
+    m.setOwner,
+    m.createClinic,
+    m.toast,
+  ])
+    f.mockReset();
+  m.clinics = [
+    { id: "c1", name: "Sunrise", createdAt: 1, ownerEmail: "own@x.com" },
+  ];
+  m.emails = [
+    { email: "own@x.com", clinicId: "c1", seat: "1", addedAt: 0 },
+    { email: "two@x.com", clinicId: "c1", seat: "2", addedAt: 0 },
+  ];
 };
 
-test("slug auto-fills from name and create is called", () => {
+const fillCreate = (name: string, owner: string) => {
+  fireEvent.change(screen.getByLabelText("Clinic name"), {
+    target: { value: name },
+  });
+  if (owner)
+    fireEvent.change(screen.getByLabelText("Owner email"), {
+      target: { value: owner },
+    });
+};
+
+test("slug auto-fills from name; create needs a valid owner email", () => {
   asAdmin();
   renderAt();
-  fireEvent.change(screen.getByLabelText("Clinic name"), {
-    target: { value: "Sunrise Homoeo" },
-  });
+  fillCreate("Sunrise Homoeo", "");
   expect(screen.getByLabelText("Slug")).toHaveValue("sunrise-homoeo");
-  fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  const btn = screen.getByRole("button", { name: "Create clinic" });
+  expect(btn).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Owner email"), {
+    target: { value: "bad" },
+  });
+  expect(btn).toBeDisabled();
+  fireEvent.change(screen.getByLabelText("Owner email"), {
+    target: { value: "Dr@X.com" },
+  });
+  expect(btn).toBeEnabled();
+  fireEvent.click(btn);
   expect(m.createClinic).toHaveBeenCalledWith(
-    { id: "sunrise-homoeo", name: "Sunrise Homoeo" },
+    {
+      id: "sunrise-homoeo",
+      name: "Sunrise Homoeo",
+      ownerEmail: "dr@x.com",
+      addedBy: "smartin.cherian@gmail.com",
+    },
     expect.anything(),
   );
 });
@@ -84,39 +131,96 @@ test("slug auto-fills from name and create is called", () => {
 test("invalid slug disables create and shows helper text", () => {
   asAdmin();
   renderAt();
-  fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "Bad Slug" } });
+  fillCreate("X", "dr@x.com");
+  fireEvent.change(screen.getByLabelText("Slug"), {
+    target: { value: "Bad Slug" },
+  });
   expect(screen.getByRole("button", { name: "Create clinic" })).toBeDisabled();
   expect(
     screen.getByText("Lowercase letters, numbers and hyphens (3–40)"),
   ).toBeInTheDocument();
 });
 
-test("allowing an email requires a clinic", () => {
+test("lists clinic users with seat, owner chip and actions", () => {
   asAdmin();
   renderAt();
-  fireEvent.change(screen.getByLabelText("Email to allow"), {
-    target: { value: "a@x.com" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Allow" }));
-  expect(screen.getByText("Choose a clinic")).toBeInTheDocument();
-  expect(m.addEmail).not.toHaveBeenCalled();
+  expect(screen.getByText("own@x.com")).toBeInTheDocument();
+  expect(screen.getByText("Owner")).toBeInTheDocument();
+  expect(screen.getByText("Seat 2")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Remove own@x.com" }),
+  ).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Make own@x.com owner" }),
+  ).toBeNull();
 
-  fireEvent.mouseDown(screen.getByRole("combobox", { name: "Clinic" }));
-  fireEvent.click(within(screen.getByRole("listbox")).getByText("Sunrise"));
-  fireEvent.click(screen.getByRole("button", { name: "Allow" }));
-  expect(m.addEmail).toHaveBeenCalledWith(
-    { email: "a@x.com", clinicId: "c1", addedBy: "smartin.cherian@gmail.com" },
+  fireEvent.click(screen.getByRole("button", { name: "Make two@x.com owner" }));
+  expect(m.setOwner).toHaveBeenCalledWith(
+    { clinicId: "c1", email: "two@x.com" },
     expect.anything(),
   );
 });
 
-test("lists clinic name or No clinic for allowed emails", () => {
+test("remove asks for confirmation then removes the seat", () => {
   asAdmin();
-  m.emails = [
-    { email: "a@x.com", clinicId: "c1", addedAt: 0 },
-    { email: "b@x.com", clinicId: "", addedAt: 0 },
-  ];
   renderAt();
-  expect(screen.getByText("No clinic")).toBeInTheDocument();
-  expect(screen.getAllByText("Sunrise").length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: "Remove two@x.com" }));
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Remove" }),
+  );
+  expect(m.removeUser).toHaveBeenCalledWith(
+    { seat: { seat: "2", email: "two@x.com" }, ownerEmail: "own@x.com" },
+    expect.anything(),
+  );
+});
+
+test("clinic without owner shows No owner set; legacy entry shows a dash seat", () => {
+  asAdmin();
+  m.clinics = [{ id: "c1", name: "Sunrise", createdAt: 1 }];
+  m.emails = [{ email: "old@x.com", clinicId: "c1", seat: "", addedAt: 0 }];
+  renderAt();
+  expect(screen.getByText("No owner set")).toBeInTheDocument();
+  expect(screen.getByText("Seat —")).toBeInTheDocument();
+});
+
+test("adds a user with the clinic's current seats", () => {
+  asAdmin();
+  renderAt();
+  fireEvent.change(screen.getByLabelText("Add user to Sunrise"), {
+    target: { value: "New@X.com" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add to Sunrise" }),
+  );
+  expect(m.addUser).toHaveBeenCalledWith(
+    {
+      email: "new@x.com",
+      addedBy: "smartin.cherian@gmail.com",
+      seats: [
+        { seat: "1", email: "own@x.com" },
+        { seat: "2", email: "two@x.com" },
+      ],
+    },
+    expect.anything(),
+  );
+});
+
+test("blocks adding an email that belongs to another clinic", () => {
+  asAdmin();
+  m.clinics = [
+    { id: "c1", name: "Sunrise", createdAt: 1, ownerEmail: "own@x.com" },
+    { id: "c2", name: "Moonlight", createdAt: 2 },
+  ];
+  m.emails = [{ email: "own@x.com", clinicId: "c1", seat: "1", addedAt: 0 }];
+  renderAt();
+  fireEvent.change(screen.getByLabelText("Add user to Moonlight"), {
+    target: { value: "own@x.com" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add to Moonlight" }),
+  );
+  expect(
+    screen.getByText("Already assigned to Sunrise. Remove it there first."),
+  ).toBeInTheDocument();
+  expect(m.addUser).not.toHaveBeenCalled();
 });

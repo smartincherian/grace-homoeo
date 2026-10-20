@@ -8,9 +8,20 @@ export function useClinics() {
 export function useCreateClinic() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) => createClinic(id, name),
+    mutationFn: ({
+      id,
+      name,
+      ownerEmail,
+      addedBy,
+    }: {
+      id: string;
+      name: string;
+      ownerEmail: string;
+      addedBy: string;
+    }) => createClinic(id, name, ownerEmail, addedBy),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["clinics"] });
+      void qc.invalidateQueries({ queryKey: ["allowedEmails"] });
     },
   });
 }

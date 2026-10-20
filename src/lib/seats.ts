@@ -35,7 +35,7 @@ export class SeatError extends Error {
   }
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const SEATS = "seats";
 
 /** A clinic's occupied seats, sorted by seat id. */

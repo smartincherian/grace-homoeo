@@ -1,13 +1,6 @@
-import {
-  collection,
-  deleteDoc,
-  doc,
-  getDocs,
-  setDoc,
-  type DocumentData,
-} from "firebase/firestore";
+import { collection, getDocs, type DocumentData } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
+import { ALLOWED_EMAILS } from "../../lib/access";
 
 export interface AllowedEmail {
   email: string;
@@ -32,22 +25,4 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
       };
     })
     .sort((a, b) => a.email.localeCompare(b.email));
-}
-
-export async function addAllowedEmail(
-  email: string,
-  clinicId: string,
-  addedBy: string,
-): Promise<void> {
-  const id = normalizeEmail(email);
-  await setDoc(doc(db, ALLOWED_EMAILS, id), {
-    email: id,
-    clinicId,
-    addedAt: Date.now(),
-    addedBy,
-  });
-}
-
-export async function removeAllowedEmail(email: string): Promise<void> {
-  await deleteDoc(doc(db, ALLOWED_EMAILS, normalizeEmail(email)));
 }
