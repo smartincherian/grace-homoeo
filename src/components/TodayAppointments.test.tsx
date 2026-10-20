@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
@@ -8,8 +8,9 @@ const state = vi.hoisted(() => ({
     data?: unknown[];
   },
 }));
+const useDay = vi.hoisted(() => vi.fn());
 vi.mock("../lib/appointments", () => ({
-  useDayAppointments: () => state.q,
+  useDayAppointments: useDay,
 }));
 vi.mock("../lib/clinicQueries", () => ({
   useClinicTimeZone: () => "Asia/Kolkata",
@@ -31,7 +32,19 @@ const renderIt = () =>
   );
 
 describe("TodayAppointments", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("queries the clinic-zone day start, not the device zone", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T19:00:00Z"));
+    state.q = { status: "success", data: [] };
+    useDay.mockImplementation(() => state.q);
+    renderIt();
+    expect(useDay).toHaveBeenCalledWith("c1", Date.UTC(2026, 10, 1, 18, 30));
+  });
+
   it("lists appointments in order with statuses and links to bookings", () => {
+    useDay.mockImplementation(() => state.q);
     state.q = {
       status: "success",
       data: [
@@ -58,6 +71,7 @@ describe("TodayAppointments", () => {
       { status: "error" },
     ]) {
       state.q = q;
+      useDay.mockImplementation(() => state.q);
       const { container, unmount } = renderIt();
       expect(container).toBeEmptyDOMElement();
       unmount();
