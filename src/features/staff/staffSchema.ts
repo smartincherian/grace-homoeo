@@ -19,7 +19,10 @@ export const staffFormSchema = z
       .int("Joining date is required"),
     leftOn: z.number().int().nullable().default(null),
     monthlySalary: z
-      .number({ invalid_type_error: "Salary must be a number" })
+      .number({
+        required_error: "Monthly salary is required",
+        invalid_type_error: "Salary must be a number",
+      })
       .nonnegative("Salary cannot be negative"),
   })
   .refine((v) => v.leftOn === null || v.leftOn >= v.joinedOn, {

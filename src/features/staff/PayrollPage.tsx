@@ -32,6 +32,9 @@ export default function PayrollPage() {
   const payments = useMonthPayments(month);
   const del = useDeletePayment();
   const [paying, setPaying] = useState<Staff | null>(null);
+  const payingPayment = paying
+    ? (payments.data ?? []).find((p) => p.staffId === paying.id)
+    : undefined;
   const [undoing, setUndoing] = useState<Staff | null>(null);
 
   const statuses = [staff.status, leaves.status, payments.status];
@@ -46,21 +49,28 @@ export default function PayrollPage() {
       (payments.data ?? []).map((p) => [p.staffId, p]),
     );
     return (staff.data ?? [])
-      .map((s) => ({
-        staff: s,
-        line: computePayroll(
-          s,
-          (leaves.data ?? []).filter((l) => l.staffId === s.id),
-          month,
-          tz,
-        ),
-        payment: paymentFor.get(s.id),
-      }))
+      .map((s) => {
+        const payment = paymentFor.get(s.id);
+        return {
+          staff: s,
+          line: computePayroll(
+            s,
+            (leaves.data ?? []).filter((l) => l.staffId === s.id),
+            month,
+            tz,
+            payment?.adjustment ?? 0,
+          ),
+          payment,
+        };
+      })
       .filter((r) => r.line.employedDays > 0 || r.payment)
       .sort((a, b) => a.staff.name.localeCompare(b.staff.name));
   }, [staff.data, leaves.data, payments.data, month, tz]);
 
-  const total = rows.reduce((sum, r) => sum + r.line.net, 0);
+  const total = rows.reduce(
+    (sum, r) => sum + (r.payment ? r.payment.net : r.line.net),
+    0,
+  );
 
   const confirmUndo = async () => {
     const s = undoing;
@@ -166,6 +176,7 @@ export default function PayrollPage() {
           staff={paying}
           leaves={(leaves.data ?? []).filter((l) => l.staffId === paying.id)}
           month={month}
+          payment={payingPayment}
           tz={tz}
           onClose={() => setPaying(null)}
         />

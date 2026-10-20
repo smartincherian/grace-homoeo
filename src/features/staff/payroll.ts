@@ -5,7 +5,12 @@ import {
   monthKeyOf,
   monthRange,
 } from "../../lib/zonedDates";
-import { LEAVE_TYPES, type Leave, type LeaveType, type Staff } from "./staffSchema";
+import {
+  LEAVE_TYPES,
+  type Leave,
+  type LeaveType,
+  type Staff,
+} from "./staffSchema";
 
 type LeaveSpan = Pick<Leave, "from" | "to" | "halfDay">;
 type LeaveLike = LeaveSpan & Pick<Leave, "type">;
@@ -74,7 +79,7 @@ export function computePayroll(
     .reduce((sum, l) => sum + leaveDaysInRange(l, lo, hi, tz), 0);
   const unpaidDays = Math.min(employedDays, unpaidRaw);
   const base = Math.round((staff.monthlySalary * employedDays) / days);
-  const deduction = Math.round((staff.monthlySalary / days) * unpaidDays);
+  const deduction = Math.round((staff.monthlySalary * unpaidDays) / days);
   return {
     month,
     base,
@@ -108,7 +113,11 @@ export function leaveTotalsForYear(
 ): Record<LeaveType, number> {
   const first = monthRange(`${year}-01`, tz).start;
   const last = dayStartInZone(monthRange(`${year}-12`, tz).end, tz);
-  const totals = Object.fromEntries(LEAVE_TYPES.map((t) => [t, 0])) as Record<LeaveType, number>;
-  for (const l of leaves) totals[l.type] += leaveDaysInRange(l, first, last, tz);
+  const totals = Object.fromEntries(LEAVE_TYPES.map((t) => [t, 0])) as Record<
+    LeaveType,
+    number
+  >;
+  for (const l of leaves)
+    totals[l.type] += leaveDaysInRange(l, first, last, tz);
   return totals;
 }

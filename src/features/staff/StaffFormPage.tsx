@@ -24,7 +24,6 @@ const DEFAULTS: Partial<StaffFormValues> = {
   phone: "",
   designation: "",
   leftOn: null,
-  monthlySalary: 0,
 };
 
 export default function StaffFormPage() {
@@ -172,10 +171,12 @@ export default function StaffFormPage() {
                   type="number"
                   fullWidth
                   required
-                  value={Number.isFinite(field.value) ? field.value : ""}
+                  value={field.value ?? ""}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value === "" ? 0 : Number(e.target.value),
+                      e.target.value === ""
+                        ? undefined
+                        : Number(e.target.value),
                     )
                   }
                   error={!!errors.monthlySalary}

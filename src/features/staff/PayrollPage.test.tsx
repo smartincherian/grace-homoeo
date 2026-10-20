@@ -153,4 +153,59 @@ test("no Now chip when the payment needs no review", () => {
   expect(screen.queryByText(/^Now ₹/)).not.toBeInTheDocument();
 });
 
+test("Pay again prefills the stored payment and keeps its values", async () => {
+  state.payments = [
+    {
+      ...payment,
+      adjustment: 500,
+      adjustmentNote: "Diwali bonus",
+      net: 26500,
+      paidOn: day("2026-02-25"),
+      paymentMode: "UPI",
+    },
+  ];
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(screen.getByRole("button", { name: "Pay again" }));
+  const dlg = await screen.findByRole("dialog");
+  expect(within(dlg).getByLabelText(/Adjustment \(/)).toHaveValue(500);
+  expect(within(dlg).getByLabelText("Adjustment note")).toHaveValue(
+    "Diwali bonus",
+  );
+  expect(within(dlg).getByLabelText("Paid on")).toHaveValue("2026-02-25");
+  expect(within(dlg).getByText("UPI")).toBeInTheDocument();
+  expect(within(dlg).queryByRole("button", { name: "Mark paid" })).toBeNull();
+  await user.click(within(dlg).getByRole("button", { name: "Update payment" }));
+  await waitFor(() =>
+    expect(markPaidAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        base: 28000,
+        deduction: 2000,
+        adjustment: 500,
+        adjustmentNote: "Diwali bonus",
+        net: 26500,
+        paymentMode: "UPI",
+        paidOn: day("2026-02-25"),
+      }),
+    ),
+  );
+});
+
+test("stored adjustment is honoured: no Now chip, total uses paid net", () => {
+  state.payments = [{ ...payment, adjustment: 500, net: 26500 }];
+  renderPage();
+  expect(screen.queryByText(/^Now ₹/)).not.toBeInTheDocument();
+  expect(screen.getByText(/Total net ₹26,500/)).toBeInTheDocument();
+});
+
+test("rejects a fractional adjustment", async () => {
+  const user = userEvent.setup();
+  renderPage();
+  await user.click(screen.getByRole("button", { name: "Mark paid" }));
+  const dlg = await screen.findByRole("dialog");
+  await user.type(within(dlg).getByLabelText(/Adjustment \(/), "100.5");
+  expect(within(dlg).getByText("Whole rupees only")).toBeInTheDocument();
+  expect(within(dlg).getByRole("button", { name: "Mark paid" })).toBeDisabled();
+});
+
 afterEach(() => vi.useRealTimers());

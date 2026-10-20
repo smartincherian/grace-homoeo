@@ -129,7 +129,10 @@ service cloud.firestore {
         allow create, update: if manager(clinicId)
           && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
           && paymentId == request.resource.data.staffId + '_' + request.resource.data.month
-          && request.resource.data.needsReview is bool;
+          && request.resource.data.needsReview is bool
+          && request.resource.data.net is int
+          && request.resource.data.paidOn is int
+          && request.resource.data.adjustment is int;
       }
 
       // {sub}/{document=**} needs at least one segment, so this does not match

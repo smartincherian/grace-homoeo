@@ -6,6 +6,13 @@ const TZ = "Asia/Kolkata";
 const d = (s: string) => dateInputToZonedMs(s, TZ);
 
 describe("payroll", () => {
+  test("a fully unpaid 31-day month nets exactly zero", () => {
+    const l = [{ from: d("2026-01-01"), to: d("2026-01-31"), halfDay: false, type: "Unpaid" as const }];
+    expect(
+      computePayroll({ joinedOn: d("2025-01-01"), leftOn: null, monthlySalary: 10000 }, l, "2026-01", TZ),
+    ).toMatchObject({ base: 10000, deduction: 10000, net: 0 });
+  });
+
   test("full month, no leave", () => {
     expect(
       computePayroll({ joinedOn: d("2025-01-01"), leftOn: null, monthlySalary: 30000 }, [], "2026-02", TZ),

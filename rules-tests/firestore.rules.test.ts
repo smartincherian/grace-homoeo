@@ -422,9 +422,7 @@ describe("branding settings", () => {
   });
 
   it("superadmin writes valid branding", async () => {
-    await assertSucceeds(
-      setDoc(doc(dbFor(SUPER), path), valid(SUPER)),
-    );
+    await assertSucceeds(setDoc(doc(dbFor(SUPER), path), valid(SUPER)));
   });
 
   it("owner cannot write other settings docs", async () => {
@@ -445,6 +443,8 @@ describe("staff, leaves and salary payments", () => {
     month,
     needsReview: false,
     net: 1,
+    paidOn: 1,
+    adjustment: 0,
   });
 
   beforeEach(async () => {
@@ -452,7 +452,10 @@ describe("staff, leaves and salary payments", () => {
       const db = ctx.firestore();
       await setDoc(doc(db, "clinics/c1/staff/s1"), { name: "S" });
       await setDoc(doc(db, "clinics/c1/leaves/l1"), { staffId: "s1" });
-      await setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-02"), pay("2026-02"));
+      await setDoc(
+        doc(db, "clinics/c1/salaryPayments/s1_2026-02"),
+        pay("2026-02"),
+      );
     });
   });
 
@@ -463,18 +466,24 @@ describe("staff, leaves and salary payments", () => {
       await assertSucceeds(getDocs(collection(db, `clinics/c1/${c}`)));
     }
     await assertSucceeds(setDoc(doc(db, "clinics/c1/staff/s2"), { name: "T" }));
-    await assertSucceeds(setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }));
+    await assertSucceeds(
+      setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }),
+    );
     await assertSucceeds(
       setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-03"), pay("2026-03")),
     );
-    await assertSucceeds(deleteDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-02")));
+    await assertSucceeds(
+      deleteDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-02")),
+    );
   });
 
   it("a member is denied get, list and set on each", async () => {
     const db = dbFor("a@x.com");
     for (const p of paths) {
       await assertFails(getDoc(doc(db, p)));
-      await assertFails(setDoc(doc(db, p.replace(/[^/]+$/, "new_2026-03")), pay("2026-03")));
+      await assertFails(
+        setDoc(doc(db, p.replace(/[^/]+$/, "new_2026-03")), pay("2026-03")),
+      );
     }
     for (const c of ["staff", "leaves", "salaryPayments"]) {
       await assertFails(getDocs(collection(db, `clinics/c1/${c}`)));
@@ -493,7 +502,9 @@ describe("staff, leaves and salary payments", () => {
     const db = dbFor(SUPER);
     for (const p of paths) await assertSucceeds(getDoc(doc(db, p)));
     await assertSucceeds(setDoc(doc(db, "clinics/c1/staff/s2"), { name: "T" }));
-    await assertSucceeds(setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }));
+    await assertSucceeds(
+      setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }),
+    );
     await assertSucceeds(
       setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-03"), pay("2026-03")),
     );
@@ -512,10 +523,25 @@ describe("staff, leaves and salary payments", () => {
     );
   });
 
+  it("denies a payment with non-integer net, paidOn or adjustment", async () => {
+    const db = dbFor("o@x.com");
+    const ref = doc(db, "clinics/c1/salaryPayments/s1_2026-03");
+    await assertFails(setDoc(ref, { ...pay("2026-03"), net: "100" }));
+    await assertFails(setDoc(ref, { ...pay("2026-03"), net: 100.5 }));
+    await assertFails(setDoc(ref, { ...pay("2026-03"), paidOn: "x" }));
+    await assertFails(setDoc(ref, { ...pay("2026-03"), adjustment: 1.5 }));
+  });
+
   it("lets the owner flag a payment for review, not a member", async () => {
     const ref = "clinics/c1/salaryPayments/s1_2026-02";
-    await assertSucceeds(updateDoc(doc(dbFor("o@x.com"), ref), { needsReview: true }));
-    await assertFails(updateDoc(doc(dbFor("a@x.com"), ref), { needsReview: true }));
-    await assertFails(updateDoc(doc(dbFor("o@x.com"), ref), { month: "2026-13" }));
+    await assertSucceeds(
+      updateDoc(doc(dbFor("o@x.com"), ref), { needsReview: true }),
+    );
+    await assertFails(
+      updateDoc(doc(dbFor("a@x.com"), ref), { needsReview: true }),
+    );
+    await assertFails(
+      updateDoc(doc(dbFor("o@x.com"), ref), { month: "2026-13" }),
+    );
   });
 });

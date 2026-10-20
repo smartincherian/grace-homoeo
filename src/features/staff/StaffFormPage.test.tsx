@@ -64,9 +64,22 @@ test("rejects a leaving date before the joining date", async () => {
   await user.type(screen.getByLabelText(/^name/i), "Ravi");
   await user.type(screen.getByLabelText(/joined on/i), "2026-02-01");
   await user.type(screen.getByLabelText(/left on/i), "2026-01-01");
+  await user.type(screen.getByLabelText(/monthly salary/i), "12000");
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(
     await screen.findByText("Leaving date can't be before joining date"),
+  ).toBeInTheDocument();
+  expect(createAsync).not.toHaveBeenCalled();
+});
+
+test("requires a monthly salary instead of saving zero", async () => {
+  const user = userEvent.setup();
+  renderPage();
+  await user.type(screen.getByLabelText(/^name/i), "Ravi");
+  await user.type(screen.getByLabelText(/joined on/i), "2026-02-01");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(
+    await screen.findByText("Monthly salary is required"),
   ).toBeInTheDocument();
   expect(createAsync).not.toHaveBeenCalled();
 });

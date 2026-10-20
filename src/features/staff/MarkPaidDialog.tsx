@@ -16,6 +16,7 @@ import {
   PAYMENT_MODES,
   type Leave,
   type PaymentMode,
+  type SalaryPayment,
   type Staff,
 } from "./staffSchema";
 import {
@@ -32,6 +33,8 @@ interface Props {
   /** The month's leaves for this staff member. */
   leaves: Leave[];
   month: string;
+  /** The existing payment when paying again; its values prefill the form. */
+  payment?: SalaryPayment;
   tz: string;
   onClose: () => void;
 }
@@ -40,20 +43,23 @@ export default function MarkPaidDialog({
   staff,
   leaves,
   month,
+  payment,
   tz,
   onClose,
 }: Props) {
   const { showToast } = useToast();
   const markPaid = useMarkPaid();
-  const [adjustment, setAdjustment] = useState("0");
-  const [note, setNote] = useState("");
-  const [paidOn, setPaidOn] = useState(() =>
-    zonedMsToDateInput(Date.now(), tz),
+  const [adjustment, setAdjustment] = useState(
+    String(payment?.adjustment ?? 0),
   );
-  const [mode, setMode] = useState<PaymentMode>("Cash");
+  const [note, setNote] = useState(payment?.adjustmentNote ?? "");
+  const [paidOn, setPaidOn] = useState(() =>
+    zonedMsToDateInput(payment?.paidOn ?? Date.now(), tz),
+  );
+  const [mode, setMode] = useState<PaymentMode>(payment?.paymentMode ?? "Cash");
 
   const adj = Number(adjustment);
-  const adjValid = adjustment.trim() !== "" && Number.isFinite(adj);
+  const adjValid = adjustment.trim() !== "" && Number.isInteger(adj);
   const line = computePayroll(staff, leaves, month, tz, adjValid ? adj : 0);
 
   const submit = async () => {
@@ -92,10 +98,11 @@ export default function MarkPaidDialog({
           <TextField
             label="Adjustment (₹)"
             type="number"
+            inputProps={{ step: 1 }}
             value={adjustment}
             onChange={(e) => setAdjustment(e.target.value)}
             error={!adjValid}
-            helperText={adjValid ? "May be negative" : "Enter a number"}
+            helperText={adjValid ? "May be negative" : "Whole rupees only"}
             fullWidth
           />
           <TextField
@@ -135,7 +142,7 @@ export default function MarkPaidDialog({
           onClick={() => void submit()}
           disabled={markPaid.isPending || !adjValid || !paidOn}
         >
-          Mark paid
+          {payment ? "Update payment" : "Mark paid"}
         </Button>
       </DialogActions>
     </Dialog>
