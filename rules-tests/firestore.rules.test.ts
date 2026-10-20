@@ -654,13 +654,17 @@ describe("bookings", () => {
   it("keeps bookings private to the clinic", async () => {
     await seed();
     const t = dbFor("t@x.com");
+    const a = dbFor("a@x.com");
     await assertFails(getDoc(doc(t, apptPath(start))));
     await assertFails(getDoc(doc(t, histPath(start))));
     const s2 = start + 3_600_000;
-    await assertFails(setDoc(doc(t, apptPath(s2)), appt(s2)));
-    await assertFails(
-      setDoc(doc(t, histPath(start, 9)), hist(start, { createdAt: 9 })),
-    );
+    const s3 = start + 7_200_000;
+    const own = (e: string) => appt(s2, { createdBy: e });
+    const closed = (e: string) => hist(s3, { createdAt: 9, closedBy: e });
+    await assertFails(setDoc(doc(t, apptPath(s2)), own("t@x.com")));
+    await assertSucceeds(setDoc(doc(a, apptPath(s2)), own("a@x.com")));
+    await assertFails(setDoc(doc(t, histPath(s3, 9)), closed("t@x.com")));
+    await assertSucceeds(setDoc(doc(a, histPath(s3, 9)), closed("a@x.com")));
   });
 
   describe("schedule", () => {
