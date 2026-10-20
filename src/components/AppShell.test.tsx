@@ -232,7 +232,7 @@ test("hides scripture but keeps the footer when branding turns it off", () => {
   useBranding.mockReturnValue(branded({ showScripture: false }));
   renderShell(["/c1/patients"]);
   expect(screen.getByRole("contentinfo")).toBeInTheDocument();
-  expect(screen.queryByText(/—/)).toBeNull();
+  expect(screen.queryByText(/\d+:\d+/)).toBeNull();
 });
 
 test("shows HomoeoDesk and no clinic name on the admin page", () => {
@@ -240,4 +240,10 @@ test("shows HomoeoDesk and no clinic name on the admin page", () => {
   expect(screen.getAllByText("HomoeoDesk").length).toBeGreaterThan(0);
   expect(screen.queryByText(/^Clinic /)).toBeNull();
   expect(useBranding).not.toHaveBeenCalledWith("admin");
+});
+
+test("shows scripture when branding leaves it on", () => {
+  useBranding.mockReturnValue(branded({ showScripture: true }));
+  renderShell(["/c1/patients"]);
+  expect(screen.getByText(/\d+:\d+/)).toBeInTheDocument();
 });

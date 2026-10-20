@@ -74,12 +74,13 @@ function ShellInner({
   const shownName = clinicId
     ? displayNameOf(branding, clinicName)
     : "HomoeoDesk";
-  const mark = (size: number) =>
+  const mark = (size: number, decorative = false) =>
     clinicId ? (
       <ClinicMark
         branding={branding ?? DEFAULT_BRANDING}
         name={shownName}
         size={size}
+        decorative={decorative}
       />
     ) : (
       <ProductMark size={size} />
@@ -210,7 +211,7 @@ function ShellInner({
             sx={{ display: "block", px: 1.5, pt: 0.5 }}
           >
             <Box sx={{ display: "flex", justifyContent: "center" }}>
-              {mark(56)}
+              {mark(56, true)}
             </Box>
             <Typography
               noWrap

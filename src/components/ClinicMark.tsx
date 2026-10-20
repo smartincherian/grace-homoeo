@@ -7,10 +7,13 @@ export default function ClinicMark({
   branding,
   name,
   size = 36,
+  decorative = false,
 }: {
   branding: Pick<Branding, "logoDataUrl"> | undefined;
   name: string;
   size?: number;
+  /** Hide from assistive tech when the name is printed beside it. */
+  decorative?: boolean;
 }) {
   const radius = `${Math.round(size * 0.3)}px`;
   if (branding?.logoDataUrl) {
@@ -18,7 +21,7 @@ export default function ClinicMark({
       <Box
         component="img"
         src={branding.logoDataUrl}
-        alt={name}
+        alt={decorative ? "" : name}
         sx={{
           width: size,
           height: size,

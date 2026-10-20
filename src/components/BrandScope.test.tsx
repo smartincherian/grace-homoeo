@@ -60,4 +60,23 @@ test("restores defaults on unmount", () => {
   );
   unmount();
   expect(root()).toBe(ensureContrast(DEFAULT_BRAND));
+  expect(document.title).toBe("HomoeoDesk");
+});
+
+test("switching clinics updates the colour", () => {
+  const { rerender } = render(
+    <BrandScope clinicId="a">
+      <p>x</p>
+    </BrandScope>,
+  );
+  useBranding.mockReturnValue({
+    data: { displayName: "Red", primaryColor: "#b91c1c" },
+  });
+  rerender(
+    <BrandScope clinicId="b">
+      <p>x</p>
+    </BrandScope>,
+  );
+  expect(root()).toBe(ensureContrast("#b91c1c"));
+  expect(document.title).toBe("Red · HomoeoDesk");
 });

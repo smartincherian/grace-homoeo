@@ -35,7 +35,13 @@ export default function BrandScope({
   useEffect(() => {
     applyVars(color ? brandCssVars(derivePalette(color)) : DEFAULT_VARS);
   }, [color]);
-  useEffect(() => () => applyVars(DEFAULT_VARS), []);
+  useEffect(
+    () => () => {
+      applyVars(DEFAULT_VARS);
+      document.title = "HomoeoDesk";
+    },
+    [],
+  );
   useEffect(() => {
     document.title = title;
   }, [title]);
