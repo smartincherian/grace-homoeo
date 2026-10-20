@@ -21,6 +21,8 @@ import PeoplePage from "./features/people/PeoplePage";
 import SettingsPage from "./features/settings/SettingsPage";
 import StaffListPage from "./features/staff/StaffListPage";
 import StaffFormPage from "./features/staff/StaffFormPage";
+import StaffDetailPage from "./features/staff/StaffDetailPage";
+import LeaveFormPage from "./features/staff/LeaveFormPage";
 import AccessPage from "./features/access/AccessPage";
 
 export default function App() {
@@ -94,6 +96,30 @@ export default function App() {
             element={
               <OwnerOnly>
                 <StaffFormPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/:id"
+            element={
+              <OwnerOnly>
+                <StaffDetailPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/:id/leaves/new"
+            element={
+              <OwnerOnly>
+                <LeaveFormPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/:id/leaves/:leaveId/edit"
+            element={
+              <OwnerOnly>
+                <LeaveFormPage />
               </OwnerOnly>
             }
           />
