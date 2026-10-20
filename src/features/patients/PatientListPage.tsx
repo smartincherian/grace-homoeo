@@ -12,11 +12,12 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import SearchIcon from "@mui/icons-material/Search";
 import dayjs from "dayjs";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { usePatients } from "./usePatients";
 import type { Patient } from "./patientSchema";
 import PatientPreview from "./PatientPreview";
 import QueryStates from "../../components/QueryStates";
+import TodayAppointments from "../../components/TodayAppointments";
 import AddButton from "../../components/AddButton";
 import AvatarTile from "../../components/AvatarTile";
 import { PageHeader } from "../../components/PageLayout";
@@ -47,6 +48,7 @@ export default function PatientListPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { clinicSlug } = useParams();
 
   const counts = useMemo(() => {
     const list = data ?? [];
@@ -296,6 +298,8 @@ export default function PatientListPage() {
           </>
         }
       />
+
+      {clinicSlug && <TodayAppointments clinicId={clinicSlug} />}
 
       <Box
         role="group"

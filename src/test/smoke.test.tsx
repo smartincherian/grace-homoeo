@@ -22,6 +22,7 @@ vi.mock("../lib/access", async (orig) => ({
 vi.mock("../lib/clinicQueries", () => ({
   useClinic: () => ({ data: { id: "c1", name: "Clinic One", createdAt: 0 } }),
 }));
+vi.mock("../components/TodayAppointments", () => ({ default: () => null }));
 vi.mock("../features/patients/usePatients", () => ({
   usePatients: () => ({ status: "success", data: [] }),
 }));

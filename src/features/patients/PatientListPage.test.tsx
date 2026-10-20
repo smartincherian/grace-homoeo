@@ -34,6 +34,12 @@ vi.mock("./usePatients", () => ({
   usePatients: () => ({ status: "success", data }),
 }));
 
+vi.mock("../../components/TodayAppointments", () => ({
+  default: ({ clinicId }: { clinicId: string }) => (
+    <div>Today strip {clinicId}</div>
+  ),
+}));
+
 import PatientListPage from "./PatientListPage";
 
 const renderPage = () =>
@@ -50,6 +56,11 @@ describe("PatientListPage", () => {
     renderPage();
     expect(screen.getByText("Asha")).toBeInTheDocument();
     expect(screen.getByText("Biju")).toBeInTheDocument();
+  });
+
+  it("renders the today's appointments strip", () => {
+    renderPage();
+    expect(screen.getByText("Today strip c1")).toBeInTheDocument();
   });
 
   it("filters by name", async () => {
