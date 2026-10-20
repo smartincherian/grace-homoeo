@@ -12,6 +12,7 @@ import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
 export interface AllowedEmail {
   email: string;
   clinicId: string;
+  seat: string;
   addedAt: number;
   addedBy: string;
 }
@@ -25,6 +26,7 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
       return {
         email: d.id,
         clinicId: data.clinicId ?? "",
+        seat: data.seat ?? "",
         addedAt: data.addedAt ?? 0,
         addedBy: data.addedBy ?? "",
       };

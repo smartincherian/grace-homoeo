@@ -57,6 +57,17 @@ describe("accessRepo", () => {
     expect(list[0].clinicId).toBe("");
   });
 
+  it("maps seat, defaulting to an empty string", async () => {
+    getDocs.mockResolvedValue({
+      docs: [
+        { id: "a@x.com", data: () => ({ seat: "2" }) },
+        { id: "b@x.com", data: () => ({}) },
+      ],
+    });
+    const list = await listAllowedEmails();
+    expect(list.map((e) => e.seat)).toEqual(["2", ""]);
+  });
+
   it("removes by lowercased email", async () => {
     await removeAllowedEmail("Amy@X.com");
     expect(doc).toHaveBeenCalledWith({}, "allowedEmails", "amy@x.com");
