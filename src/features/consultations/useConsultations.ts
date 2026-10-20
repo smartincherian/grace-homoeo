@@ -42,12 +42,20 @@ export function useCreateConsultation(patientId: string) {
       patient: ConsultationPatientRef;
       values: ConsultationFormValues;
       record: CaseRecordInput;
-    }) => createConsultation(vars.patient, vars.values, vars.record),
+      appointmentId?: string;
+    }) =>
+      createConsultation(
+        vars.patient,
+        vars.values,
+        vars.record,
+        vars.appointmentId,
+      ),
     onSuccess: (cid) => {
       invalidateCaseRecord(qc, patientId, cid);
       void qc.invalidateQueries({ queryKey: ["consultations", patientId] });
       void qc.invalidateQueries({ queryKey: ["patients"] });
       void qc.invalidateQueries({ queryKey: ["patients", patientId] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
     },
   });
 }

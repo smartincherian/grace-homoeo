@@ -4,24 +4,32 @@ const addDoc = vi.fn();
 const getDocs = vi.fn();
 const updateDoc = vi.fn();
 const collection = vi.fn((..._a: unknown[]) => ({ path: "patients" }));
-const doc = vi.fn((..._a: unknown[]) => ({ id: "doc-ref" }));
+const doc = vi.fn((..._a: unknown[]) => ({ id: "new-pid", path: "gen" }));
 const query = vi.fn((...a: unknown[]) => a);
 const orderBy = vi.fn((...a: unknown[]) => ({ orderBy: a }));
 const where = vi.fn((...a: unknown[]) => ({ where: a }));
 const batchDelete = vi.fn();
 const commit = vi.fn();
+const getDoc = vi.fn();
+const batchSet = vi.fn();
+const batchUpdate = vi.fn();
 
 vi.mock("firebase/firestore", () => ({
   addDoc: (...a: unknown[]) => addDoc(...a),
   getDocs: (...a: unknown[]) => getDocs(...a),
-  getDoc: vi.fn(),
+  getDoc: (...a: unknown[]) => getDoc(...a),
   updateDoc: (...a: unknown[]) => updateDoc(...a),
   collection: (...a: unknown[]) => collection(...a),
   doc: (...a: unknown[]) => doc(...a),
   query: (...a: unknown[]) => query(...a),
   orderBy: (...a: unknown[]) => orderBy(...a),
   where: (...a: unknown[]) => where(...a),
-  writeBatch: () => ({ delete: batchDelete, commit }),
+  writeBatch: () => ({
+    delete: batchDelete,
+    set: batchSet,
+    update: batchUpdate,
+    commit,
+  }),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 const activeClinic = vi.hoisted(() => ({ id: "c1" }));
@@ -51,6 +59,9 @@ beforeEach(() => {
   getDocs.mockReset();
   updateDoc.mockReset();
   batchDelete.mockReset();
+  batchSet.mockReset();
+  batchUpdate.mockReset();
+  getDoc.mockReset();
   commit.mockReset();
   nextPatientSerial.mockReset();
   activeClinic.id = "c1";
@@ -189,5 +200,71 @@ describe("deletePatient", () => {
       { path: "clinics/c1/patients/p1" },
     ]);
     expect(commit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createPatient with an appointment", () => {
+  const base = {
+    name: "Asha",
+    dob: 100,
+    gender: "Female" as const,
+    place: "",
+    phone: "98",
+  };
+  const apptSnap = (exists: boolean, status = "booked") => ({
+    exists: () => exists,
+    data: () => ({ status }),
+  });
+
+  it("sets the patient and links the appointment in one batch", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockResolvedValue(apptSnap(true));
+    const id = await createPatient(base, "123");
+    expect(id).toBe("new-pid");
+    expect(addDoc).not.toHaveBeenCalled();
+    expect(batchSet).toHaveBeenCalledTimes(1);
+    expect(batchSet.mock.calls[0][1]).toMatchObject({ serialNo: 7 });
+    expect(batchUpdate).toHaveBeenCalledWith(
+      { path: "clinics/c1/appointments/123" },
+      { patientId: "new-pid", serialNo: 7, patientName: "Asha", phone: "98" },
+    );
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("still saves the patient when the appointment is gone", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockResolvedValue(apptSnap(false));
+    await createPatient(base, "123");
+    expect(batchSet).toHaveBeenCalledTimes(1);
+    expect(batchUpdate).not.toHaveBeenCalled();
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not touch an appointment that is already done", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockResolvedValue(apptSnap(true, "done"));
+    await createPatient(base, "123");
+    expect(batchUpdate).not.toHaveBeenCalled();
+  });
+
+  it("clamps the name to 80 chars, phone to 20, and a non-integer serial to null", async () => {
+    nextPatientSerial.mockResolvedValue(7.5);
+    getDoc.mockResolvedValue(apptSnap(true));
+    await createPatient(
+      { ...base, name: "N".repeat(100), phone: "9".repeat(30) },
+      "123",
+    );
+    const link = batchUpdate.mock.calls[0][1] as Record<string, unknown>;
+    expect(link.patientName).toBe("N".repeat(80));
+    expect(link.phone).toBe("9".repeat(20));
+    expect(link.serialNo).toBeNull();
+  });
+
+  it("does not read appointments without an id", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    addDoc.mockResolvedValue({ id: "x" });
+    await createPatient(base);
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(batchUpdate).not.toHaveBeenCalled();
   });
 });

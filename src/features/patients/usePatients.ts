@@ -23,9 +23,11 @@ export function usePatient(id: string | undefined) {
 export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (values: PatientFormValues) => createPatient(values),
+    mutationFn: (vars: { values: PatientFormValues; appointmentId?: string }) =>
+      createPatient(vars.values, vars.appointmentId),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["patients"] });
+      void qc.invalidateQueries({ queryKey: ["appointments"] });
     },
   });
 }

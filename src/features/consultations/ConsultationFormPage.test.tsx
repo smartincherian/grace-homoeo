@@ -95,9 +95,11 @@ const lsmcRow = (id: string, location: string): LsmcRow => ({
   createdAt: 1,
 });
 
-function renderNew() {
+function renderNew(search = "") {
   return render(
-    <MemoryRouter initialEntries={["/c1/patients/p1/consultations/new"]}>
+    <MemoryRouter
+      initialEntries={[`/c1/patients/p1/consultations/new${search}`]}
+    >
       <Routes>
         <Route
           path="/:clinicSlug/patients/:patientId/consultations/new"
@@ -139,6 +141,15 @@ beforeEach(() => {
 });
 
 describe("ConsultationFormPage (create)", () => {
+  it("passes the appointment id from the URL to create", async () => {
+    const user = userEvent.setup();
+    renderNew("?appointment=123");
+    await user.type(screen.getByLabelText(/complaint/i), "fever");
+    await user.type(screen.getByLabelText(/^prescription/i), "Bryonia 30");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    expect(create.mock.calls[0][0].appointmentId).toBe("123");
+  });
+
   it("submits a new consultation with the patient ref", async () => {
     const user = userEvent.setup();
     renderNew();
@@ -238,6 +249,7 @@ describe("ConsultationFormPage (edit)", () => {
     await screen.findByDisplayValue("low");
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(update.mock.calls[0][0].record.generals.menarche).toBe("13");
+    expect(update.mock.calls[0][0]).not.toHaveProperty("appointmentId");
   });
 
   it("passes existing LSMC ids so removed rows are deleted", async () => {

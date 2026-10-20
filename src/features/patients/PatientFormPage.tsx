@@ -11,7 +11,12 @@ import {
   ToggleButtonGroup,
   Typography,
 } from "@mui/material";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   patientFormSchema,
   GENDERS,
@@ -48,6 +53,11 @@ export default function PatientFormPage() {
   const cp = useClinicPath();
   const { id } = useParams<{ id: string }>();
   const isEdit = !!id;
+  const [params] = useSearchParams();
+  const appointment = (!isEdit && params.get("appointment")) || undefined;
+  const day = params.get("day");
+  // From a booking, plain Save is primary unless the user came to consult.
+  const consultFirst = !appointment || params.get("then") === "consultation";
   useSetPageTitle(isEdit ? "Edit patient" : "Add patient");
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -68,7 +78,13 @@ export default function PatientFormPage() {
     formState: { errors },
   } = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
-    defaultValues: DEFAULTS as PatientFormValues,
+    defaultValues: (isEdit
+      ? DEFAULTS
+      : {
+          ...DEFAULTS,
+          name: params.get("name") ?? "",
+          phone: params.get("phone") ?? "",
+        }) as PatientFormValues,
   });
 
   useEffect(() => {
@@ -113,12 +129,22 @@ export default function PatientFormPage() {
         showToast("Patient updated", "success");
         navigate(cp(`/patients/${id}`));
       } else {
-        const newId = await create.mutateAsync(values);
+        const newId = await create.mutateAsync({
+          values,
+          appointmentId: appointment,
+        });
         showToast("Patient added", "success");
+        const consult = startConsultation.current;
         navigate(
-          startConsultation.current
-            ? cp(`/patients/${newId}/consultations/new`)
-            : cp(`/patients/${newId}`),
+          consult
+            ? cp(
+                `/patients/${newId}/consultations/new${
+                  appointment ? `?appointment=${appointment}` : ""
+                }`,
+              )
+            : appointment
+              ? cp(`/bookings${day ? `?day=${day}` : ""}`)
+              : cp(`/patients/${newId}`),
         );
       }
     } catch {
@@ -315,7 +341,7 @@ export default function PatientFormPage() {
             <>
               <Button
                 type="submit"
-                variant="contained"
+                variant={consultFirst ? "contained" : "outlined"}
                 disabled={busy}
                 onClick={() => (startConsultation.current = true)}
                 sx={{ flex: 1, height: 48 }}
@@ -324,7 +350,7 @@ export default function PatientFormPage() {
               </Button>
               <Button
                 type="submit"
-                variant="outlined"
+                variant={consultFirst ? "outlined" : "contained"}
                 disabled={busy}
                 onClick={() => (startConsultation.current = false)}
                 sx={{ height: 48 }}

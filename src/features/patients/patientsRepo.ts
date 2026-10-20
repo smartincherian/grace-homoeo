@@ -1,5 +1,6 @@
 import {
   addDoc,
+  doc,
   getDoc,
   getDocs,
   orderBy,
@@ -15,6 +16,7 @@ import {
 import { db } from "../../lib/firebase";
 import { clinicCollection, clinicDoc, getActiveClinic } from "../../lib/clinic";
 import { nextPatientSerial } from "../../lib/serial";
+import { clampedLink, linkableAppointment } from "../../lib/appointmentLink";
 import type { Patient, PatientFormValues } from "./patientSchema";
 
 const COLLECTION = "patients";
@@ -51,17 +53,37 @@ export async function getPatient(id: string): Promise<Patient | null> {
 
 export async function createPatient(
   values: PatientFormValues,
+  appointmentId?: string,
 ): Promise<string> {
   // Pin the clinic: the active one may change while the serial is awaited.
   const clinic = getActiveClinic();
   const serialNo = await nextPatientSerial(clinic);
-  const ref = await addDoc(clinicCollection(COLLECTION, clinic), {
+  const data = {
     ...values,
     nameLower: values.name.toLowerCase(),
     serialNo,
     createdAt: Date.now(),
     lastVisitAt: null,
-  });
+  };
+  if (!appointmentId) {
+    const ref = await addDoc(clinicCollection(COLLECTION, clinic), data);
+    return ref.id;
+  }
+  const appt = await linkableAppointment(clinic, appointmentId);
+  const batch = writeBatch(db);
+  const ref = doc(clinicCollection(COLLECTION, clinic));
+  batch.set(ref, data);
+  if (appt) {
+    batch.update(appt, {
+      patientId: ref.id,
+      ...clampedLink({
+        patientName: values.name,
+        phone: values.phone,
+        serialNo,
+      }),
+    });
+  }
+  await batch.commit();
   return ref.id;
 }
 

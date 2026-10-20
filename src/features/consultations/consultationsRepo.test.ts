@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const getDocs = vi.fn();
+const getDoc = vi.fn();
 const updateDoc = vi.fn();
 const batchSet = vi.fn();
 const batchUpdate = vi.fn();
@@ -27,7 +28,7 @@ const where = vi.fn((...a: unknown[]) => ({ where: a }));
 
 vi.mock("firebase/firestore", () => ({
   getDocs: (...a: unknown[]) => getDocs(...a),
-  getDoc: vi.fn(),
+  getDoc: (...a: unknown[]) => getDoc(...a),
   updateDoc: (...a: unknown[]) => updateDoc(...a),
   writeBatch: (...a: unknown[]) => writeBatch(...a),
   collection: (...a: unknown[]) => collection(...a),
@@ -37,6 +38,7 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 vi.mock("../../lib/clinic", () => ({
+  getActiveClinic: () => "c1",
   clinicCollection: (n: string) => ({ path: `clinics/c1/${n}` }),
   clinicDoc: (n: string, id: string) => ({ path: `clinics/c1/${n}/${id}` }),
 }));
@@ -77,6 +79,7 @@ const pathsOf = (fn: ReturnType<typeof vi.fn>) =>
   fn.mock.calls.map((c) => (c[0] as { path: string }).path);
 
 beforeEach(() => {
+  getDoc.mockReset();
   getDocs.mockReset();
   batchSet.mockReset();
   batchUpdate.mockReset();
@@ -312,5 +315,59 @@ describe("listConsultationsByPatient", () => {
     });
     const list = await listConsultationsByPatient("p1");
     expect(list.map((c) => c.id)).toEqual(["c2", "c1"]);
+  });
+});
+
+describe("createConsultation with an appointment", () => {
+  const apptSnap = (exists: boolean, status = "arrived") => ({
+    exists: () => exists,
+    data: () => ({ status }),
+  });
+  const apptUpdates = () =>
+    calls(batchUpdate).filter(([p]) => String(p).includes("/appointments/"));
+
+  it("marks the appointment done with the consultation id in the same batch", async () => {
+    getDoc.mockResolvedValue(apptSnap(true));
+    await createConsultation(PATIENT, values, NO_RECORD, "123");
+    expect(apptUpdates()).toEqual([
+      [
+        "clinics/c1/appointments/123",
+        {
+          status: "done",
+          consultationId: "generated-id",
+          patientId: "p1",
+          patientName: "Asha",
+          serialNo: 7,
+        },
+      ],
+    ]);
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes no appointment without an id", async () => {
+    await createConsultation(PATIENT, values, NO_RECORD);
+    expect(getDoc).not.toHaveBeenCalled();
+    expect(apptUpdates()).toEqual([]);
+  });
+
+  it("still saves when the appointment is gone", async () => {
+    getDoc.mockResolvedValue(apptSnap(false));
+    await createConsultation(PATIENT, values, NO_RECORD, "123");
+    expect(apptUpdates()).toEqual([]);
+    expect(batchSet).toHaveBeenCalledTimes(1);
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("clamps the name to 80 chars and a non-integer serial to null", async () => {
+    getDoc.mockResolvedValue(apptSnap(true));
+    await createConsultation(
+      { id: "p1", name: "N".repeat(100), serialNo: 1.5 },
+      values,
+      NO_RECORD,
+      "123",
+    );
+    const link = apptUpdates()[0][1] as Record<string, unknown>;
+    expect(link.patientName).toBe("N".repeat(80));
+    expect(link.serialNo).toBeNull();
   });
 });

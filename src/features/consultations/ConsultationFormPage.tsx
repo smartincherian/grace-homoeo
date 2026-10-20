@@ -13,7 +13,12 @@ import {
   Typography,
 } from "@mui/material";
 import dayjs from "dayjs";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   consultationFormSchema,
   PAYMENT_MODES,
@@ -134,6 +139,7 @@ export default function ConsultationFormPage() {
   const cp = useClinicPath();
   const { patientId, cid } = useParams<{ patientId: string; cid: string }>();
   const isEdit = !!cid;
+  const appointmentId = useSearchParams()[0].get("appointment") ?? undefined;
   useSetPageTitle(isEdit ? "Edit consultation" : "Add consultation");
   const navigate = useNavigate();
   const { showToast } = useToast();
@@ -236,6 +242,7 @@ export default function ConsultationFormPage() {
           },
           values,
           record,
+          appointmentId,
         });
         showToast("Consultation added", "success");
       } else {

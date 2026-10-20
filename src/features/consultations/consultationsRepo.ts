@@ -11,7 +11,8 @@ import {
   type DocumentSnapshot,
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { clinicCollection, clinicDoc } from "../../lib/clinic";
+import { clinicCollection, clinicDoc, getActiveClinic } from "../../lib/clinic";
+import { clampedLink, linkableAppointment } from "../../lib/appointmentLink";
 import type {
   Consultation,
   ConsultationFormValues,
@@ -41,8 +42,9 @@ function addNewLsmcRow(
   r: LsmcRowInput,
   link: { patientId: string; consultationId: string; date: number },
   createdAt: number,
+  clinic?: string,
 ) {
-  batch.set(doc(clinicCollection(LSMC)), {
+  batch.set(doc(clinicCollection(LSMC, clinic)), {
     ...toLsmcCells(r),
     ...link,
     createdAt,
@@ -95,10 +97,16 @@ export async function createConsultation(
   patient: ConsultationPatientRef,
   values: ConsultationFormValues,
   record: CaseRecordInput,
+  appointmentId?: string,
 ): Promise<string> {
+  // Pin the clinic: the active one may change while the appointment is read.
+  const clinic = getActiveClinic();
+  const appt = appointmentId
+    ? await linkableAppointment(clinic, appointmentId)
+    : null;
   const now = Date.now();
   const batch = writeBatch(db);
-  const ref = doc(clinicCollection(COLLECTION));
+  const ref = doc(clinicCollection(COLLECTION, clinic));
   batch.set(ref, {
     ...values,
     patientId: patient.id,
@@ -112,7 +120,7 @@ export async function createConsultation(
     date: values.date,
   };
   if (record.generals && !isGeneralsBlank(record.generals)) {
-    batch.set(clinicDoc(GENERALS, ref.id), {
+    batch.set(clinicDoc(GENERALS, ref.id, clinic), {
       ...record.generals,
       ...link,
       updatedAt: now,
@@ -121,11 +129,21 @@ export async function createConsultation(
   // createdAt + n keeps rows entered together in entry order.
   let n = 0;
   for (const r of record.lsmc) {
-    if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now + n++);
+    if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now + n++, clinic);
   }
   // Stamp the patient's last visit in the same atomic batch (write by path,
   // not by importing the patients feature, to respect feature boundaries).
-  batch.update(clinicDoc(PATIENTS, patient.id), { lastVisitAt: values.date });
+  batch.update(clinicDoc(PATIENTS, patient.id, clinic), {
+    lastVisitAt: values.date,
+  });
+  if (appt) {
+    batch.update(appt, {
+      status: "done",
+      consultationId: ref.id,
+      patientId: patient.id,
+      ...clampedLink({ patientName: patient.name, serialNo: patient.serialNo }),
+    });
+  }
   await batch.commit();
   return ref.id;
 }
