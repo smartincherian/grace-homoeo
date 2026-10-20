@@ -1,6 +1,31 @@
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
+
+const setDoc = vi.fn();
+const getDocs = vi.fn();
+const getDoc = vi.fn();
+const where = vi.fn((...a: unknown[]) => ({ where: a }));
+vi.mock("firebase/firestore", () => ({
+  setDoc: (...a: unknown[]) => setDoc(...a),
+  getDocs: (...a: unknown[]) => getDocs(...a),
+  getDoc: (...a: unknown[]) => getDoc(...a),
+  query: (...a: unknown[]) => ({ query: a }),
+  where: (...a: unknown[]) => where(...a),
+}));
+vi.mock("./firebase", () => ({ db: {} }));
+vi.mock("./clinic", () => ({
+  clinicCollection: (n: string, c = "ACTIVE") => ({
+    path: `clinics/${c}/${n}`,
+  }),
+  clinicDoc: (n: string, id: string, c = "ACTIVE") => ({
+    path: `clinics/${c}/${n}/${id}`,
+  }),
+}));
+
 import {
   DEFAULT_SCHEDULE,
+  getSchedule,
+  OffGridError,
+  saveSchedule,
   hasHours,
   holidayOn,
   offGridAppointments,
@@ -106,5 +131,94 @@ describe("schedule", () => {
     ).toEqual([]);
     expect(hasHours(DEFAULT_SCHEDULE)).toBe(false);
     expect(hasHours(s)).toBe(true);
+  });
+});
+
+describe("saveSchedule", () => {
+  const now = Date.UTC(2026, 10, 2, 3, 0); // Mon 08:30 IST
+  const appt = (startMs: number, endMs: number) => ({
+    id: String(startMs),
+    data: () => ({ start: startMs, end: endMs }),
+  });
+  const at = (hhmm: string) => zonedTimeToMs(day, hhmm, TZ);
+  beforeEach(() => {
+    setDoc.mockReset();
+    getDocs.mockReset();
+    getDoc.mockReset();
+    where.mockClear();
+  });
+
+  test("blocks 15 -> 20 minute change and lists the booking", async () => {
+    getDocs.mockResolvedValue({ docs: [appt(at("09:45"), at("10:00"))] });
+    const err = await saveSchedule(
+      "c1",
+      { ...s, slotMinutes: 20 },
+      "o@x.com",
+      TZ,
+      now,
+    ).catch((e) => e);
+    expect(err).toBeInstanceOf(OffGridError);
+    expect(err.appointments.map((a: { start: number }) => a.start)).toEqual([
+      at("09:45"),
+    ]);
+    expect(setDoc).not.toHaveBeenCalled();
+  });
+
+  test("saves when only a holiday is added", async () => {
+    getDocs.mockResolvedValue({ docs: [appt(at("09:45"), at("10:00"))] });
+    await saveSchedule(
+      "c1",
+      { ...s, holidays: [{ date: day, note: "Diwali" }] },
+      "o@x.com",
+      TZ,
+      now,
+    );
+    const [ref, data] = setDoc.mock.calls[0];
+    expect(ref.path).toBe("clinics/c1/settings/schedule");
+    expect(data).toEqual(
+      expect.objectContaining({ updatedAt: now, updatedBy: "o@x.com" }),
+    );
+  });
+
+  test("drops holidays before today", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    await saveSchedule(
+      "c1",
+      {
+        ...s,
+        holidays: [
+          { date: addDaysInZone(day, -1, TZ), note: "past" },
+          { date: day, note: "today" },
+        ],
+      },
+      "o@x.com",
+      TZ,
+      now,
+    );
+    expect(setDoc.mock.calls[0][1].holidays).toEqual([
+      { date: day, note: "today" },
+    ]);
+  });
+
+  test("blocks on an appointment that started 10 minutes ago and is running", async () => {
+    const n = at("09:40");
+    getDocs.mockResolvedValue({ docs: [appt(at("09:30"), at("09:45"))] });
+    await expect(
+      saveSchedule("c1", { ...s, slotMinutes: 20 }, "o@x.com", TZ, n),
+    ).rejects.toBeInstanceOf(OffGridError);
+  });
+
+  test("queries the given clinic, not the active one", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    await saveSchedule("c9", s, "o@x.com", TZ, now);
+    expect(getDocs.mock.calls[0][0].query[0].path).toBe(
+      "clinics/c9/appointments",
+    );
+    expect(setDoc.mock.calls[0][0].path).toBe("clinics/c9/settings/schedule");
+  });
+
+  test("getSchedule returns the default when absent", async () => {
+    getDoc.mockResolvedValue({ exists: () => false });
+    await expect(getSchedule("c1")).resolves.toEqual(DEFAULT_SCHEDULE);
   });
 });

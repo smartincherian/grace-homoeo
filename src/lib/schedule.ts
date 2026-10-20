@@ -1,4 +1,8 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDoc, setDoc } from "firebase/firestore";
 import { z } from "zod";
+import { listFutureAppointments, type Appointment } from "./appointments";
+import { clinicDoc } from "./clinic";
 import { dayStartInZone, weekdayKeyOf, zonedTimeToMs } from "./zonedDates";
 
 export const WEEKDAYS = [
@@ -159,4 +163,73 @@ export function parseSchedule(data: unknown): Schedule {
     weekly,
     holidays,
   };
+}
+
+const SETTINGS = "settings";
+const SCHEDULE_ID = "schedule";
+
+export async function getSchedule(clinicId: string): Promise<Schedule> {
+  const snap = await getDoc(clinicDoc(SETTINGS, SCHEDULE_ID, clinicId));
+  if (!snap.exists()) return DEFAULT_SCHEDULE;
+  return parseSchedule(snap.data());
+}
+
+export class OffGridError extends Error {
+  appointments: Appointment[];
+  constructor(appointments: Appointment[]) {
+    super("Some upcoming appointments would no longer fit the new hours");
+    this.name = "OffGridError";
+    this.appointments = appointments;
+  }
+}
+
+export async function saveSchedule(
+  clinicId: string,
+  s: Schedule,
+  by: string,
+  tz: string,
+  now: number = Date.now(),
+): Promise<void> {
+  const today = dayStartInZone(now, tz);
+  const next: Schedule = {
+    ...s,
+    holidays: s.holidays.filter((h) => h.date >= today),
+  };
+  const off = offGridAppointments(
+    await listFutureAppointments(clinicId, now),
+    next,
+    tz,
+  );
+  if (off.length > 0) throw new OffGridError(off);
+  await setDoc(clinicDoc(SETTINGS, SCHEDULE_ID, clinicId), {
+    slotMinutes: next.slotMinutes,
+    weekly: next.weekly,
+    holidays: next.holidays,
+    updatedAt: now,
+    updatedBy: by,
+  });
+}
+
+export function useSchedule(clinicId: string | undefined) {
+  return useQuery({
+    queryKey: ["schedule", clinicId],
+    queryFn: () => getSchedule(clinicId as string),
+    enabled: !!clinicId,
+  });
+}
+
+export function useSaveSchedule(clinicId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      schedule,
+      by,
+      tz,
+    }: {
+      schedule: Schedule;
+      by: string;
+      tz: string;
+    }) => saveSchedule(clinicId, schedule, by, tz),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["schedule", clinicId] }),
+  });
 }
