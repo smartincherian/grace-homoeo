@@ -396,7 +396,7 @@ function ShellInner({
         }}
       >
         {isRoot ? (
-          mark(32)
+          mark(32, true)
         ) : (
           <IconButton
             aria-label="back"

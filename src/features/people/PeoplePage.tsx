@@ -63,7 +63,7 @@ export default function PeoplePage() {
     e.preventDefault();
     if (full || !email.trim()) return;
     addUser.mutate(
-      { email, addedBy: user?.email ?? "", seats },
+      { email, addedBy: normalizeEmail(user?.email ?? ""), seats },
       {
         onSuccess: () => {
           setEmail("");

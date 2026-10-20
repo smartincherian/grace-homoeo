@@ -57,7 +57,11 @@ describe("getBranding", () => {
 
 describe("saveBranding", () => {
   it("writes the doc with updatedAt and updatedBy", async () => {
-    await saveBranding("c1", { ...DEFAULT_BRANDING, displayName: "G" }, "o@x.com");
+    await saveBranding(
+      "c1",
+      { ...DEFAULT_BRANDING, displayName: "G" },
+      "o@x.com",
+    );
     const [ref, data] = setDoc.mock.calls[0];
     expect(ref.path).toBe("clinics/c1/settings/branding");
     expect(data.displayName).toBe("G");
@@ -86,6 +90,19 @@ describe("cache", () => {
     expect(() => writeCachedBranding("c1", DEFAULT_BRANDING)).not.toThrow();
   });
 
+  it("replaces wrongly-typed cached fields with defaults", () => {
+    localStorage.setItem(
+      "homoeodesk.branding.c1",
+      JSON.stringify({
+        displayName: 5,
+        contact: "x",
+        primaryColor: "blue",
+        showScripture: "no",
+      }),
+    );
+    expect(readCachedBranding("c1")).toEqual(DEFAULT_BRANDING);
+  });
+
   it("ignores corrupt JSON", () => {
     localStorage.setItem("homoeodesk.branding.c1", "{nope");
     expect(readCachedBranding("c1")).toBeUndefined();
@@ -94,8 +111,20 @@ describe("cache", () => {
 
 describe("displayNameOf", () => {
   it("falls back in order", () => {
-    expect(displayNameOf({ ...DEFAULT_BRANDING, displayName: " Mine " }, "Clinic")).toBe("Mine");
+    expect(
+      displayNameOf({ ...DEFAULT_BRANDING, displayName: " Mine " }, "Clinic"),
+    ).toBe("Mine");
     expect(displayNameOf(DEFAULT_BRANDING, "Clinic")).toBe("Clinic");
     expect(displayNameOf(undefined, undefined)).toBe("HomoeoDesk");
+  });
+});
+
+describe("displayNameOf robustness", () => {
+  it("does not throw on a non-string displayName", () => {
+    const bad = {
+      ...DEFAULT_BRANDING,
+      displayName: 5,
+    } as unknown as typeof DEFAULT_BRANDING;
+    expect(displayNameOf(bad, "Clinic")).toBe("Clinic");
   });
 });

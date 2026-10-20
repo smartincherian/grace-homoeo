@@ -39,18 +39,45 @@ export const DEFAULT_BRANDING: Branding = {
 const SETTINGS = "settings";
 const BRANDING_ID = "branding";
 
-function merge(data: Partial<Branding>): Branding {
+const str = (v: unknown, d: string) => (typeof v === "string" ? v : d);
+
+function merge(data: unknown): Branding {
+  const o = (data && typeof data === "object" ? data : {}) as Record<
+    string,
+    unknown
+  >;
+  const c = (
+    o.contact && typeof o.contact === "object" && !Array.isArray(o.contact)
+      ? o.contact
+      : {}
+  ) as Record<string, unknown>;
   return {
-    ...DEFAULT_BRANDING,
-    ...data,
-    contact: { ...EMPTY_CONTACT, ...(data.contact ?? {}) },
+    displayName: str(o.displayName, DEFAULT_BRANDING.displayName),
+    logoDataUrl: str(o.logoDataUrl, DEFAULT_BRANDING.logoDataUrl),
+    primaryColor:
+      typeof o.primaryColor === "string" &&
+      /^#[0-9a-f]{6}$/i.test(o.primaryColor)
+        ? o.primaryColor
+        : DEFAULT_BRANDING.primaryColor,
+    showScripture:
+      typeof o.showScripture === "boolean"
+        ? o.showScripture
+        : DEFAULT_BRANDING.showScripture,
+    contact: {
+      doctorName: str(c.doctorName, ""),
+      qualifications: str(c.qualifications, ""),
+      registrationNo: str(c.registrationNo, ""),
+      address: str(c.address, ""),
+      phone: str(c.phone, ""),
+      email: str(c.email, ""),
+    },
   };
 }
 
 export async function getBranding(clinicId: string): Promise<Branding> {
   const snap = await getDoc(clinicDoc(SETTINGS, BRANDING_ID, clinicId));
   if (!snap.exists()) return DEFAULT_BRANDING;
-  return merge(snap.data() as Partial<Branding>);
+  return merge(snap.data());
 }
 
 export async function saveBranding(
@@ -75,7 +102,7 @@ export function readCachedBranding(clinicId: string): Branding | undefined {
   try {
     const raw = localStorage.getItem(cacheKey(clinicId));
     if (!raw) return undefined;
-    return merge(JSON.parse(raw) as Partial<Branding>);
+    return merge(JSON.parse(raw));
   } catch {
     return undefined;
   }
@@ -93,5 +120,6 @@ export function displayNameOf(
   b: Branding | undefined,
   clinicName: string | undefined,
 ): string {
-  return b?.displayName.trim() || clinicName || "HomoeoDesk";
+  const n = typeof b?.displayName === "string" ? b.displayName.trim() : "";
+  return n || clinicName || "HomoeoDesk";
 }

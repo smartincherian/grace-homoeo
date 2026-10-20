@@ -221,11 +221,11 @@ test("shows the clinic logo image when one is set", () => {
   useBranding.mockReturnValue(
     branded({ logoDataUrl: "data:image/png;base64,AA" }),
   );
-  renderShell(["/c1/patients"]);
-  expect(screen.getByRole("img", { name: "Teal Clinic" })).toHaveAttribute(
-    "src",
-    "data:image/png;base64,AA",
-  );
+  const { container } = renderShell(["/c1/patients"]);
+  // Decorative: the clinic name is printed beside the logo.
+  expect(
+    container.querySelector('img[src="data:image/png;base64,AA"]'),
+  ).not.toBeNull();
 });
 
 test("hides scripture but keeps the footer when branding turns it off", () => {
@@ -253,7 +253,9 @@ test("shows Settings to the clinic owner and hides it from members", async () =>
   membership.value = { superadmin: false, clinicId: "c1", owner: true };
   const { unmount } = renderShell(["/c1/patients"]);
   await user.click(screen.getByRole("button", { name: /account/i }));
-  expect(screen.getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("menuitem", { name: "Settings" }),
+  ).toBeInTheDocument();
   unmount();
   membership.value = { superadmin: false, clinicId: "c1", owner: false };
   renderShell(["/c1/patients"]);

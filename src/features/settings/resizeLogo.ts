@@ -23,7 +23,10 @@ export async function resizeLogo(file: File, maxSide = 256): Promise<string> {
   if (!TYPES.includes(file.type)) throw new Error("not-image");
   if (file.size > MAX_FILE) throw new Error("too-large");
   const img = await load(file);
-  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(
+    1,
+    maxSide / Math.max(img.naturalWidth, img.naturalHeight),
+  );
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
   canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));

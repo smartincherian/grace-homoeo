@@ -398,6 +398,15 @@ describe("branding settings", () => {
     );
   });
 
+  it("accepts a logo of exactly 200000 chars", async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor("o@x.com"), path), {
+        ...valid(),
+        logoDataUrl: "data:image/webp;base64," + "A".repeat(200000 - 23),
+      }),
+    );
+  });
+
   it("rejects invalid branding", async () => {
     const db = dbFor("o@x.com");
     const bad = (patch: Record<string, unknown>) =>
