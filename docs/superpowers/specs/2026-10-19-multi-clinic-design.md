@@ -116,8 +116,8 @@ Default Credentials). Arguments: `--clinic grace-homoeo --name "Grace Homoeo"
 
 The script aborts (exit 1) if the destination already has data, because a re-run would overwrite live edits with stale legacy copies. `--resync` overrides this and is only for a re-run BEFORE the new rules are deployed; never after cutover. The counter is written as max(source, existing destination) `lastSerial`. Verification compares every source doc ID against the destination and exits 1 on any missing doc; a missing source counter with existing patients is a hard error. `--project` is mandatory unless `FIRESTORE_EMULATOR_HOST` is set.
 
-**Cutover order:** run script → verify counts → deploy rules + hosting together
-(`firebase deploy --only firestore:rules,hosting`) → check the app → delete legacy
+**Cutover order:** run `migrate:clinics` → verify counts → run `npm run backfill:seats -- --clinic <id> --owner <email> --project <id>` (dry run, then real; assigns `ownerEmail`, `timeZone`, `seats/{1..3}` and `allowedEmails.seat`; aborts if >3 emails, the owner is missing, the superadmin is in the clinic, or seats exist) → deploy rules + hosting together
+(`firebase deploy --only firestore:rules,hosting`) → reopen the app on every device (see below) → tell existing password users they will verify their email once (rules now require a verified email for everyone) → check the app → delete legacy
 top-level collections manually later. Between the script and the deploy, new
 writes still go to the old collections, so deploy straight after the script (or
 re-run it with `--resync` immediately before deploying).

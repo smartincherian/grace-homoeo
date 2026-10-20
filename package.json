@@ -14,7 +14,8 @@
     "emulators": "firebase emulators:start --only firestore,auth",
     "release": "npm run build && firebase deploy --only firestore:rules,hosting",
     "test:rules": "firebase emulators:exec --only firestore --project demo-grace \"vitest run --config vitest.rules.config.ts\"",
-    "migrate:clinics": "node scripts/migrate-to-clinics.mjs"
+    "migrate:clinics": "node scripts/migrate-to-clinics.mjs",
+    "backfill:seats": "node scripts/backfill-seats.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.13.0",
