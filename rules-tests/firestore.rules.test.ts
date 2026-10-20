@@ -545,3 +545,157 @@ describe("staff, leaves and salary payments", () => {
     );
   });
 });
+
+describe("bookings", () => {
+  const start = Date.now() + 86_400_000;
+  const appt = (s: number, patch: Record<string, unknown> = {}) => ({
+    date: s - (s % 86_400_000),
+    start: s,
+    end: s + 900_000,
+    patientId: null,
+    patientName: "Asha",
+    phone: "9999999999",
+    serialNo: null,
+    status: "booked",
+    note: "",
+    createdBy: "a@x.com",
+    createdAt: 1,
+    consultationId: null,
+    ...patch,
+  });
+  const apptPath = (s: number) => `clinics/c1/appointments/${s}`;
+  const histPath = (s: number, c = 1) =>
+    `clinics/c1/appointmentHistory/${s}_${c}`;
+  const hist = (s: number, patch: Record<string, unknown> = {}) => ({
+    ...appt(s, { status: "cancelled" }),
+    closedAt: 5,
+    closedBy: "a@x.com",
+    ...patch,
+  });
+  const seed = () =>
+    env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), apptPath(start)), appt(start));
+    });
+
+  it("lets members and the superadmin create valid appointments", async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor("a@x.com"), apptPath(start)), appt(start)),
+    );
+    const s2 = start + 3_600_000;
+    await assertSucceeds(
+      setDoc(doc(dbFor(SUPER), apptPath(s2)), appt(s2, { createdBy: SUPER })),
+    );
+  });
+
+  it("denies bad ids, status, createdBy and past slots on create", async () => {
+    const db = dbFor("a@x.com");
+    await assertFails(setDoc(doc(db, apptPath(start + 1)), appt(start)));
+    await assertFails(
+      setDoc(doc(db, apptPath(start)), appt(start, { status: "done" })),
+    );
+    await assertFails(
+      setDoc(doc(db, apptPath(start)), appt(start, { createdBy: "o@x.com" })),
+    );
+    const past = Date.now() - 7_200_000;
+    await assertFails(setDoc(doc(db, apptPath(past)), appt(past)));
+    const fut = start + 7_200_000;
+    await assertSucceeds(setDoc(doc(db, apptPath(fut)), appt(fut)));
+  });
+
+  it("denies invalid appointment shapes", async () => {
+    const db = dbFor("a@x.com");
+    const r = doc(db, apptPath(start));
+    await assertFails(setDoc(r, appt(start, { extra: 1 })));
+    await assertFails(setDoc(r, appt(start, { patientName: "" })));
+    await assertFails(setDoc(r, appt(start, { end: start })));
+    await assertFails(setDoc(r, appt(start, { date: start + 1 })));
+    await assertFails(setDoc(r, appt(start, { note: "x".repeat(201) })));
+  });
+
+  it("allows status updates but not slot or provenance changes", async () => {
+    await seed();
+    const ref = doc(dbFor("a@x.com"), apptPath(start));
+    await assertSucceeds(updateDoc(ref, { status: "arrived" }));
+    await assertFails(updateDoc(ref, { start: start + 1 }));
+    await assertFails(updateDoc(ref, { date: start - 1 }));
+    await assertFails(updateDoc(ref, { createdAt: 2 }));
+    await assertFails(setDoc(ref, appt(start, { createdAt: 2 })));
+  });
+
+  it("closes an appointment only with its history in one batch", async () => {
+    await seed();
+    const db = dbFor("a@x.com");
+    await assertFails(deleteDoc(doc(db, apptPath(start))));
+    await assertFails(setDoc(doc(db, histPath(start)), hist(start)));
+    const b = writeBatch(db);
+    b.set(doc(db, histPath(start)), hist(start));
+    b.delete(doc(db, apptPath(start)));
+    await assertSucceeds(b.commit());
+    await assertFails(updateDoc(doc(db, histPath(start)), { note: "x" }));
+    await assertFails(deleteDoc(doc(db, histPath(start))));
+    await assertSucceeds(getDoc(doc(db, histPath(start))));
+  });
+
+  it("denies invalid history docs", async () => {
+    await seed();
+    const db = dbFor("a@x.com");
+    for (const patch of [
+      { status: "done" },
+      { extra: 1 },
+      { closedBy: "o@x.com" },
+    ]) {
+      const b = writeBatch(db);
+      b.set(doc(db, histPath(start)), hist(start, patch));
+      b.delete(doc(db, apptPath(start)));
+      await assertFails(b.commit());
+    }
+  });
+
+  it("keeps bookings private to the clinic", async () => {
+    await seed();
+    const t = dbFor("t@x.com");
+    await assertFails(getDoc(doc(t, apptPath(start))));
+    await assertFails(getDoc(doc(t, histPath(start))));
+    const s2 = start + 3_600_000;
+    await assertFails(setDoc(doc(t, apptPath(s2)), appt(s2)));
+    await assertFails(
+      setDoc(doc(t, histPath(start, 9)), hist(start, { createdAt: 9 })),
+    );
+  });
+
+  describe("schedule", () => {
+    const sched = (patch: Record<string, unknown> = {}) => ({
+      slotMinutes: 15,
+      weekly: { mon: [{ start: "09:00", end: "13:00" }] },
+      holidays: [],
+      updatedAt: 1,
+      updatedBy: "o@x.com",
+      ...patch,
+    });
+    const path = "clinics/c1/settings/schedule";
+
+    it("lets the owner write and members only read", async () => {
+      await assertSucceeds(setDoc(doc(dbFor("o@x.com"), path), sched()));
+      await assertFails(
+        setDoc(doc(dbFor("a@x.com"), path), sched({ updatedBy: "a@x.com" })),
+      );
+      await assertSucceeds(getDoc(doc(dbFor("a@x.com"), path)));
+    });
+
+    it("denies invalid schedules", async () => {
+      const r = doc(dbFor("o@x.com"), path);
+      await assertFails(setDoc(r, sched({ slotMinutes: 3 })));
+      await assertFails(setDoc(r, sched({ extra: 1 })));
+      await assertFails(setDoc(r, sched({ weekly: { xyz: [] } })));
+      const s = { start: "09:00", end: "10:00" };
+      await assertFails(setDoc(r, sched({ weekly: { mon: [s, s, s, s] } })));
+      await assertFails(setDoc(r, sched({ updatedBy: "x@x.com" })));
+    });
+
+    it("still denies unknown settings docs", async () => {
+      await assertFails(
+        setDoc(doc(dbFor("o@x.com"), "clinics/c1/settings/other"), sched()),
+      );
+    });
+  });
+});

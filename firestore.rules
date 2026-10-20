@@ -64,6 +64,50 @@ service cloud.firestore {
         && d.updatedBy == authEmail();
     }
 
+    // Clinic hours: weekly sessions per weekday (max 3), holidays, slot length.
+    function validSchedule(d) {
+      return d.keys().hasOnly(['slotMinutes', 'weekly', 'holidays', 'updatedAt', 'updatedBy'])
+        && d.keys().hasAll(['slotMinutes', 'weekly', 'holidays', 'updatedAt', 'updatedBy'])
+        && d.slotMinutes is int && d.slotMinutes >= 5 && d.slotMinutes <= 120
+        && d.weekly is map
+        && d.weekly.keys().hasOnly(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'])
+        && d.weekly.get('mon', []).size() <= 3 && d.weekly.get('tue', []).size() <= 3
+        && d.weekly.get('wed', []).size() <= 3 && d.weekly.get('thu', []).size() <= 3
+        && d.weekly.get('fri', []).size() <= 3 && d.weekly.get('sat', []).size() <= 3
+        && d.weekly.get('sun', []).size() <= 3
+        && d.holidays is list && d.holidays.size() <= 100
+        && d.updatedAt is number
+        && d.updatedBy == authEmail();
+    }
+    // Field types shared by appointments and their history copies.
+    function apptFieldsOk(d) {
+      return d.start is int && d.end is int && d.date is int
+        && d.end > d.start && d.date <= d.start
+        && d.patientName is string && d.patientName.size() >= 1 && d.patientName.size() <= 80
+        && d.phone is string && d.phone.size() <= 20
+        && d.note is string && d.note.size() <= 200
+        && d.status is string
+        && (d.patientId == null || d.patientId is string)
+        && (d.consultationId == null || d.consultationId is string)
+        && (d.serialNo == null || d.serialNo is int)
+        && d.createdBy is string && d.createdAt is int;
+    }
+    function validAppt(d) {
+      return d.keys().hasOnly(['date', 'start', 'end', 'patientId', 'patientName', 'phone', 'serialNo', 'status', 'note', 'createdBy', 'createdAt', 'consultationId'])
+        && d.keys().hasAll(['date', 'start', 'end', 'patientId', 'patientName', 'phone', 'serialNo', 'status', 'note', 'createdBy', 'createdAt', 'consultationId'])
+        && apptFieldsOk(d)
+        && d.status in ['booked', 'arrived', 'done'];
+    }
+    // History copy: the 12 appointment fields plus closedAt and closedBy.
+    function validClosed(d) {
+      return d.keys().hasOnly(['date', 'start', 'end', 'patientId', 'patientName', 'phone', 'serialNo', 'status', 'note', 'createdBy', 'createdAt', 'consultationId', 'closedAt', 'closedBy'])
+        && d.keys().hasAll(['date', 'start', 'end', 'patientId', 'patientName', 'phone', 'serialNo', 'status', 'note', 'createdBy', 'createdAt', 'consultationId', 'closedAt', 'closedBy'])
+        && apptFieldsOk(d)
+        && d.status in ['cancelled', 'no-show']
+        && d.closedAt is int
+        && d.closedBy == authEmail();
+    }
+
     // The allow list: anyone may check their own entry. A user is added or
     // removed together with their seat doc in one batch (max 3 seats per clinic);
     // entries are never updated in place, so nobody can move between clinics.
@@ -111,9 +155,39 @@ service cloud.firestore {
       match /settings/{docId} {
         allow read: if member(clinicId);
         allow create, update: if manager(clinicId)
-          && docId == 'branding'
-          && validBranding(request.resource.data);
-        allow delete: if manager(clinicId) && docId == 'branding';
+          && ((docId == 'branding' && validBranding(request.resource.data))
+              || (docId == 'schedule' && validSchedule(request.resource.data)));
+        allow delete: if manager(clinicId) && (docId == 'branding' || docId == 'schedule');
+      }
+
+      // Bookings: id is the slot start (epoch ms), so a slot holds one appointment.
+      match /appointments/{apptId} {
+        allow read: if member(clinicId);
+        allow create: if member(clinicId)
+          && validAppt(request.resource.data)
+          && apptId == string(request.resource.data.start)
+          && request.resource.data.status == 'booked'
+          && request.resource.data.createdBy == authEmail()
+          && request.resource.data.end > request.time.toMillis();
+        allow update: if member(clinicId)
+          && validAppt(request.resource.data)
+          && request.resource.data.start == resource.data.start
+          && request.resource.data.end == resource.data.end
+          && request.resource.data.date == resource.data.date
+          && request.resource.data.createdAt == resource.data.createdAt
+          && request.resource.data.createdBy == resource.data.createdBy;
+        // Closing needs its history copy written in the same batch.
+        allow delete: if member(clinicId)
+          && existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/appointmentHistory/$(apptId + '_' + string(resource.data.createdAt)));
+      }
+      // Create-only record of cancelled / no-show appointments.
+      match /appointmentHistory/{id} {
+        allow read: if member(clinicId);
+        allow create: if member(clinicId)
+          && validClosed(request.resource.data)
+          && id == string(request.resource.data.start) + '_' + string(request.resource.data.createdAt)
+          && !existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/appointments/$(string(request.resource.data.start)));
+        allow update, delete: if false;
       }
 
       // Staff, leave and salary data is owner/superadmin only (not in memberSubs).
