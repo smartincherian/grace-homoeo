@@ -8,7 +8,7 @@ import App from "../App";
 
 vi.mock("../features/auth/useAuth", () => ({
   useAuth: () => ({
-    user: { uid: "test-uid", email: "doc@example.com" },
+    user: { uid: "test-uid", email: "doc@example.com", emailVerified: true },
     loading: false,
   }),
 }));
