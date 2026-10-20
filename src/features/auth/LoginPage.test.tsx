@@ -61,13 +61,13 @@ beforeEach(() => {
 
 test("shows the generic brand and footer, no Grace text", () => {
   const { container } = renderLogin();
-  // The developer credit links to graceissufficient.net; check the rest.
-  container.querySelector("footer")?.remove();
   expect(
     screen.getByRole("heading", { name: "HomoeoDesk" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Homoeo Clinic Manager")).toBeInTheDocument();
   expect(screen.getByText(/developed by/i)).toBeInTheDocument();
+  // The developer credit links to graceissufficient.net; check the rest.
+  container.querySelector("footer")?.remove();
   expect(container.textContent).not.toMatch(/grace/i);
 });
 
