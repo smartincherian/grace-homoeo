@@ -59,6 +59,18 @@ beforeEach(() => {
   Object.values(h).forEach((f) => f.mockReset());
 });
 
+test("shows the generic brand and footer, no Grace text", () => {
+  const { container } = renderLogin();
+  // The developer credit links to graceissufficient.net; check the rest.
+  container.querySelector("footer")?.remove();
+  expect(
+    screen.getByRole("heading", { name: "HomoeoDesk" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Homoeo Clinic Manager")).toBeInTheDocument();
+  expect(screen.getByText(/developed by/i)).toBeInTheDocument();
+  expect(container.textContent).not.toMatch(/grace/i);
+});
+
 test("Forgot password asks for an email first", async () => {
   const user = userEvent.setup();
   renderLogin();

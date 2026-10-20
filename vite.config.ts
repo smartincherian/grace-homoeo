@@ -10,12 +10,13 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Grace Homoeo",
-        short_name: "Grace",
+        name: "HomoeoDesk",
+        short_name: "HomoeoDesk",
+        description: "Homoeo Clinic Manager",
         theme_color: "#f5f7fc",
         background_color: "#f5f7fc",
         display: "standalone",
-        start_url: "/patients",
+        start_url: "/",
         icons: [
           { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

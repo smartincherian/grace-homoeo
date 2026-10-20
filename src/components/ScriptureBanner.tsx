@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   ButtonBase,
@@ -7,7 +7,6 @@ import {
   useTheme,
 } from "@mui/material";
 import { TOKENS } from "../theme/theme";
-import SiteFooter from "./SiteFooter";
 
 const VERSES = [
   {
@@ -68,38 +67,16 @@ function Verse({ text, reference }: { text: string; reference: string }) {
 }
 
 /**
- * The clinic's verses in a framed card with the copyright line beneath,
- * pinned to the bottom of every page. Wide screens show both verses side by
+ * The clinic's verses in a framed card. Wide screens show both verses side by
  * side; phones show one at a time (tap, or every 10s). The verses scroll
- * inside the card if they ever outgrow it. `pinned={false}` lets it sit in
- * normal flow (login page).
+ * inside the card if they ever outgrow it. Placement is up to the caller
+ * (see BottomDock).
  */
-export default function ScriptureBanner({
-  pinned = true,
-}: {
-  pinned?: boolean;
-}) {
+export default function ScriptureBanner() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [index, setIndex] = useState(0);
-
-  // Publish the block's height as --scripture-h so other bottom-pinned things
-  // (add button, form save bar) can sit above it.
-  const ref = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!pinned || !el || typeof ResizeObserver === "undefined") return;
-    const root = document.documentElement;
-    const ro = new ResizeObserver(() =>
-      root.style.setProperty("--scripture-h", `${el.offsetHeight}px`),
-    );
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      root.style.removeProperty("--scripture-h");
-    };
-  }, [pinned]);
 
   useEffect(() => {
     if (isDesktop || reduceMotion) return;
@@ -114,108 +91,89 @@ export default function ScriptureBanner({
 
   return (
     <Box
-      ref={ref}
+      component="aside"
+      aria-label="Scripture"
+      lang="ml"
       sx={{
-        position: pinned ? "sticky" : "relative",
-        // Phones: sit right on top of the bottom tab bar.
-        bottom: pinned
-          ? { xs: "calc(56px + env(safe-area-inset-bottom))", md: 0 }
-          : undefined,
-        zIndex: 2,
-        mt: 2,
-        pt: 1,
-        pb: { xs: 0.5, md: 0 },
-        // Page ground behind the card so scrolled content doesn't show
-        // through the gaps around it.
-        bgcolor: pinned ? "background.default" : undefined,
+        p: "1.5px",
+        borderRadius: "16px",
+        background: FRAME,
+        boxShadow: "0 6px 20px rgba(27,58,168,.12)",
       }}
     >
       <Box
-        component="aside"
-        aria-label="Scripture"
-        lang="ml"
+        {...(isDesktop
+          ? {}
+          : {
+              component: ButtonBase,
+              onClick: () => setIndex((i) => (i + 1) % VERSES.length),
+              "aria-label": "Show the next verse",
+            })}
         sx={{
-          p: "1.5px",
-          borderRadius: "16px",
-          background: FRAME,
-          boxShadow: "0 6px 20px rgba(27,58,168,.12)",
+          position: "relative",
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+          textAlign: "left",
+          borderRadius: "14.5px",
+          background: `radial-gradient(120% 140% at 0% 0%, ${TOKENS.blue50} 0%, ${TOKENS.white} 55%, #fffaf0 100%)`,
+          px: { xs: 1.75, md: 2.5 },
+          py: { xs: 1, md: 1.25 },
         }}
       >
         <Box
-          {...(isDesktop
-            ? {}
-            : {
-                component: ButtonBase,
-                onClick: () => setIndex((i) => (i + 1) % VERSES.length),
-                "aria-label": "Show the next verse",
-              })}
           sx={{
-            position: "relative",
-            width: "100%",
-            display: "flex",
+            flex: 1,
+            minWidth: 0,
+            maxHeight: { xs: "22vh", md: "18vh" },
+            overflowY: "auto",
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", md: "1fr auto 1fr" },
+            columnGap: 3,
             alignItems: "center",
-            gap: 1.5,
-            textAlign: "left",
-            borderRadius: "14.5px",
-            background: `radial-gradient(120% 140% at 0% 0%, ${TOKENS.blue50} 0%, ${TOKENS.white} 55%, #fffaf0 100%)`,
-            px: { xs: 1.75, md: 2.5 },
-            py: { xs: 1, md: 1.25 },
           }}
         >
+          {shown.map((v, i) => [
+            i > 0 && (
+              <Box
+                key={`${v.ref}-rule`}
+                aria-hidden
+                sx={{
+                  alignSelf: "stretch",
+                  width: "1px",
+                  background: `linear-gradient(180deg, transparent, ${TOKENS.blue200}, transparent)`,
+                }}
+              />
+            ),
+            <Verse key={v.ref} text={v.text} reference={v.ref} />,
+          ])}
+        </Box>
+        {!isDesktop && (
           <Box
+            aria-hidden
             sx={{
-              flex: 1,
-              minWidth: 0,
-              maxHeight: { xs: "22vh", md: "18vh" },
-              overflowY: "auto",
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "1fr auto 1fr" },
-              columnGap: 3,
-              alignItems: "center",
+              display: "flex",
+              flexDirection: "column",
+              gap: 0.5,
+              flex: "none",
             }}
           >
-            {shown.map((v, i) => [
-              i > 0 && (
-                <Box
-                  key={`${v.ref}-rule`}
-                  aria-hidden
-                  sx={{
-                    alignSelf: "stretch",
-                    width: "1px",
-                    background: `linear-gradient(180deg, transparent, ${TOKENS.blue200}, transparent)`,
-                  }}
-                />
-              ),
-              <Verse key={v.ref} text={v.text} reference={v.ref} />,
-            ])}
+            {VERSES.map((v, i) => (
+              <Box
+                key={v.ref}
+                sx={{
+                  width: 6,
+                  height: i === index ? 14 : 6,
+                  borderRadius: "99px",
+                  bgcolor: i === index ? GOLD : TOKENS.blue200,
+                  transition: "height .25s ease",
+                }}
+              />
+            ))}
           </Box>
-          {!isDesktop && (
-            <Box
-              aria-hidden
-              sx={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 0.5,
-                flex: "none",
-              }}
-            >
-              {VERSES.map((v, i) => (
-                <Box
-                  key={v.ref}
-                  sx={{
-                    width: 6,
-                    height: i === index ? 14 : 6,
-                    borderRadius: "99px",
-                    bgcolor: i === index ? GOLD : TOKENS.blue200,
-                    transition: "height .25s ease",
-                  }}
-                />
-              ))}
-            </Box>
-          )}
-        </Box>
+        )}
       </Box>
-      <SiteFooter />
     </Box>
   );
 }

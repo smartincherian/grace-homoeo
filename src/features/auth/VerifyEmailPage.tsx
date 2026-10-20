@@ -9,6 +9,7 @@ import { getMembership, homePath } from "../../lib/access";
 import { ensureUserDoc } from "./ensureUserDoc";
 import { useAuth } from "./useAuth";
 import { useToast } from "../../components/useToast";
+import ProductMark from "../../components/ProductMark";
 import { CARD_SX, TOKENS } from "../../theme/theme";
 
 export default function VerifyEmailPage() {
@@ -105,6 +106,17 @@ export default function VerifyEmailPage() {
         sx={{ ...CARD_SX, width: "100%", maxWidth: 400, borderRadius: "24px" }}
       >
         <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
+            <ProductMark size={40} />
+            <Box>
+              <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
+                HomoeoDesk
+              </Typography>
+              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                Homoeo Clinic Manager
+              </Typography>
+            </Box>
+          </Box>
           <Typography variant="h1" sx={{ fontSize: 22, mb: 1 }}>
             Verify your email
           </Typography>

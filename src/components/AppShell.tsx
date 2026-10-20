@@ -34,7 +34,7 @@ import SetPasswordDialog, {
 } from "../features/auth/SetPasswordDialog";
 import { setActiveClinic } from "../lib/clinic";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
-import ScriptureBanner from "./ScriptureBanner";
+import BottomDock from "./BottomDock";
 import logo from "../assets/logo.png";
 import { LINE, TOKENS, initials } from "../theme/theme";
 import { canManageClinic, isSuperadmin } from "../lib/access";
@@ -372,7 +372,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
             </ButtonBase>
           )}
           <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
-          <ScriptureBanner />
+          <BottomDock showScripture />
         </Box>
       </Box>
     );
@@ -419,7 +419,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
             noWrap
             sx={{ fontWeight: 800, fontSize: 17 }}
           >
-            {isRoot ? "Grace Homoeo" : pageTitle || "Grace Homoeo"}
+            {isRoot ? "HomoeoDesk" : pageTitle || "HomoeoDesk"}
           </Typography>
           {isRoot && clinicName && (
             <Typography
@@ -449,7 +449,7 @@ function ShellInner({ children }: { children?: ReactNode }) {
         }}
       >
         <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
-        <ScriptureBanner />
+        <BottomDock showScripture />
       </Box>
 
       {clinicSlug && (

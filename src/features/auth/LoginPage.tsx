@@ -27,7 +27,8 @@ import { getMembership, homePath } from "../../lib/access";
 import { ensureUserDoc } from "./ensureUserDoc";
 import { useToast } from "../../components/useToast";
 import { TOKENS } from "../../theme/theme";
-import ScriptureBanner from "../../components/ScriptureBanner";
+import BottomDock from "../../components/BottomDock";
+import ProductMark from "../../components/ProductMark";
 
 // Closing the Google popup is not an error worth reporting.
 const CANCELLED = ["auth/popup-closed-by-user", "auth/cancelled-popup-request"];
@@ -213,27 +214,13 @@ export default function LoginPage() {
           <Box
             sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3.5 }}
           >
-            <Box
-              sx={{
-                width: 44,
-                height: 44,
-                borderRadius: "14px",
-                background: "linear-gradient(135deg, var(--brand-300), var(--brand))",
-                color: "#fff",
-                display: "grid",
-                placeItems: "center",
-                fontWeight: 800,
-                fontSize: 19,
-              }}
-            >
-              G
-            </Box>
+            <ProductMark />
             <Box>
               <Typography variant="h1" sx={{ fontSize: 22 }}>
-                Grace Homoeo
+                HomoeoDesk
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                Clinic sign-in
+                Homoeo Clinic Manager
               </Typography>
             </Box>
           </Box>
@@ -309,7 +296,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <Box sx={{ width: "100%", maxWidth: 880 }}>
-        <ScriptureBanner pinned={false} />
+        <BottomDock pinned={false} />
       </Box>
     </Box>
   );
