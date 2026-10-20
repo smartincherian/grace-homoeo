@@ -70,6 +70,7 @@ const renderShell = (
           <Routes>
             <Route element={<AppShell>{children}</AppShell>}>
               <Route path="/admin" element={null} />
+              <Route path="/:clinicSlug/people" element={<p>people route</p>} />
               <Route path="/:clinicSlug/*" element={null} />
             </Route>
           </Routes>
@@ -172,4 +173,21 @@ test("hides the back button on a root tab", () => {
   expect(
     screen.queryByRole("button", { name: /back/i }),
   ).not.toBeInTheDocument();
+});
+
+test("shows People to the clinic owner and navigates to it", async () => {
+  const user = userEvent.setup();
+  membership.value = { superadmin: false, clinicId: "c1", owner: true };
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  await user.click(screen.getByRole("menuitem", { name: "People" }));
+  expect(await screen.findByText("people route")).toBeInTheDocument();
+});
+
+test("hides People from a non-owner member", async () => {
+  const user = userEvent.setup();
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  expect(screen.queryByRole("menuitem", { name: "People" })).toBeNull();
 });

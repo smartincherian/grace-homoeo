@@ -37,7 +37,7 @@ import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import ScriptureBanner from "./ScriptureBanner";
 import logo from "../assets/logo.png";
 import { LINE, TOKENS, initials } from "../theme/theme";
-import { isSuperadmin } from "../lib/access";
+import { canManageClinic, isSuperadmin } from "../lib/access";
 import { useClinic } from "../lib/clinicQueries";
 
 const NAV = [
@@ -144,6 +144,16 @@ function ShellInner({ children }: { children?: ReactNode }) {
           }}
         >
           Admin
+        </MenuItem>
+      )}
+      {canManageClinic(membership, clinicSlug) && (
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            navigate(sectionHref("people"));
+          }}
+        >
+          People
         </MenuItem>
       )}
       {user && !hasPassword(user) && (

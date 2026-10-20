@@ -16,6 +16,8 @@ import InventoryFormPage from "./features/inventory/InventoryFormPage";
 import FundsPage from "./features/funds/FundsPage";
 import ExpenseFormPage from "./features/funds/ExpenseFormPage";
 import CalculatorPage from "./features/rateCalculator/CalculatorPage";
+import OwnerOnly from "./features/auth/OwnerOnly";
+import PeoplePage from "./features/people/PeoplePage";
 import AccessPage from "./features/access/AccessPage";
 
 export default function App() {
@@ -60,6 +62,14 @@ export default function App() {
           <Route path="funds/expenses/new" element={<ExpenseFormPage />} />
           <Route path="funds/expenses/:id/edit" element={<ExpenseFormPage />} />
           <Route path="calculator" element={<CalculatorPage />} />
+          <Route
+            path="people"
+            element={
+              <OwnerOnly>
+                <PeoplePage />
+              </OwnerOnly>
+            }
+          />
         </Route>
         <Route path="/" element={<HomeRedirect />} />
         <Route path="*" element={<HomeRedirect />} />
