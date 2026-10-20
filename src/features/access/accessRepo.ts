@@ -1,6 +1,12 @@
-import { collection, getDocs, type DocumentData } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  type DocumentData,
+} from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { ALLOWED_EMAILS } from "../../lib/access";
+import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
 
 export interface AllowedEmail {
   email: string;
@@ -25,4 +31,9 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
       };
     })
     .sort((a, b) => a.email.localeCompare(b.email));
+}
+
+/** Deletes an allow-list entry that belongs to no clinic (superadmin only). */
+export async function removeUnassignedEntry(email: string): Promise<void> {
+  await deleteDoc(doc(db, ALLOWED_EMAILS, normalizeEmail(email)));
 }

@@ -12,13 +12,12 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { Navigate, useNavigate } from "react-router-dom";
-import { z } from "zod";
 import { useAuth } from "../auth/useAuth";
-import { useAllowedEmails } from "./useAllowedEmails";
+import { useAllowedEmails, useRemoveUnassigned } from "./useAllowedEmails";
 import type { AllowedEmail } from "./accessRepo";
 import { useClinics, useCreateClinic } from "./useClinics";
 import { useAddUser, useRemoveUser, useSetOwner } from "../../lib/useSeats";
-import { SeatError, type Seat, type SeatId } from "../../lib/seats";
+import { EMAIL_RE, SeatError, type Seat, type SeatId } from "../../lib/seats";
 import type { Clinic } from "../../lib/clinicQueries";
 import { isValidSlug, slugify } from "../../lib/clinic";
 import { isSuperadmin, normalizeEmail } from "../../lib/access";
@@ -30,7 +29,25 @@ import { PageColumn, PageHeader } from "../../components/PageLayout";
 import { useToast } from "../../components/useToast";
 import { CARD_SX, TOKENS } from "../../theme/theme";
 
-const emailSchema = z.string().trim().email();
+const isEmail = (v: string) => EMAIL_RE.test(normalizeEmail(v));
+
+/** Why `value` can't be given a seat in `targetClinicId`, or "" if it is free to add. */
+function assignedMessage(
+  value: string,
+  targetClinicId: string | null,
+  allowed: AllowedEmail[],
+  clinics: Clinic[],
+): string {
+  const existing = allowed.find((a) => a.email === value);
+  if (!existing) return "";
+  if (targetClinicId !== null && existing.clinicId === targetClinicId) {
+    return "This email already has access";
+  }
+  const name = clinics.find((c) => c.id === existing.clinicId)?.name;
+  return name
+    ? `Already assigned to ${name}. Remove it there first.`
+    : "Already in the allow list without a clinic. Remove it under Unassigned first.";
+}
 
 export default function AccessPage() {
   useSetPageTitle("Admin");
@@ -41,6 +58,7 @@ export default function AccessPage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
   const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerError, setOwnerError] = useState("");
   const [clinicName, setClinicName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
@@ -49,12 +67,22 @@ export default function AccessPage() {
   if (loading) return null;
   if (!isSuperadmin(user?.email)) return <Navigate to="/" replace />;
 
-  const ownerValid = emailSchema.safeParse(ownerEmail).success;
+  const ownerValid = isEmail(ownerEmail);
   const slugInvalid = slug !== "" && !isValidSlug(slug);
 
   const submitClinic = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidSlug(slug) || !ownerValid) return;
+    const taken = assignedMessage(
+      normalizeEmail(ownerEmail),
+      null,
+      allowed.data ?? [],
+      clinics.data ?? [],
+    );
+    if (taken) {
+      setOwnerError(taken);
+      return;
+    }
     const name = clinicName.trim();
     createClinic.mutate(
       {
@@ -133,8 +161,12 @@ export default function AccessPage() {
             size="small"
             fullWidth
             value={ownerEmail}
-            onChange={(e) => setOwnerEmail(e.target.value)}
-            helperText=" "
+            onChange={(e) => {
+              setOwnerEmail(e.target.value);
+              setOwnerError("");
+            }}
+            error={!!ownerError}
+            helperText={ownerError || " "}
           />
           <Button
             type="submit"
@@ -168,12 +200,21 @@ export default function AccessPage() {
           />
         ))}
       </QueryStates>
+      {clinics.status === "success" && (
+        <UnassignedSection
+          entries={(allowed.data ?? []).filter(
+            (a) => !(clinics.data ?? []).some((c) => c.id === a.clinicId),
+          )}
+        />
+      )}
       <Typography sx={{ fontSize: 13, color: "text.secondary", mt: 2 }}>
         Removing someone signs them out the next time they open the app.
       </Typography>
     </PageColumn>
   );
 }
+
+const SEATLESS_TIP = "Run the seat backfill first";
 
 const SEAT_MESSAGES: Record<SeatError["code"], string> = {
   full: "This clinic already has three users.",
@@ -215,21 +256,14 @@ function ClinicSection({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailSchema.safeParse(email).success) {
+    if (!isEmail(email)) {
       setError("Enter a valid email address");
       return;
     }
     const value = normalizeEmail(email);
-    const existing = allowed.find((a) => a.email === value);
-    if (existing && existing.clinicId !== clinic.id) {
-      const name =
-        clinics.find((c) => c.id === existing.clinicId)?.name ??
-        existing.clinicId;
-      setError(`Already assigned to ${name}. Remove it there first.`);
-      return;
-    }
-    if (existing) {
-      setError("This email already has access");
+    const taken = assignedMessage(value, clinic.id, allowed, clinics);
+    if (taken) {
+      setError(taken);
       return;
     }
     add.mutate(
@@ -302,34 +336,47 @@ function ClinicSection({
                 {u.email}
               </Typography>
               <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
-                {`Seat ${u.seat || "—"}`}
+                {u.seat ? `Seat ${u.seat}` : "No seat (legacy)"}
               </Typography>
             </Box>
             {isOwner ? (
               <Chip label="Owner" size="small" color="primary" />
             ) : (
-              <Button
-                size="small"
-                aria-label={`Make ${u.email} owner`}
-                onClick={() =>
-                  makeOwner.mutate(
-                    { clinicId: clinic.id, email: u.email },
-                    {
-                      onSuccess: () =>
-                        showToast(`${u.email} is now the owner`, "success"),
-                      onError: () =>
-                        showToast(
-                          "Could not change owner. Please try again.",
-                          "error",
-                        ),
-                    },
-                  )
-                }
-              >
-                Make owner
-              </Button>
+              <Tooltip title={u.seat ? "" : SEATLESS_TIP}>
+                <span>
+                  <Button
+                    size="small"
+                    disabled={!u.seat}
+                    aria-label={`Make ${u.email} owner`}
+                    onClick={() =>
+                      makeOwner.mutate(
+                        { clinicId: clinic.id, email: u.email },
+                        {
+                          onSuccess: () =>
+                            showToast(`${u.email} is now the owner`, "success"),
+                          onError: () =>
+                            showToast(
+                              "Could not change owner. Please try again.",
+                              "error",
+                            ),
+                        },
+                      )
+                    }
+                  >
+                    Make owner
+                  </Button>
+                </span>
+              </Tooltip>
             )}
-            <Tooltip title={isOwner ? "Make someone else owner first" : ""}>
+            <Tooltip
+              title={
+                isOwner
+                  ? "Make someone else owner first"
+                  : u.seat
+                    ? ""
+                    : SEATLESS_TIP
+              }
+            >
               <span>
                 <IconButton
                   aria-label={`Remove ${u.email}`}
@@ -376,6 +423,63 @@ function ClinicSection({
         open={!!toRemove}
         title="Remove access?"
         message={`${toRemove?.email ?? ""} will no longer be able to sign in.`}
+        confirmLabel="Remove"
+        onConfirm={confirmRemove}
+        onClose={() => setToRemove(null)}
+      />
+    </Box>
+  );
+}
+
+function UnassignedSection({ entries }: { entries: AllowedEmail[] }) {
+  const { showToast } = useToast();
+  const remove = useRemoveUnassigned();
+  const [toRemove, setToRemove] = useState<string | null>(null);
+  if (entries.length === 0) return null;
+
+  const confirmRemove = () => {
+    if (!toRemove) return;
+    const email = toRemove;
+    setToRemove(null);
+    remove.mutate(email, {
+      onSuccess: () => showToast(`${email} removed`, "success"),
+      onError: () =>
+        showToast("Could not remove email. Please try again.", "error"),
+    });
+  };
+
+  return (
+    <Box sx={{ ...CARD_SX, p: { xs: 2, md: 2.5 }, mb: 2, mt: 3 }}>
+      <Typography variant="h6">Unassigned</Typography>
+      <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 1 }}>
+        These emails are on the allow list but belong to no clinic.
+      </Typography>
+      {entries.map((a) => (
+        <Stack
+          key={a.email}
+          direction="row"
+          alignItems="center"
+          spacing={1}
+          sx={{ py: 0.5 }}
+        >
+          <Typography noWrap sx={{ flex: 1, fontSize: 14 }}>
+            {a.email}
+          </Typography>
+          <IconButton
+            aria-label={`Remove ${a.email}`}
+            size="small"
+            disabled={remove.isPending}
+            onClick={() => setToRemove(a.email)}
+            sx={{ color: TOKENS.muted }}
+          >
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+      ))}
+      <ConfirmDialog
+        open={!!toRemove}
+        title="Remove access?"
+        message={`${toRemove ?? ""} will no longer be able to sign in.`}
         confirmLabel="Remove"
         onConfirm={confirmRemove}
         onClose={() => setToRemove(null)}

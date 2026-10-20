@@ -56,6 +56,7 @@ service cloud.firestore {
         && request.resource.data.seat in ['1', '2', '3']
         && seatAfterIs(request.resource.data.clinicId, request.resource.data.seat, email);
       allow update: if false;
+      allow delete: if superadmin() && resource.data.get('clinicId', '') == '';
       allow delete: if manager(resource.data.clinicId)
         && !seatAfterIs(resource.data.clinicId, resource.data.get('seat', '0'), email);
     }

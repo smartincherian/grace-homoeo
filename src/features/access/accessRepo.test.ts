@@ -1,20 +1,23 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
 const getDocs = vi.fn();
+const deleteDoc = vi.fn();
 const collection = vi.fn((..._a: unknown[]) => ({ path: "allowedEmails" }));
 const doc = vi.fn((...a: unknown[]) => ({ id: a[2] }));
 
 vi.mock("firebase/firestore", () => ({
   getDocs: (...a: unknown[]) => getDocs(...a),
+  deleteDoc: (...a: unknown[]) => deleteDoc(...a),
   collection: (...a: unknown[]) => collection(...a),
   doc: (...a: unknown[]) => doc(...a),
 }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
 
-import { listAllowedEmails } from "./accessRepo";
+import { listAllowedEmails, removeUnassignedEntry } from "./accessRepo";
 
 beforeEach(() => {
   getDocs.mockReset();
+  deleteDoc.mockReset();
 });
 
 describe("accessRepo", () => {
@@ -46,5 +49,11 @@ describe("accessRepo", () => {
     });
     const list = await listAllowedEmails();
     expect(list.map((e) => e.seat)).toEqual(["2", ""]);
+  });
+
+  it("removes an unassigned entry by lowercased email", async () => {
+    await removeUnassignedEntry(" Amy@X.com ");
+    expect(doc).toHaveBeenCalledWith({}, "allowedEmails", "amy@x.com");
+    expect(deleteDoc).toHaveBeenCalledTimes(1);
   });
 });

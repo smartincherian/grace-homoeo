@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   addUser: vi.fn(),
   removeUser: vi.fn(),
   setOwner: vi.fn(),
+  removeUnassigned: vi.fn(),
   createClinic: vi.fn(),
   toast: vi.fn(),
   emails: [] as Entry[],
@@ -31,6 +32,7 @@ vi.mock("./useClinics", () => ({
 }));
 vi.mock("./useAllowedEmails", () => ({
   useAllowedEmails: () => ({ status: "success", data: m.emails }),
+  useRemoveUnassigned: () => ({ mutate: m.removeUnassigned, isPending: false }),
 }));
 vi.mock("../../lib/useSeats", () => ({
   useAddUser: () => ({ mutate: m.addUser, isPending: false }),
@@ -180,7 +182,7 @@ test("clinic without owner shows No owner set; legacy entry shows a dash seat", 
   m.emails = [{ email: "old@x.com", clinicId: "c1", seat: "", addedAt: 0 }];
   renderAt();
   expect(screen.getByText("No owner set")).toBeInTheDocument();
-  expect(screen.getByText("Seat —")).toBeInTheDocument();
+  expect(screen.getByText("No seat (legacy)")).toBeInTheDocument();
 });
 
 test("adds a user with the clinic's current seats", () => {
@@ -219,4 +221,74 @@ test("blocks adding an email that belongs to another clinic", () => {
     screen.getByText("Already assigned to Sunrise. Remove it there first."),
   ).toBeInTheDocument();
   expect(m.addUser).not.toHaveBeenCalled();
+});
+
+test("seat-less users cannot be removed or made owner", () => {
+  asAdmin();
+  m.emails = [
+    { email: "own@x.com", clinicId: "c1", seat: "1", addedAt: 0 },
+    { email: "old@x.com", clinicId: "c1", seat: "", addedAt: 0 },
+  ];
+  renderAt();
+  expect(
+    screen.getByRole("button", { name: "Remove old@x.com" }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Make old@x.com owner" }),
+  ).toBeDisabled();
+});
+
+test("lists unassigned entries and removes one after confirmation", () => {
+  asAdmin();
+  m.emails = [
+    { email: "own@x.com", clinicId: "c1", seat: "1", addedAt: 0 },
+    { email: "orph@x.com", clinicId: "", seat: "", addedAt: 0 },
+    { email: "ghost@x.com", clinicId: "gone", seat: "1", addedAt: 0 },
+  ];
+  renderAt();
+  expect(
+    screen.getByRole("heading", { name: "Unassigned" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("ghost@x.com")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Remove orph@x.com" }));
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Remove" }),
+  );
+  expect(m.removeUnassigned).toHaveBeenCalledWith(
+    "orph@x.com",
+    expect.anything(),
+  );
+});
+
+test("no Unassigned section when every entry has a clinic", () => {
+  asAdmin();
+  renderAt();
+  expect(screen.queryByRole("heading", { name: "Unassigned" })).toBeNull();
+});
+
+test("adding an orphan email to a clinic points to Unassigned", () => {
+  asAdmin();
+  m.emails = [{ email: "orph@x.com", clinicId: "", seat: "", addedAt: 0 }];
+  renderAt();
+  fireEvent.change(screen.getByLabelText("Add user to Sunrise"), {
+    target: { value: "orph@x.com" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Add to Sunrise" }));
+  expect(
+    screen.getByText(
+      "Already in the allow list without a clinic. Remove it under Unassigned first.",
+    ),
+  ).toBeInTheDocument();
+  expect(m.addUser).not.toHaveBeenCalled();
+});
+
+test("creating a clinic with an owner already in another clinic is blocked", () => {
+  asAdmin();
+  renderAt();
+  fillCreate("Moon Clinic", "own@x.com");
+  fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  expect(
+    screen.getByText("Already assigned to Sunrise. Remove it there first."),
+  ).toBeInTheDocument();
+  expect(m.createClinic).not.toHaveBeenCalled();
 });

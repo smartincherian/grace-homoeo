@@ -8,6 +8,7 @@ import {
 } from "@firebase/rules-unit-testing";
 import {
   collection,
+  deleteDoc,
   doc,
   getDoc,
   getDocs,
@@ -94,6 +95,10 @@ beforeEach(async () => {
       seat: "1",
     });
     await setDoc(doc(db, "allowedEmails/nocl@x.com"), {});
+    await setDoc(doc(db, "allowedEmails/empty@x.com"), {
+      email: "empty@x.com",
+      clinicId: "",
+    });
     await setDoc(doc(db, "clinics/c1/seats/1"), { email: "o@x.com" });
     await setDoc(doc(db, "clinics/c1/seats/2"), { email: "a@x.com" });
     await setDoc(doc(db, "clinics/c2/seats/1"), { email: "t@x.com" });
@@ -193,6 +198,18 @@ describe("superadmin", () => {
     );
   });
 
+  it("deletes an orphan entry with an empty clinicId", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(dbFor(SUPER), "allowedEmails/empty@x.com")),
+    );
+  });
+
+  it("deletes an orphan entry with no clinicId field", async () => {
+    await assertSucceeds(
+      deleteDoc(doc(dbFor(SUPER), "allowedEmails/nocl@x.com")),
+    );
+  });
+
   it("sets ownerEmail to a member of the clinic", async () => {
     await assertSucceeds(
       updateDoc(doc(dbFor(SUPER), "clinics/c1"), { ownerEmail: "a@x.com" }),
@@ -276,6 +293,12 @@ describe("clinic owner (o@x.com, clinic c1)", () => {
 
   it("removes a member", async () => {
     await assertSucceeds(removeUser(dbFor("o@x.com"), "c1", "2", "a@x.com"));
+  });
+
+  it("cannot delete an orphan allow-list entry", async () => {
+    const db = dbFor("o@x.com");
+    await assertFails(deleteDoc(doc(db, "allowedEmails/empty@x.com")));
+    await assertFails(deleteDoc(doc(db, "allowedEmails/nocl@x.com")));
   });
 
   it("cannot remove themselves", async () => {
