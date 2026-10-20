@@ -57,6 +57,10 @@ export async function createPatient(
 ): Promise<string> {
   // Pin the clinic: the active one may change while the serial is awaited.
   const clinic = getActiveClinic();
+  // Read the link first so a failed read can never burn a serial.
+  const appt = appointmentId
+    ? await linkableAppointment(clinic, appointmentId)
+    : null;
   const serialNo = await nextPatientSerial(clinic);
   const data = {
     ...values,
@@ -69,21 +73,29 @@ export async function createPatient(
     const ref = await addDoc(clinicCollection(COLLECTION, clinic), data);
     return ref.id;
   }
-  const appt = await linkableAppointment(clinic, appointmentId);
-  const batch = writeBatch(db);
   const ref = doc(clinicCollection(COLLECTION, clinic));
-  batch.set(ref, data);
-  if (appt) {
-    batch.update(appt, {
-      patientId: ref.id,
-      ...clampedLink({
-        patientName: values.name,
-        phone: values.phone,
-        serialNo,
-      }),
-    });
+  const commit = async (link: boolean) => {
+    const batch = writeBatch(db);
+    batch.set(ref, data);
+    if (link && appt) {
+      batch.update(appt, {
+        patientId: ref.id,
+        ...clampedLink({
+          patientName: values.name,
+          phone: values.phone,
+          serialNo,
+        }),
+      });
+    }
+    await batch.commit();
+  };
+  try {
+    await commit(true);
+  } catch (e) {
+    // The appointment may have vanished since the read: save the patient anyway.
+    if (!appt) throw e;
+    await commit(false);
   }
-  await batch.commit();
   return ref.id;
 }
 

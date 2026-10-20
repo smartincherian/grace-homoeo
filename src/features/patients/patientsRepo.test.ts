@@ -260,6 +260,49 @@ describe("createPatient with an appointment", () => {
     expect(link.serialNo).toBeNull();
   });
 
+  it("saves without a link when the appointment read throws", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockRejectedValue(new Error("offline"));
+    commit.mockResolvedValue(undefined);
+    const id = await createPatient(base, "123");
+    expect(id).toBe("new-pid");
+    expect(batchSet).toHaveBeenCalledTimes(1);
+    expect(batchUpdate).not.toHaveBeenCalled();
+  });
+
+  it("reads the appointment before taking a serial", async () => {
+    getDoc.mockImplementation(async () => {
+      expect(nextPatientSerial).not.toHaveBeenCalled();
+      return apptSnap(true);
+    });
+    nextPatientSerial.mockResolvedValue(7);
+    commit.mockResolvedValue(undefined);
+    await createPatient(base, "123");
+    expect(getDoc).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries the batch without the link when the linked commit fails", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockResolvedValue(apptSnap(true));
+    commit
+      .mockRejectedValueOnce(new Error("not-found"))
+      .mockResolvedValue(undefined);
+    const id = await createPatient(base, "123");
+    expect(id).toBe("new-pid");
+    expect(commit).toHaveBeenCalledTimes(2);
+    expect(nextPatientSerial).toHaveBeenCalledTimes(1);
+    expect(batchUpdate).toHaveBeenCalledTimes(1);
+    expect(batchSet).toHaveBeenCalledTimes(2);
+  });
+
+  it("still throws when a commit without a link fails", async () => {
+    nextPatientSerial.mockResolvedValue(7);
+    getDoc.mockResolvedValue(apptSnap(false));
+    commit.mockRejectedValue(new Error("denied"));
+    await expect(createPatient(base, "123")).rejects.toThrow("denied");
+    expect(commit).toHaveBeenCalledTimes(1);
+  });
+
   it("does not read appointments without an id", async () => {
     nextPatientSerial.mockResolvedValue(7);
     addDoc.mockResolvedValue({ id: "x" });

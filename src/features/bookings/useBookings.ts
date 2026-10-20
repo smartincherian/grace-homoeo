@@ -14,6 +14,7 @@ export function useDayHistory(clinicId: string, dayStart: number) {
     queryKey: ["appointments", "history", clinicId, dayStart],
     queryFn: () => listDayHistory(clinicId, dayStart),
     enabled: !!clinicId,
+    refetchInterval: 60_000,
   });
 }
 
@@ -51,7 +52,8 @@ export function useCloseAppointment() {
       status: "cancelled" | "no-show";
       by: string;
     }) => closeAppointment(v.appointment, v.status, v.by),
-    onSuccess: done,
+    // Also refresh on failure so a row cancelled elsewhere doesn't stay stale.
+    onSettled: done,
   });
 }
 
@@ -59,6 +61,7 @@ export function useMarkArrived() {
   const done = useInvalidate();
   return useMutation({
     mutationFn: (id: string) => markArrived(id),
-    onSuccess: done,
+    // Also refresh on failure so a row cancelled elsewhere doesn't stay stale.
+    onSettled: done,
   });
 }

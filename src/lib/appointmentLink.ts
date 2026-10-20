@@ -5,17 +5,22 @@ const APPOINTMENTS = "appointments";
 
 /**
  * Best-effort linking: the appointment ref to update alongside a patient or
- * consultation save, or null when it is gone (cancelled meanwhile) or already
- * done. A missing appointment must never block saving the patient/consultation.
+ * consultation save, or null when it is gone (cancelled meanwhile), already
+ * done, or unreadable (offline). A missing appointment must never block saving
+ * the patient/consultation.
  */
 export async function linkableAppointment(
   clinic: string,
   appointmentId: string,
 ): Promise<DocumentReference | null> {
   const ref = clinicDoc(APPOINTMENTS, appointmentId, clinic);
-  const snap = await getDoc(ref);
-  if (!snap.exists()) return null;
-  return snap.data()?.status === "done" ? null : ref;
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) return null;
+    return snap.data()?.status === "done" ? null : ref;
+  } catch {
+    return null;
+  }
 }
 
 /** Appointment fields clamped to what the Firestore rules accept. */

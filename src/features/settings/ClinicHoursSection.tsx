@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -337,9 +337,18 @@ function Form({ clinicId, initial }: { clinicId: string; initial: Schedule }) {
 
 export default function ClinicHoursSection({ clinicId }: { clinicId: string }) {
   const q = useSchedule(clinicId);
+  const ref = useRef<HTMLElement>(null);
+  const loaded = !!q.data;
+  // "Set clinic hours" deep-links here; scroll once the section has rendered.
+  useEffect(() => {
+    if (loaded && window.location.hash === "#clinic-hours") {
+      ref.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    }
+  }, [loaded]);
   return (
     <Box
       component="section"
+      ref={ref}
       id="clinic-hours"
       sx={{ ...CARD_SX, p: { xs: 2, md: 2.5 }, mb: 2.5 }}
     >

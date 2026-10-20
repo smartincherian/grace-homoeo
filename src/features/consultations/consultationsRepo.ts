@@ -105,46 +105,58 @@ export async function createConsultation(
     ? await linkableAppointment(clinic, appointmentId)
     : null;
   const now = Date.now();
-  const batch = writeBatch(db);
   const ref = doc(clinicCollection(COLLECTION, clinic));
-  batch.set(ref, {
-    ...values,
-    patientId: patient.id,
-    patientName: patient.name,
-    serialNo: patient.serialNo,
-    createdAt: now,
-  });
-  const link = {
-    patientId: patient.id,
-    consultationId: ref.id,
-    date: values.date,
-  };
-  if (record.generals && !isGeneralsBlank(record.generals)) {
-    batch.set(clinicDoc(GENERALS, ref.id, clinic), {
-      ...record.generals,
-      ...link,
-      updatedAt: now,
-    });
-  }
-  // createdAt + n keeps rows entered together in entry order.
-  let n = 0;
-  for (const r of record.lsmc) {
-    if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now + n++, clinic);
-  }
-  // Stamp the patient's last visit in the same atomic batch (write by path,
-  // not by importing the patients feature, to respect feature boundaries).
-  batch.update(clinicDoc(PATIENTS, patient.id, clinic), {
-    lastVisitAt: values.date,
-  });
-  if (appt) {
-    batch.update(appt, {
-      status: "done",
-      consultationId: ref.id,
+  const build = (withAppt: boolean) => {
+    const batch = writeBatch(db);
+    batch.set(ref, {
+      ...values,
       patientId: patient.id,
-      ...clampedLink({ patientName: patient.name, serialNo: patient.serialNo }),
+      patientName: patient.name,
+      serialNo: patient.serialNo,
+      createdAt: now,
     });
+    const link = {
+      patientId: patient.id,
+      consultationId: ref.id,
+      date: values.date,
+    };
+    if (record.generals && !isGeneralsBlank(record.generals)) {
+      batch.set(clinicDoc(GENERALS, ref.id, clinic), {
+        ...record.generals,
+        ...link,
+        updatedAt: now,
+      });
+    }
+    // createdAt + n keeps rows entered together in entry order.
+    let n = 0;
+    for (const r of record.lsmc) {
+      if (!isLsmcRowBlank(r)) addNewLsmcRow(batch, r, link, now + n++, clinic);
+    }
+    // Stamp the patient's last visit in the same atomic batch (write by path,
+    // not by importing the patients feature, to respect feature boundaries).
+    batch.update(clinicDoc(PATIENTS, patient.id, clinic), {
+      lastVisitAt: values.date,
+    });
+    if (appt && withAppt) {
+      batch.update(appt, {
+        status: "done",
+        consultationId: ref.id,
+        patientId: patient.id,
+        ...clampedLink({
+          patientName: patient.name,
+          serialNo: patient.serialNo,
+        }),
+      });
+    }
+    return batch;
+  };
+  try {
+    await build(true).commit();
+  } catch (e) {
+    // The appointment may have vanished since the read: save the visit anyway.
+    if (!appt) throw e;
+    await build(false).commit();
   }
-  await batch.commit();
   return ref.id;
 }
 

@@ -47,6 +47,26 @@ beforeEach(() => {
 const saveBtn = () => screen.getByRole("button", { name: "Save hours" });
 
 describe("ClinicHoursSection", () => {
+  it("scrolls into view when the URL hash is #clinic-hours", () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.location.hash = "#clinic-hours";
+    try {
+      render(<ClinicHoursSection clinicId="c1" />);
+      expect(scroll).toHaveBeenCalledTimes(1);
+    } finally {
+      window.location.hash = "";
+    }
+  });
+
+  it("does not scroll without the hash", () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    window.location.hash = "";
+    render(<ClinicHoursSection clinicId="c1" />);
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
   it("shows existing sessions and Closed days", () => {
     render(<ClinicHoursSection clinicId="c1" />);
     expect(screen.getByLabelText("Monday start 1")).toHaveValue("09:30");

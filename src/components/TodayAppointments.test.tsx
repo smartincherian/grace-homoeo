@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const state = vi.hoisted(() => ({
@@ -41,6 +41,21 @@ describe("TodayAppointments", () => {
     useDay.mockImplementation(() => state.q);
     renderIt();
     expect(useDay).toHaveBeenCalledWith("c1", Date.UTC(2026, 10, 1, 18, 30));
+  });
+
+  it("moves to the new day after midnight without a remount", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-11-01T19:00:00Z"));
+    state.q = { status: "success", data: [] };
+    useDay.mockImplementation(() => state.q);
+    renderIt();
+    act(() => {
+      vi.advanceTimersByTime(24 * 3600_000);
+    });
+    expect(useDay).toHaveBeenLastCalledWith(
+      "c1",
+      Date.UTC(2026, 10, 2, 18, 30),
+    );
   });
 
   it("lists appointments in order with statuses and links to bookings", () => {

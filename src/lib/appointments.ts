@@ -95,5 +95,7 @@ export function useDayAppointments(clinicId: string, dayStart: number) {
     queryKey: ["appointments", "day", clinicId, dayStart],
     queryFn: () => listAppointmentsForDay(clinicId, dayStart),
     enabled: !!clinicId,
+    // A second device may book or mark arrivals while this one is open.
+    refetchInterval: 60_000,
   });
 }

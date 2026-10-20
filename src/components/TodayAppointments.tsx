@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import { Link } from "react-router-dom";
 import {
@@ -20,7 +20,13 @@ const STATUS_LABEL: Record<AppointmentStatus, string> = {
 export default function TodayAppointments({ clinicId }: { clinicId: string }) {
   const cp = useClinicPath();
   const tz = useClinicTimeZone(clinicId);
-  const dayStart = useMemo(() => dayStartInZone(Date.now(), tz), [tz]);
+  // Minute tick so "today" rolls over at midnight without a remount.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const dayStart = dayStartInZone(now, tz);
   const { status, data } = useDayAppointments(clinicId, dayStart);
   if (status !== "success" || !data || data.length === 0) return null;
 

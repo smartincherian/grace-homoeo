@@ -14,8 +14,12 @@ vi.mock("./clinic", () => ({
   }),
 }));
 
+import { renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement, type ReactNode } from "react";
 import {
   historyId,
+  useDayAppointments,
   listAppointmentsForDay,
   listFutureAppointments,
 } from "./appointments";
@@ -66,5 +70,21 @@ describe("appointments", () => {
     const r = await listFutureAppointments("c1", now);
     expect(where).toHaveBeenCalledWith("start", ">=", now - 2 * 3600_000);
     expect(r.map((a) => a.id)).toEqual(["run"]);
+  });
+});
+
+describe("useDayAppointments", () => {
+  it("polls every minute so a second device's changes show up", () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    const qc = new QueryClient();
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client: qc }, children);
+    renderHook(() => useDayAppointments("c1", 0), { wrapper });
+    const q = qc
+      .getQueryCache()
+      .findAll({ queryKey: ["appointments", "day"] })[0];
+    expect((q?.options as { refetchInterval?: number }).refetchInterval).toBe(
+      60_000,
+    );
   });
 });

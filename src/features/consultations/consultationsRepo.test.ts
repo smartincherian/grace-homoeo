@@ -358,6 +358,41 @@ describe("createConsultation with an appointment", () => {
     expect(batchCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("saves without a link when the appointment read throws", async () => {
+    getDoc.mockRejectedValue(new Error("offline"));
+    await createConsultation(PATIENT, values, NO_RECORD, "123");
+    expect(apptUpdates()).toEqual([]);
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("writes no link when the appointment is already done", async () => {
+    getDoc.mockResolvedValue(apptSnap(true, "done"));
+    await createConsultation(PATIENT, values, NO_RECORD, "123");
+    expect(apptUpdates()).toEqual([]);
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries the batch without the link when the linked commit fails", async () => {
+    getDoc.mockResolvedValue(apptSnap(true));
+    batchCommit
+      .mockRejectedValueOnce(new Error("not-found"))
+      .mockResolvedValue(undefined);
+    const id = await createConsultation(PATIENT, values, NO_RECORD, "123");
+    expect(id).toBe("generated-id");
+    expect(batchCommit).toHaveBeenCalledTimes(2);
+    expect(apptUpdates()).toHaveLength(1);
+    expect(batchSet).toHaveBeenCalledTimes(2);
+  });
+
+  it("still throws when a commit without a link fails", async () => {
+    getDoc.mockResolvedValue(apptSnap(false));
+    batchCommit.mockRejectedValue(new Error("denied"));
+    await expect(
+      createConsultation(PATIENT, values, NO_RECORD, "123"),
+    ).rejects.toThrow("denied");
+    expect(batchCommit).toHaveBeenCalledTimes(1);
+  });
+
   it("clamps the name to 80 chars and a non-integer serial to null", async () => {
     getDoc.mockResolvedValue(apptSnap(true));
     await createConsultation(
