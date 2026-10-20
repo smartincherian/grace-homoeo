@@ -34,7 +34,7 @@ const closed = (start: number, createdAt = 1): ClosedAppointment => ({
 test("keeps every slot before they start, sorted", () => {
   const rows = dayRows(slots, [], [], T0 - 60 * M);
   expect(rows.map((r) => r.start)).toEqual(slots.map((s) => s.start));
-  expect(rows[0]).toEqual({ ...slots[0], history: [] });
+  expect(rows[0]).toEqual({ ...slots[0], isSlot: true, history: [] });
 });
 
 test("drops past free slots but keeps the running one and a past booked one", () => {
@@ -72,4 +72,16 @@ test("history attaches to its row, including a free slot after a cancel", () => 
 test("a past free slot with history is kept", () => {
   const rows = dayRows(slots, [], [closed(T0)], T0 + 60 * M);
   expect(rows.map((r) => r.start)).toEqual([T0]);
+});
+
+test("only rows on the computed slot grid are slots", () => {
+  const off = T0 + 7 * M;
+  // Holiday: no slots; a cancelled booking and an off-grid one remain.
+  const rows = dayRows([], [appt(off)], [closed(T0)], T0 - M);
+  expect(rows.map((r) => [r.start, r.isSlot])).toEqual([
+    [T0, false],
+    [off, false],
+  ]);
+  const grid = dayRows(slots, [], [closed(T0)], T0 - M);
+  expect(grid[0].isSlot).toBe(true);
 });

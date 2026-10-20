@@ -3,6 +3,8 @@ import type { Appointment, ClosedAppointment } from "../../lib/appointments";
 export interface DayRow {
   start: number;
   end: number;
+  /** True only for a slot of today's computed grid: the only bookable rows. */
+  isSlot: boolean;
   appointment?: Appointment;
   history: ClosedAppointment[];
 }
@@ -19,15 +21,15 @@ export function dayRows(
   now: number,
 ): DayRow[] {
   const byStart = new Map<number, DayRow>();
-  const rowFor = (start: number, end: number) => {
+  const rowFor = (start: number, end: number, isSlot = false) => {
     let row = byStart.get(start);
     if (!row) {
-      row = { start, end, history: [] };
+      row = { start, end, isSlot, history: [] };
       byStart.set(start, row);
     }
     return row;
   };
-  for (const s of slots) rowFor(s.start, s.end);
+  for (const s of slots) rowFor(s.start, s.end, true);
   for (const a of appointments) rowFor(a.start, a.end).appointment = a;
   for (const h of history) rowFor(h.start, h.end).history.push(h);
   return [...byStart.values()]

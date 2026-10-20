@@ -355,6 +355,8 @@ export default function BookingsPage() {
                     </Typography>
                   }
                   trailing={
+                    // Holiday or off-grid rows kept for their history aren't bookable.
+                    r.isSlot &&
                     r.end > now && (
                       <Button
                         size="small"

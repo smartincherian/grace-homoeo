@@ -195,6 +195,25 @@ test("a holiday with a booking shows the banner and a still-booked warning", () 
   expect(screen.queryByRole("button", { name: "Book" })).toBeNull();
 });
 
+test("a holiday with only a cancelled booking offers no Book button", () => {
+  state.schedule = {
+    slotMinutes: 15,
+    weekly: weekly(),
+    holidays: [{ date: MON, note: "Diwali" }],
+  };
+  state.history = [
+    {
+      ...appt({ patientName: "Ravi" }),
+      status: "cancelled",
+      closedAt: 2,
+      closedBy: "doc@example.com",
+    },
+  ];
+  renderPage();
+  expect(screen.getByText("Cancelled · Ravi")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Book" })).toBeNull();
+});
+
 test("a closed weekday says so; next day moves the ?day param", async () => {
   const user = userEvent.setup();
   renderPage();
