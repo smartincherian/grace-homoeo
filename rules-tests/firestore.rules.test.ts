@@ -355,3 +355,72 @@ describe("seats and subcollections", () => {
     );
   });
 });
+
+describe("branding settings", () => {
+  const path = "clinics/c1/settings/branding";
+  const contact = {
+    doctorName: "Dr A",
+    qualifications: "BHMS",
+    registrationNo: "123",
+    address: "Street",
+    phone: "999",
+    email: "d@x.com",
+  };
+  const valid = (by = "o@x.com") => ({
+    displayName: "Grace",
+    logoDataUrl: "",
+    primaryColor: "#0f766e",
+    showScripture: true,
+    contact,
+    updatedAt: 1,
+    updatedBy: by,
+  });
+
+  it("members read their own clinic's branding, others cannot", async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), path), valid());
+    });
+    await assertSucceeds(getDoc(doc(dbFor("a@x.com"), path)));
+    await assertFails(getDoc(doc(dbFor("t@x.com"), path)));
+  });
+
+  it("owner writes valid branding; member cannot", async () => {
+    await assertSucceeds(setDoc(doc(dbFor("o@x.com"), path), valid()));
+    await assertFails(setDoc(doc(dbFor("a@x.com"), path), valid("a@x.com")));
+  });
+
+  it("owner accepts a small data-url logo", async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor("o@x.com"), path), {
+        ...valid(),
+        logoDataUrl: "data:image/png;base64,AAAA",
+      }),
+    );
+  });
+
+  it("rejects invalid branding", async () => {
+    const db = dbFor("o@x.com");
+    const bad = (patch: Record<string, unknown>) =>
+      assertFails(setDoc(doc(db, path), { ...valid(), ...patch }));
+    await bad({ primaryColor: "blue" });
+    await bad({ displayName: "x".repeat(61) });
+    await bad({ logoDataUrl: "http://x/y.png" });
+    await bad({ logoDataUrl: "data:image/png;base64," + "A".repeat(200001) });
+    await bad({ foo: 1 });
+    await bad({ updatedBy: "a@x.com" });
+    await bad({ contact: { ...contact, phone: "9".repeat(121) } });
+    await bad({ showScripture: "yes" });
+  });
+
+  it("superadmin writes valid branding", async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor(SUPER), path), valid(SUPER)),
+    );
+  });
+
+  it("owner cannot write other settings docs", async () => {
+    await assertFails(
+      setDoc(doc(dbFor("o@x.com"), "clinics/c1/settings/other"), valid()),
+    );
+  });
+});

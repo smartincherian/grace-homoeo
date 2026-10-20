@@ -43,6 +43,27 @@ service cloud.firestore {
       return ['patients', 'consultations', 'generals', 'lsmc', 'inventory', 'orderItems', 'expenses', 'counters'];
     }
 
+    function shortStr(v) { return v is string && v.size() <= 120; }
+    function validContact(c) {
+      return c is map
+        && c.keys().hasOnly(['doctorName', 'qualifications', 'registrationNo', 'address', 'phone', 'email'])
+        && c.keys().hasAll(['doctorName', 'qualifications', 'registrationNo', 'address', 'phone', 'email'])
+        && shortStr(c.doctorName) && shortStr(c.qualifications) && shortStr(c.registrationNo)
+        && shortStr(c.address) && shortStr(c.phone) && shortStr(c.email);
+    }
+    function validBranding(d) {
+      return d.keys().hasOnly(['displayName', 'logoDataUrl', 'primaryColor', 'showScripture', 'contact', 'updatedAt', 'updatedBy'])
+        && d.keys().hasAll(['displayName', 'logoDataUrl', 'primaryColor', 'showScripture', 'contact', 'updatedAt', 'updatedBy'])
+        && d.displayName is string && d.displayName.size() <= 60
+        && d.logoDataUrl is string && d.logoDataUrl.size() <= 200000
+        && (d.logoDataUrl == '' || d.logoDataUrl.matches('^data:image/(png|webp|jpeg);base64,.*'))
+        && d.primaryColor is string && d.primaryColor.matches('^#[0-9a-fA-F]{6}$')
+        && d.showScripture is bool
+        && validContact(d.contact)
+        && d.updatedAt is number
+        && d.updatedBy == authEmail();
+    }
+
     // The allow list: anyone may check their own entry. A user is added or
     // removed together with their seat doc in one batch (max 3 seats per clinic);
     // entries are never updated in place, so nobody can move between clinics.
@@ -84,6 +105,15 @@ service cloud.firestore {
         allow delete: if manager(clinicId)
           && resource.data.email != getAfter(/databases/$(database)/documents/clinics/$(clinicId)).data.get('ownerEmail', '')
           && !entryAfterIs(resource.data.email, clinicId, seatId);
+      }
+
+      // Per-clinic branding: members read, the owner/superadmin write a validated doc.
+      match /settings/{docId} {
+        allow read: if member(clinicId);
+        allow create, update: if manager(clinicId)
+          && docId == 'branding'
+          && validBranding(request.resource.data);
+        allow delete: if manager(clinicId) && docId == 'branding';
       }
 
       // {sub}/{document=**} needs at least one segment, so this does not match
