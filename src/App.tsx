@@ -19,6 +19,8 @@ import CalculatorPage from "./features/rateCalculator/CalculatorPage";
 import OwnerOnly from "./features/auth/OwnerOnly";
 import PeoplePage from "./features/people/PeoplePage";
 import SettingsPage from "./features/settings/SettingsPage";
+import StaffListPage from "./features/staff/StaffListPage";
+import StaffFormPage from "./features/staff/StaffFormPage";
 import AccessPage from "./features/access/AccessPage";
 
 export default function App() {
@@ -68,6 +70,30 @@ export default function App() {
             element={
               <OwnerOnly>
                 <PeoplePage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff"
+            element={
+              <OwnerOnly>
+                <StaffListPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/new"
+            element={
+              <OwnerOnly>
+                <StaffFormPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/:id/edit"
+            element={
+              <OwnerOnly>
+                <StaffFormPage />
               </OwnerOnly>
             }
           />

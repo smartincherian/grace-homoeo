@@ -15,6 +15,7 @@ import {
 import PeopleIcon from "@mui/icons-material/PeopleOutline";
 import Inventory2Icon from "@mui/icons-material/Inventory2Outlined";
 import PaidIcon from "@mui/icons-material/CreditCardOutlined";
+import BadgeIcon from "@mui/icons-material/BadgeOutlined";
 import CalculateIcon from "@mui/icons-material/CalculateOutlined";
 import ArrowBackIcon from "@mui/icons-material/ArrowBackIosNew";
 import {
@@ -50,6 +51,7 @@ const NAV = [
   { to: "calculator", label: "Calculator", icon: <CalculateIcon /> },
   { to: "funds", label: "Funds", icon: <PaidIcon /> },
 ];
+const STAFF_NAV = { to: "staff", label: "Staff", icon: <BadgeIcon /> };
 const SIDEBAR_WIDTH = 244;
 
 function ShellInner({
@@ -65,10 +67,15 @@ function ShellInner({
   // Undefined outside a clinic (the superadmin's /admin page): no clinic nav there.
   const { clinicSlug } = useParams();
   const sectionHref = (section: string) => `/${clinicSlug}/${section}`;
-  const section = pathname.split("/")[2];
-  const current = NAV.find((n) => n.to === section)?.to ?? "patients";
-  const isRoot = !clinicSlug || NAV.some((n) => sectionHref(n.to) === pathname);
   const membership = useMembership();
+  const navItems = [
+    ...NAV,
+    ...(canManageClinic(membership, clinicSlug) ? [STAFF_NAV] : []),
+  ];
+  const section = pathname.split("/")[2];
+  const current = navItems.find((n) => n.to === section)?.to ?? "patients";
+  const isRoot =
+    !clinicSlug || navItems.some((n) => sectionHref(n.to) === pathname);
   const clinicName = useClinic(clinicId).data?.name;
   const branding = useBranding(clinicId).data;
   const shownName = clinicId
@@ -241,7 +248,7 @@ function ShellInner({
               component="nav"
               sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
             >
-              {NAV.map((n) => {
+              {navItems.map((n) => {
                 const active = current === n.to;
                 return (
                   <Box
@@ -458,7 +465,7 @@ function ShellInner({
             boxSizing: "content-box",
           }}
         >
-          {NAV.map((n) => (
+          {navItems.map((n) => (
             <BottomNavigationAction
               key={n.to}
               component={Link}

@@ -262,3 +262,15 @@ test("shows Settings to the clinic owner and hides it from members", async () =>
   await user.click(screen.getByRole("button", { name: /account/i }));
   expect(screen.queryByRole("menuitem", { name: "Settings" })).toBeNull();
 });
+
+test("shows a Staff nav link to the owner, selected on /c1/staff, and hides it from members", () => {
+  membership.value = { superadmin: false, clinicId: "c1", owner: true };
+  const { unmount } = renderShell(["/c1/staff"]);
+  const link = screen.getByRole("link", { name: /staff/i });
+  expect(link).toHaveAttribute("href", "/c1/staff");
+  expect(link).toHaveClass("Mui-selected");
+  unmount();
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
+  renderShell(["/c1/patients"]);
+  expect(screen.queryByRole("link", { name: /staff/i })).toBeNull();
+});
