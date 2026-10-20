@@ -433,3 +433,89 @@ describe("branding settings", () => {
     );
   });
 });
+
+describe("staff, leaves and salary payments", () => {
+  const paths = [
+    "clinics/c1/staff/s1",
+    "clinics/c1/leaves/l1",
+    "clinics/c1/salaryPayments/s1_2026-02",
+  ];
+  const pay = (month: string) => ({
+    staffId: "s1",
+    month,
+    needsReview: false,
+    net: 1,
+  });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, "clinics/c1/staff/s1"), { name: "S" });
+      await setDoc(doc(db, "clinics/c1/leaves/l1"), { staffId: "s1" });
+      await setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-02"), pay("2026-02"));
+    });
+  });
+
+  it("the owner reads and writes all three", async () => {
+    const db = dbFor("o@x.com");
+    for (const p of paths) await assertSucceeds(getDoc(doc(db, p)));
+    for (const c of ["staff", "leaves", "salaryPayments"]) {
+      await assertSucceeds(getDocs(collection(db, `clinics/c1/${c}`)));
+    }
+    await assertSucceeds(setDoc(doc(db, "clinics/c1/staff/s2"), { name: "T" }));
+    await assertSucceeds(setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }));
+    await assertSucceeds(
+      setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-03"), pay("2026-03")),
+    );
+    await assertSucceeds(deleteDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-02")));
+  });
+
+  it("a member is denied get, list and set on each", async () => {
+    const db = dbFor("a@x.com");
+    for (const p of paths) {
+      await assertFails(getDoc(doc(db, p)));
+      await assertFails(setDoc(doc(db, p.replace(/[^/]+$/, "new_2026-03")), pay("2026-03")));
+    }
+    for (const c of ["staff", "leaves", "salaryPayments"]) {
+      await assertFails(getDocs(collection(db, `clinics/c1/${c}`)));
+    }
+  });
+
+  it("another clinic's owner is denied", async () => {
+    const db = dbFor("t@x.com");
+    for (const p of paths) {
+      await assertFails(getDoc(doc(db, p)));
+      await assertFails(setDoc(doc(db, p), pay("2026-02")));
+    }
+  });
+
+  it("the superadmin reads and writes all three", async () => {
+    const db = dbFor(SUPER);
+    for (const p of paths) await assertSucceeds(getDoc(doc(db, p)));
+    await assertSucceeds(setDoc(doc(db, "clinics/c1/staff/s2"), { name: "T" }));
+    await assertSucceeds(setDoc(doc(db, "clinics/c1/leaves/l2"), { staffId: "s1" }));
+    await assertSucceeds(
+      setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-03"), pay("2026-03")),
+    );
+  });
+
+  it("denies a payment whose id or month is malformed", async () => {
+    const db = dbFor("o@x.com");
+    await assertFails(
+      setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-04"), pay("2026-03")),
+    );
+    await assertFails(
+      setDoc(doc(db, "clinics/c1/salaryPayments/s1_bad"), pay("bad")),
+    );
+    await assertFails(
+      setDoc(doc(db, "clinics/c1/salaryPayments/s1_2026-13"), pay("2026-13")),
+    );
+  });
+
+  it("lets the owner flag a payment for review, not a member", async () => {
+    const ref = "clinics/c1/salaryPayments/s1_2026-02";
+    await assertSucceeds(updateDoc(doc(dbFor("o@x.com"), ref), { needsReview: true }));
+    await assertFails(updateDoc(doc(dbFor("a@x.com"), ref), { needsReview: true }));
+    await assertFails(updateDoc(doc(dbFor("o@x.com"), ref), { month: "2026-13" }));
+  });
+});

@@ -116,6 +116,22 @@ service cloud.firestore {
         allow delete: if manager(clinicId) && docId == 'branding';
       }
 
+      // Staff, leave and salary data is owner/superadmin only (not in memberSubs).
+      match /staff/{id} {
+        allow read, write: if manager(clinicId);
+      }
+      match /leaves/{id} {
+        allow read, write: if manager(clinicId);
+      }
+      // One payment per staff member per month: the id is '<staffId>_<YYYY-MM>'.
+      match /salaryPayments/{paymentId} {
+        allow read, delete: if manager(clinicId);
+        allow create, update: if manager(clinicId)
+          && request.resource.data.month.matches('^[0-9]{4}-(0[1-9]|1[0-2])$')
+          && paymentId == request.resource.data.staffId + '_' + request.resource.data.month
+          && request.resource.data.needsReview is bool;
+      }
+
       // {sub}/{document=**} needs at least one segment, so this does not match
       // the clinic doc itself (a bare {document=**} also matches zero segments
       // and would let members rewrite or delete their own clinic doc).

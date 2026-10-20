@@ -8,7 +8,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
 // Keep in sync with src/lib/clinic.ts.
-const RESERVED_SLUGS = ["login", "admin", "access", "patients", "inventory", "calculator", "funds", "clinics", "people", "settings", "verify-email"];
+const RESERVED_SLUGS = ["login", "admin", "access", "patients", "inventory", "calculator", "funds", "clinics", "people", "settings", "staff", "verify-email"];
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const COLLECTIONS = ["patients", "consultations", "generals", "lsmc", "inventory", "orderItems", "expenses"];
 const BATCH_SIZE = 500;
