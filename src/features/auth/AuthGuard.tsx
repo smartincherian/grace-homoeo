@@ -13,7 +13,7 @@ function useMembershipQuery() {
   return useQuery({
     queryKey: ["access", user?.uid],
     queryFn: () => getMembership(user!),
-    enabled: !!user,
+    enabled: !!user && user.emailVerified,
     staleTime: Infinity,
     refetchOnWindowFocus: "always",
   });
@@ -33,6 +33,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
     if (denied) void signOut(auth);
   }, [denied]);
 
+  if (user && !user.emailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
   if (loading || (user && !access.data && !denied)) {
     return (
       <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>

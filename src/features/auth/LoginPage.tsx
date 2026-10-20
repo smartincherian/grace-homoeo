@@ -1,6 +1,8 @@
 import { useState } from "react";
 import {
+  createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -62,6 +64,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [creating, setCreating] = useState(false);
   const navigate = useNavigate();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
@@ -74,6 +77,11 @@ export default function LoginPage() {
     setBusy(true);
     try {
       const { user } = await attempt();
+      if (!user.emailVerified) {
+        // Rules need a verified email; guide them instead of denying.
+        navigate("/verify-email", { replace: true });
+        return;
+      }
       const membership = await getMembership(user);
       if (!membership) {
         await signOut(auth);
@@ -95,8 +103,39 @@ export default function LoginPage() {
     }
   };
 
+  const createAccount = async () => {
+    setBusy(true);
+    try {
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
+      await sendEmailVerification(user);
+      navigate("/verify-email", { replace: true });
+    } catch (err) {
+      const code = err instanceof FirebaseError ? err.code : "";
+      showToast(
+        code === "auth/email-already-in-use"
+          ? "An account already exists for this email. Sign in or reset your password."
+          : code === "auth/weak-password"
+            ? "Password must be at least 6 characters."
+            : code === "auth/invalid-email"
+              ? "Enter a valid email address."
+              : "Could not create the account. Please try again.",
+        "error",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (creating) {
+      void createAccount();
+      return;
+    }
     void signIn(
       () => signInWithEmailAndPassword(auth, email, password),
       "Login failed. Check your email and password, or reset your password.",
@@ -228,8 +267,25 @@ export default function LoginPage() {
             size="large"
             disabled={busy}
           >
-            {busy ? "Signing in..." : "Sign In"}
+            {creating
+              ? busy
+                ? "Creating..."
+                : "Create account"
+              : busy
+                ? "Signing in..."
+                : "Sign In"}
           </Button>
+          <Box sx={{ textAlign: "center", mt: 1.5 }}>
+            <Link
+              component="button"
+              type="button"
+              variant="body2"
+              disabled={busy}
+              onClick={() => setCreating((c) => !c)}
+            >
+              {creating ? "Have an account? Sign in" : "Create account"}
+            </Link>
+          </Box>
           <Divider sx={{ my: 2.5, fontSize: 13, color: "text.secondary" }}>
             or
           </Divider>

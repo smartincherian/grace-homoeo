@@ -11,13 +11,14 @@ import { afterEach, vi } from "vitest";
 const h = vi.hoisted(() => ({
   signOut: vi.fn(),
   getMembership: vi.fn(),
+  authUser: { uid: "u1", email: "a@b.com", emailVerified: true },
 }));
 vi.mock("firebase/auth", () => ({
   signOut: (...a: unknown[]) => h.signOut(...a),
 }));
 vi.mock("../../lib/firebase", () => ({ auth: {}, db: {} }));
 vi.mock("./useAuth", () => ({
-  useAuth: () => ({ user: { uid: "u1", email: "a@b.com" }, loading: false }),
+  useAuth: () => ({ user: h.authUser, loading: false }),
 }));
 vi.mock("../../lib/access", () => ({
   getMembership: (...a: unknown[]) => h.getMembership(...a),
@@ -31,6 +32,7 @@ const renderGuard = (qc: QueryClient) =>
       <MemoryRouter initialEntries={["/"]}>
         <Routes>
           <Route path="/login" element={<div>login page</div>} />
+          <Route path="/verify-email" element={<div>verify page</div>} />
           <Route
             path="/"
             element={
@@ -65,6 +67,7 @@ afterEach(() => {
   focusManager.setFocused(undefined);
   h.getMembership.mockReset();
   h.signOut.mockReset();
+  h.authUser.emailVerified = true;
 });
 
 it("re-checks membership on window focus and signs out a removed user", async () => {
@@ -87,4 +90,12 @@ it("re-checks membership on window focus and signs out a removed user", async ()
   await waitFor(() => expect(h.getMembership).toHaveBeenCalledTimes(2));
   expect(await screen.findByText("login page")).toBeInTheDocument();
   await waitFor(() => expect(h.signOut).toHaveBeenCalled());
+});
+
+it("sends an unverified user to /verify-email without checking membership", async () => {
+  h.authUser.emailVerified = false;
+  renderGuard(new QueryClient());
+  expect(await screen.findByText("verify page")).toBeInTheDocument();
+  expect(h.getMembership).not.toHaveBeenCalled();
+  expect(h.signOut).not.toHaveBeenCalled();
 });

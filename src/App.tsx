@@ -4,6 +4,7 @@ import AuthGuard from "./features/auth/AuthGuard";
 import ClinicLayout from "./features/auth/ClinicLayout";
 import HomeRedirect from "./features/auth/HomeRedirect";
 import LoginPage from "./features/auth/LoginPage";
+import VerifyEmailPage from "./features/auth/VerifyEmailPage";
 import PatientListPage from "./features/patients/PatientListPage";
 import PatientDetailPage from "./features/patients/PatientDetailPage";
 import PatientFormPage from "./features/patients/PatientFormPage";
@@ -21,6 +22,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
       <Route
         element={
           <AuthGuard>

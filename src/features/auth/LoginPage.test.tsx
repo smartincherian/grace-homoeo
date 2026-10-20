@@ -4,13 +4,29 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-const sendPasswordResetEmail = vi.fn();
+const h = vi.hoisted(() => ({
+  sendPasswordResetEmail: vi.fn(),
+  signInWithEmailAndPassword: vi.fn(),
+  createUserWithEmailAndPassword: vi.fn(),
+  sendEmailVerification: vi.fn(),
+  signOut: vi.fn(),
+  navigate: vi.fn(),
+}));
+const sendPasswordResetEmail = h.sendPasswordResetEmail;
 vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: class {},
-  sendPasswordResetEmail: (...a: unknown[]) => sendPasswordResetEmail(...a),
-  signInWithEmailAndPassword: vi.fn(),
+  sendPasswordResetEmail: (...a: unknown[]) => h.sendPasswordResetEmail(...a),
+  signInWithEmailAndPassword: (...a: unknown[]) =>
+    h.signInWithEmailAndPassword(...a),
+  createUserWithEmailAndPassword: (...a: unknown[]) =>
+    h.createUserWithEmailAndPassword(...a),
+  sendEmailVerification: (...a: unknown[]) => h.sendEmailVerification(...a),
   signInWithPopup: vi.fn(),
-  signOut: vi.fn(),
+  signOut: (...a: unknown[]) => h.signOut(...a),
+}));
+vi.mock("react-router-dom", async (orig) => ({
+  ...(await orig<typeof import("react-router-dom")>()),
+  useNavigate: () => h.navigate,
 }));
 vi.mock("../../lib/firebase", () => ({ auth: { name: "auth" } }));
 vi.mock("../../lib/access", () => ({
@@ -24,6 +40,8 @@ vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast }),
 }));
 
+import { FirebaseError } from "firebase/app";
+import { getMembership } from "../../lib/access";
 import LoginPage from "./LoginPage";
 
 const renderLogin = () =>
@@ -38,6 +56,7 @@ const renderLogin = () =>
 beforeEach(() => {
   sendPasswordResetEmail.mockReset();
   showToast.mockReset();
+  Object.values(h).forEach((f) => f.mockReset());
 });
 
 test("Forgot password asks for an email first", async () => {
@@ -67,4 +86,64 @@ test("Forgot password sends a reset email to the typed address", async () => {
       "success",
     ),
   );
+});
+
+test("password sign-in of an unverified user goes to /verify-email", async () => {
+  h.signInWithEmailAndPassword.mockResolvedValue({
+    user: { uid: "u1", email: "doc@gmail.com", emailVerified: false },
+  });
+  const user = userEvent.setup();
+  renderLogin();
+  await user.type(screen.getByLabelText(/email/i), "doc@gmail.com");
+  await user.type(screen.getByLabelText(/password/i), "secret1");
+  await user.click(screen.getByRole("button", { name: "Sign In" }));
+  await waitFor(() =>
+    expect(h.navigate).toHaveBeenCalledWith("/verify-email", { replace: true }),
+  );
+  expect(getMembership).not.toHaveBeenCalled();
+  expect(h.signOut).not.toHaveBeenCalled();
+  expect(showToast).not.toHaveBeenCalled();
+});
+
+const openCreate = async (user: ReturnType<typeof userEvent.setup>) => {
+  await user.click(screen.getByRole("button", { name: /create account/i }));
+  await user.type(screen.getByLabelText(/email/i), "new@gmail.com");
+  await user.type(screen.getByLabelText(/password/i), "secret1");
+};
+
+test("Create account toggle creates the account, emails a verification link and goes to /verify-email", async () => {
+  const created = { uid: "u2", email: "new@gmail.com" };
+  h.createUserWithEmailAndPassword.mockResolvedValue({ user: created });
+  h.sendEmailVerification.mockResolvedValue(undefined);
+  const user = userEvent.setup();
+  renderLogin();
+  await openCreate(user);
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+  await waitFor(() =>
+    expect(h.navigate).toHaveBeenCalledWith("/verify-email", { replace: true }),
+  );
+  expect(h.createUserWithEmailAndPassword).toHaveBeenCalledWith(
+    { name: "auth" },
+    "new@gmail.com",
+    "secret1",
+  );
+  expect(h.sendEmailVerification).toHaveBeenCalledWith(created);
+});
+
+test.each([
+  [
+    "auth/email-already-in-use",
+    "An account already exists for this email. Sign in or reset your password.",
+  ],
+  ["auth/weak-password", "Password must be at least 6 characters."],
+])("Create account maps %s to a friendly toast", async (code, message) => {
+  h.createUserWithEmailAndPassword.mockRejectedValue(
+    new FirebaseError(code, "x"),
+  );
+  const user = userEvent.setup();
+  renderLogin();
+  await openCreate(user);
+  await user.click(screen.getByRole("button", { name: "Create account" }));
+  await waitFor(() => expect(showToast).toHaveBeenCalledWith(message, "error"));
+  expect(h.navigate).not.toHaveBeenCalled();
 });
