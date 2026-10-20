@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-"Grace Homoeo" — an installable PWA for a single-doctor homoeopathy clinic, built with **Vite + React + TypeScript + MUI + Firebase**. It is a ground-up rebuild of an earlier Create React App version. Hosted on Firebase Hosting; data lives in Cloud Firestore on the **`grace-homoeo`** Firebase project (reused, no new project).
+"HomoeoDesk" (originally "Grace Homoeo") — an installable multi-clinic PWA for homoeopathy clinics, built with **Vite + React + TypeScript + MUI + Firebase**. Hosted on Firebase Hosting; data lives in Cloud Firestore on the **`grace-homoeo`** Firebase project.
 
-**Status:** The **Foundation is complete** on the `rebuild` branch — auth, adaptive app shell, providers, and the data-layer core. The three feature modules — **Patients & Consultations, Inventory, Funds** — are designed but not yet built; their routes currently render placeholder pages. See `docs/superpowers/specs/` (design) and `docs/superpowers/plans/` (the Foundation plan; Plans 2–4 to follow). The old Bible-in-a-Year helper is intentionally out of scope.
+**Status:** Auth, the adaptive app shell, multi-clinic tenancy (superadmin, owners, seats), and the Patients & Consultations, Inventory, Funds and Calculator modules are built. Each clinic can set its own name, logo, colour, scripture banner and contact details (owner Settings page). See `docs/superpowers/specs/` and `docs/superpowers/plans/`. The old Bible-in-a-Year helper is intentionally out of scope.
 
 ## Commands
 
@@ -20,6 +20,7 @@ npm test -- serial   # run a single test file by name fragment
 npm run lint         # eslint . --ext ts,tsx
 npm run format       # prettier --write .
 npm run emulators    # firebase emulators:start --only firestore,auth
+npm run icons        # regenerate PWA/brand icons (scripts/make-icons.mjs)
 npm run release      # build + firebase deploy --only firestore:rules,hosting
 npm run test:rules   # Firestore rules tests (needs the Firestore emulator)
 npm run migrate:clinics -- --clinic grace-homoeo --name "Grace Homoeo" [--dry-run] [--resync] --project grace-homoeo  # copy legacy data into clinics/{id}
@@ -29,11 +30,12 @@ npm run backfill:seats -- --clinic grace-homoeo --owner <email> [--dry-run] --pr
 ## Architecture
 
 - **Entry & providers** — `src/main.tsx` renders the provider stack in order: `QueryClientProvider` → `ThemeProvider` + `CssBaseline` → `ToastProvider` → `BrowserRouter` → `App`. Toast sits above the router so route components can call `useToast`.
-- **Routing** — `src/App.tsx` (react-router v6): `/login` is public; `/verify-email` is the verified-email gate; `/admin` is the superadmin page (clinics, owners, seats); clinic pages live under `/:clinicSlug/patients|inventory|calculator|funds…` plus `/:clinicSlug/people` (owner-only: add/remove the clinic's users), behind `<AuthGuard>` inside `<AppShell>`. Legacy `/patients/…` paths redirect to the member's own clinic; `/` and unknown paths go to `/<own clinic>/patients` (superadmin: `/admin`). The URL is navigation only; Firestore rules enforce clinic isolation. Hosting rewrites all paths to `/index.html` (`firebase.json`).
+- **Routing** — `src/App.tsx` (react-router v6): `/login` is public; `/verify-email` is the verified-email gate; `/admin` is the superadmin page (clinics, owners, seats); clinic pages live under `/:clinicSlug/patients|inventory|calculator|funds…` plus owner-only `/:clinicSlug/people` (add/remove the clinic's users) and `/:clinicSlug/settings` (branding and contact details), behind `<AuthGuard>` inside `<AppShell>`. Legacy `/patients/…` paths redirect to the member's own clinic; `/` and unknown paths go to `/<own clinic>/patients` (superadmin: `/admin`). The URL is navigation only; Firestore rules enforce clinic isolation. Hosting rewrites all paths to `/index.html` (`firebase.json`).
 - **Feature-folder structure** — code is organized by feature under `src/features/` (`auth/` is built; `patients/`, `consultations/`, `inventory/`, `funds/` are planned). Shared building blocks live in `src/components/`, `src/lib/`, and `src/theme/`. Features must not import each other's internals — only shared modules.
 - **Firebase layer** — `src/lib/firebase.ts` initializes Firebase from `import.meta.env.VITE_FIREBASE_*` and exports `auth` and `db`. It connects to local emulators when `VITE_USE_EMULATOR=true`. Feature data access goes through typed per-collection repositories + TanStack Query hooks + zod schemas (the established pattern); UI never calls the Firestore SDK directly.
 - **Auth** — Firebase Auth via Google or email/password; a verified email is required (unverified password users are sent to `/verify-email`). Access comes from the allow list + seats; roles are superadmin/owner/member. `useAuth()` exposes `{ user, loading }`; `AuthGuard` shows a spinner while resolving, then renders children or redirects to `/login`. `ensureUserDoc` creates `users/{uid}` (`uid, email, displayName, role`) on first login, with `role: "superadmin"` for the superadmin email, else `"admin"`; `users.role` is self-written and never grants permission.
 - **UI stack** — MUI v6 styled via the `sx` prop; theme in `src/theme/theme.ts` (primary `#150E56`). `AppShell` is adaptive: a bottom navigation bar on mobile, a permanent left sidebar on desktop — same features on both. Global feedback goes through `ToastProvider` / `useToast` (in `src/components/useToast.ts`) — never `alert()`. `QueryStates` (`src/components/QueryStates.tsx`) renders loading/empty/error/`children` for every list view.
+- **Theming** — the accent `TOKENS` (`blue`, `blue50`…) are CSS variables (`--brand`, `--brand-hover`, `--brand-50…700`, `--brand-rgb`) set per clinic by `BrandScope` from the clinic's `primaryColor`, passed through `ensureContrast` (4.5:1 on white). Use `TOKENS`/`GRADIENT`, never a raw accent hex. Only the Settings preview uses literal hex.
 - **PWA** — `vite-plugin-pwa` (config in `vite.config.ts`) emits the manifest + service worker; icons in `public/`. The app is installable to a phone home screen.
 
 ## Data model (Firestore)
@@ -44,6 +46,7 @@ npm run backfill:seats -- --clinic grace-homoeo --owner <email> [--dry-run] --pr
 
 Target collections (see the design spec for full field lists):
 
+- `settings/branding` (per clinic, `clinics/{id}/settings/branding`) — `displayName` (≤60), `logoDataUrl` (`""` or `data:image/(png|webp|jpeg);base64,…`, ≤200000 chars; logo resized client-side to ≤256px, no Storage), `primaryColor` (`#rrggbb`), `showScripture`, `contact{doctorName, qualifications, registrationNo, address, phone, email}` (each ≤120), `updatedAt`, `updatedBy`. Owner/superadmin write; rules validate the shape and limits; all members read. Accessed via `useBranding`/`useSaveBranding` (`src/lib/`), cached in localStorage. `"settings"` is a reserved slug.
 - `users` — `{ uid, email, displayName, role }` (`ensureUserDoc` writes `role: "superadmin"` for the superadmin email, else `"admin"`; self-written and never grants permission).
 - `patients` — `serialNo`, `name`, `nameLower`, `dob`, `gender`, `place`, `phone`, `createdAt`, `lastVisitAt`.
 - `consultations` — **top-level** (not nested), with `patientId` + denormalized `patientName`/`serialNo` so Funds can total income across all visits while a patient's history stays a simple query.

@@ -247,3 +247,16 @@ test("shows scripture when branding leaves it on", () => {
   renderShell(["/c1/patients"]);
   expect(screen.getByText(/\d+:\d+/)).toBeInTheDocument();
 });
+
+test("shows Settings to the clinic owner and hides it from members", async () => {
+  const user = userEvent.setup();
+  membership.value = { superadmin: false, clinicId: "c1", owner: true };
+  const { unmount } = renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  expect(screen.getByRole("menuitem", { name: "Settings" })).toBeInTheDocument();
+  unmount();
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
+  renderShell(["/c1/patients"]);
+  await user.click(screen.getByRole("button", { name: /account/i }));
+  expect(screen.queryByRole("menuitem", { name: "Settings" })).toBeNull();
+});

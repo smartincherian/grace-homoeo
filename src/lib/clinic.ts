@@ -18,6 +18,7 @@ export const RESERVED_SLUGS: readonly string[] = [
   "funds",
   "clinics",
   "people",
+  "settings",
   "verify-email",
 ];
 

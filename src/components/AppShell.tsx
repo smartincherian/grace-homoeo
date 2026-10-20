@@ -157,6 +157,16 @@ function ShellInner({
           People
         </MenuItem>
       )}
+      {canManageClinic(membership, clinicSlug) && (
+        <MenuItem
+          onClick={() => {
+            closeMenu();
+            navigate(sectionHref("settings"));
+          }}
+        >
+          Settings
+        </MenuItem>
+      )}
       {user && !hasPassword(user) && (
         <MenuItem
           onClick={() => {
