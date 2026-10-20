@@ -28,9 +28,10 @@ vi.mock("../lib/clinicQueries", () => ({
   useClinic: (id: string | undefined) => useClinic(id),
 }));
 const membership = vi.hoisted(() => ({
-  value: { superadmin: true, clinicId: null } as {
+  value: { superadmin: true, clinicId: null, owner: false } as {
     superadmin: boolean;
     clinicId: string | null;
+    owner: boolean;
   },
 }));
 vi.mock("../features/auth/AuthGuard", () => ({
@@ -42,7 +43,7 @@ vi.mock("../lib/clinic", () => ({
 }));
 
 beforeEach(() => {
-  membership.value = { superadmin: true, clinicId: null };
+  membership.value = { superadmin: true, clinicId: null, owner: false };
   setActiveClinic.mockClear();
   useClinic.mockReset();
   useClinic.mockImplementation((id: string | undefined) => ({
@@ -78,13 +79,13 @@ const renderShell = (
   );
 
 test("a member does not fetch a clinic other than their own", () => {
-  membership.value = { superadmin: false, clinicId: "c1" };
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
   renderShell(["/c2/patients"]);
   expect(useClinic).not.toHaveBeenCalledWith("c2");
 });
 
 test("a member fetches their own clinic", () => {
-  membership.value = { superadmin: false, clinicId: "c1" };
+  membership.value = { superadmin: false, clinicId: "c1", owner: false };
   renderShell(["/c1/patients"]);
   expect(screen.getByText("Clinic c1")).toBeInTheDocument();
 });

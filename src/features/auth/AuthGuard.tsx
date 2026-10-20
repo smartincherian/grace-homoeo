@@ -15,6 +15,7 @@ function useMembershipQuery() {
     queryFn: () => getMembership(user!),
     enabled: !!user,
     staleTime: Infinity,
+    refetchOnWindowFocus: true,
   });
 }
 

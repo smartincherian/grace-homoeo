@@ -28,7 +28,7 @@ const renderAt = (path: string) =>
     </MemoryRouter>,
   );
 
-const member: Membership = { superadmin: false, clinicId: "c1" };
+const member: Membership = { superadmin: false, clinicId: "c1", owner: false };
 
 test("forwards a legacy deep link into the member's clinic", () => {
   state.membership = member;
@@ -49,7 +49,7 @@ test("sends a member on an unknown path to their clinic home", () => {
 });
 
 test("sends the superadmin to admin", () => {
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   renderAt("/");
   expect(screen.getByTestId("where")).toHaveTextContent(/^\/admin$/);
 });

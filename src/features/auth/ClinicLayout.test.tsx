@@ -51,14 +51,14 @@ beforeEach(() => {
 });
 
 test("a member never looks up a foreign clinic", () => {
-  state.membership = { superadmin: false, clinicId: "c1" };
+  state.membership = { superadmin: false, clinicId: "c1", owner: false };
   renderAt("/c2/patients");
   expect(useClinic).not.toHaveBeenCalledWith("c2");
 });
 
 test("bounces a member away from another clinic without activating it", () => {
   const spy = vi.spyOn(clinic, "setActiveClinic");
-  state.membership = { superadmin: false, clinicId: "c1" };
+  state.membership = { superadmin: false, clinicId: "c1", owner: false };
   renderAt("/c2/patients");
   expect(screen.getByText("child of c1")).toBeInTheDocument();
   expect(spy).not.toHaveBeenCalledWith("c2");
@@ -66,20 +66,20 @@ test("bounces a member away from another clinic without activating it", () => {
 });
 
 test("renders the child for a member of the clinic and activates it", () => {
-  state.membership = { superadmin: false, clinicId: "c1" };
+  state.membership = { superadmin: false, clinicId: "c1", owner: false };
   renderAt("/c1/patients");
   expect(screen.getByText("child of c1")).toBeInTheDocument();
   expect(clinic.getActiveClinic()).toBe("c1");
 });
 
 test("lets the superadmin into any clinic", () => {
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   renderAt("/c2/patients");
   expect(screen.getByText("child of c2")).toBeInTheDocument();
 });
 
 test("tells the superadmin when a clinic does not exist", () => {
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   state.clinic = { data: null };
   renderAt("/nope/patients");
   expect(screen.getByText(/clinic not found/i)).toBeInTheDocument();
@@ -90,7 +90,7 @@ test("tells the superadmin when a clinic does not exist", () => {
 });
 
 test("switching clinics clears clinic data but keeps access", async () => {
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   const qc = new QueryClient();
   qc.setQueryData(["access", "uid1"], state.membership);
   qc.setQueryData(["patients"], [{ id: "p1" }]);
@@ -107,7 +107,7 @@ test("switching clinics clears clinic data but keeps access", async () => {
 
 test("forwards a reserved word like /patients to the member's clinic", () => {
   const spy = vi.spyOn(clinic, "setActiveClinic");
-  state.membership = { superadmin: false, clinicId: "c1" };
+  state.membership = { superadmin: false, clinicId: "c1", owner: false };
   renderAt("/patients");
   expect(screen.getByText("child of c1")).toBeInTheDocument();
   expect(spy).not.toHaveBeenCalledWith("patients");
@@ -116,7 +116,7 @@ test("forwards a reserved word like /patients to the member's clinic", () => {
 
 test("sends the superadmin at a reserved word like /access to admin", () => {
   const spy = vi.spyOn(clinic, "setActiveClinic");
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   renderAt("/access");
   expect(screen.getByText("admin page")).toBeInTheDocument();
   expect(spy).not.toHaveBeenCalledWith("access");
@@ -124,7 +124,7 @@ test("sends the superadmin at a reserved word like /access to admin", () => {
 });
 
 test("switching clinics through /admin still clears clinic data", async () => {
-  state.membership = { superadmin: true, clinicId: null };
+  state.membership = { superadmin: true, clinicId: null, owner: false };
   const qc = new QueryClient();
   qc.setQueryData(["access", "uid1"], state.membership);
   qc.setQueryData(["patients"], [{ id: "p1" }]);

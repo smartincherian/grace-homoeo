@@ -8,7 +8,13 @@ vi.mock("firebase/firestore", () => ({
 }));
 vi.mock("./firebase", () => ({ db: {} }));
 
-import { getMembership, homePath, isSuperadmin, normalizeEmail } from "./access";
+import {
+  canManageClinic,
+  getMembership,
+  homePath,
+  isSuperadmin,
+  normalizeEmail,
+} from "./access";
 
 const user = (email: string | null) => ({ uid: "u1", email }) as never;
 
@@ -33,17 +39,57 @@ describe("getMembership", () => {
     expect(await getMembership(user("smartin.cherian@gmail.com"))).toEqual({
       superadmin: true,
       clinicId: null,
+      owner: false,
     });
     expect(getDoc).not.toHaveBeenCalled();
   });
 
   it("returns the clinic from the allow-list entry", async () => {
-    getDoc.mockResolvedValue({ exists: () => true, data: () => ({ clinicId: "grace-homoeo" }) });
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ clinicId: "grace-homoeo" }),
+    });
     expect(await getMembership(user("Dr@Clinic.com"))).toEqual({
       superadmin: false,
       clinicId: "grace-homoeo",
+      owner: false,
     });
     expect(doc).toHaveBeenCalledWith({}, "allowedEmails", "dr@clinic.com");
+  });
+
+  const allowed = { exists: () => true, data: () => ({ clinicId: "c1" }) };
+  const clinicDoc = (ownerEmail?: string) => ({ data: () => ({ ownerEmail }) });
+
+  it("is owner when the clinic ownerEmail matches the normalized email", async () => {
+    getDoc
+      .mockResolvedValueOnce(allowed)
+      .mockResolvedValueOnce(clinicDoc("dr@clinic.com"));
+    expect(await getMembership(user(" Dr@Clinic.com "))).toEqual({
+      superadmin: false,
+      clinicId: "c1",
+      owner: true,
+    });
+    expect(doc).toHaveBeenCalledWith({}, "clinics", "c1");
+  });
+
+  it("is not owner when ownerEmail differs or is missing", async () => {
+    getDoc
+      .mockResolvedValueOnce(allowed)
+      .mockResolvedValueOnce(clinicDoc("other@clinic.com"));
+    expect((await getMembership(user("dr@clinic.com")))?.owner).toBe(false);
+    getDoc.mockResolvedValueOnce(allowed).mockResolvedValueOnce(clinicDoc());
+    expect((await getMembership(user("dr@clinic.com")))?.owner).toBe(false);
+  });
+
+  it("returns a non-owner membership when the clinic doc read throws", async () => {
+    getDoc
+      .mockResolvedValueOnce(allowed)
+      .mockRejectedValueOnce(new Error("denied"));
+    expect(await getMembership(user("dr@clinic.com"))).toEqual({
+      superadmin: false,
+      clinicId: "c1",
+      owner: false,
+    });
   });
 
   it("returns null for an entry without clinicId", async () => {
@@ -65,7 +111,24 @@ describe("getMembership", () => {
 
 describe("homePath", () => {
   it("routes superadmin to /admin and members to their clinic", () => {
-    expect(homePath({ superadmin: true, clinicId: null })).toBe("/admin");
-    expect(homePath({ superadmin: false, clinicId: "c1" })).toBe("/c1/patients");
+    expect(homePath({ superadmin: true, clinicId: null, owner: false })).toBe(
+      "/admin",
+    );
+    expect(homePath({ superadmin: false, clinicId: "c1", owner: false })).toBe(
+      "/c1/patients",
+    );
+  });
+});
+
+describe("canManageClinic", () => {
+  const sa = { superadmin: true, clinicId: null, owner: false };
+  const owner = { superadmin: false, clinicId: "c1", owner: true };
+  const member = { superadmin: false, clinicId: "c1", owner: false };
+  it("allows superadmin anywhere and owner only in own clinic", () => {
+    expect(canManageClinic(sa, "any")).toBe(true);
+    expect(canManageClinic(owner, "c1")).toBe(true);
+    expect(canManageClinic(owner, "c2")).toBe(false);
+    expect(canManageClinic(member, "c1")).toBe(false);
+    expect(canManageClinic(undefined, "c1")).toBe(false);
   });
 });
