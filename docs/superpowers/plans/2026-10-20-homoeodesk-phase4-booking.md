@@ -64,7 +64,13 @@ The new `src/features/bookings/` folder holds the booking writes, the day view a
   - `booked` or `arrived` → "Start consultation", "Register patient" (only without a `patientId`), "Cancel" and "No-show" (both confirm first).
   - `done` → "View consultation".
 - Bookings' patient picker reads `patients` with its own minimal query (`["bookings","patientChoices"]`), not through the patients feature.
-- Route `/:clinicSlug/bookings?day=YYYY-MM-DD` defaults to today in the clinic zone. The nav order is Patients, Bookings, Inventory, Calculator, Funds (+ Staff). With 6 items, mobile bottom navigation must still fit at 360px wide; if it doesn't, Calculator moves into the account menu on mobile only.
+- Route `/:clinicSlug/bookings?day=YYYY-MM-DD` defaults to today in the clinic zone. The nav order is Patients, Bookings, Inventory, Calculator, Funds (+ Staff). MUI's `BottomNavigationAction` `minWidth: 80` already overflows 360px with 5 items. So Task 5 makes the bottom bar items compact:
+- `minWidth: 0`, `px: 0.5` and `flex: 1` on each action.
+- Narrower selected-icon pill padding in `theme.ts` (16px → 10px each side).
+- Label font 11px.
+All 6 items fit at 360px.
+- Linking an appointment from patient or consultation saves is **best-effort**. The repo first `getDoc`s the appointment and adds its update to the batch only if it exists and isn't `done`, so a cancelled appointment never blocks saving a patient or consultation. Linked values are clamped to the rules limits: `patientName.slice(0, 80)`, `phone.slice(0, 20)`, and `serialNo` stays as is when `Number.isInteger`, otherwise `null`.
+- Every appointment read takes an explicit `clinicId` (no active-clinic fallback), so a superadmin saving one clinic's hours can't be checked against another clinic's bookings.
 
 ## Review Focus
 
@@ -84,7 +90,7 @@ The new `src/features/bookings/` folder holds the booking writes, the day view a
 
 **Interfaces:**
 - Produces, in `zonedDates.ts`:
-  - `zonedTimeToMs(dayStartMs: number, hhmm: string, tz: string): number`. This is that time-of-day on that clinic-zone day; use `dayjs.tz(\`${date} ${hhmm}\`, tz)`.
+  - `zonedTimeToMs(dayStartMs: number, hhmm: string, tz: string): number`. This is that time-of-day on that clinic-zone day. Use `dayjs.tz(\`${zonedMsToDateInput(dayStartMs, tz)} ${hhmm}\`, "YYYY-MM-DD HH:mm", tz)` with the `customParseFormat` plugin extended in `zonedDates.ts`.
   - `weekdayKeyOf(ms: number, tz: string): Weekday`
   - `formatZonedTime(ms: number, tz: string): string`, as `"h:mm A"`
 - Produces, in `schedule.ts`:
@@ -96,7 +102,7 @@ The new `src/features/bookings/` folder holds the booking writes, the day view a
     - Each session has `start < end`.
     - Each day has ≤ 3 sessions, with no overlaps once sorted.
     - `slotMinutes` is an int from 5 to 120.
-    - `note` is ≤ 60 characters.
+    - `holidays` has at most 100 entries, each `date` is an int, and `note` is ≤ 60 characters.
   - `hasHours(s: Schedule): boolean`
   - `holidayOn(dayStart: number, s: Schedule): Holiday | undefined`
   - `slotsForDay(dayStart: number, s: Schedule, tz: string, opts?: { ignoreHolidays?: boolean }): { start: number; end: number }[]`
@@ -182,14 +188,19 @@ test("parseSchedule fills defaults; hasHours", () => {
     - delete: `member && existsAfter(.../appointmentHistory/$(apptId + '_' + string(resource.data.createdAt)))`.
   - `match /appointmentHistory/{id}`:
     - read: `member`.
-    - create: `member && d.status in ['cancelled','no-show'] && d.closedBy == authEmail() && id == string(d.start) + '_' + string(d.createdAt)`.
+    - create: `member && d.status in ['cancelled','no-show'] && d.closedBy == authEmail() && d.closedAt is int && id == string(d.start) + '_' + string(d.createdAt) && !existsAfter(.../appointments/$(string(d.start)))`.
+    - On create, `validClosed(d)` also applies: keys are only the appointment's 11 non-id fields plus `closedAt` and `closedBy`, with the same type and size caps as `validAppt`. The history and the delete therefore have to happen in one batch.
     - update, delete: `false`.
   - Neither collection is added to `memberSubs()`.
 
 - [ ] **Step 1: Write failing tests** in a new `describe("bookings")`. Use the existing fixtures: member `a@x.com` and owner `o@x.com` in c1, owner `t@x.com` in c2. Use a future `start = Date.now() + 86_400_000`, plus a helper `appt(start, patch?)` that builds a valid 12-field doc (`createdBy: "a@x.com"`, `createdAt: 1`). Tests:
-  1. The member creates `appointments/${start}`. A different id is denied. `status: "done"` on create is denied. `createdBy` set to another email is denied. A past `end` (`Date.now() - 1000`) is denied.
+  1. The member creates `appointments/${start}`, and so does the superadmin (with `createdBy` set to the superadmin email).
+     - A different id is denied.
+     - `status: "done"` on create is denied.
+     - `createdBy` set to another email is denied.
+     - A past slot is denied. Use a past `start` with `end = start + 900_000 < Date.now()` and id `String(start)`, so only the `request.time` check can fail. Next to it, put a positive control: the same shape in the future succeeds.
   2. With an appointment seeded: an update setting `status: "arrived"` succeeds. Updates that change `start`, `date` or `createdAt` are each denied. A `setDoc` that replaces it with a different `createdAt` is denied.
-  3. A batch writing history `${start}_1` (`status: "cancelled"`, `closedBy: "a@x.com"`, `closedAt`) and deleting the appointment succeeds. A delete without the history doc is denied. Updating or deleting the history doc afterwards is denied. History with `status: "done"` is denied.
+  3. A batch writing history `${start}_1` (`status: "cancelled"`, `closedBy: "a@x.com"`, `closedAt`) and deleting the appointment succeeds. A delete without the history doc is denied. Updating or deleting the history doc afterwards is denied. History with `status: "done"` is denied. History with an extra key is denied. Creating history alone, without deleting the appointment, is denied.
   4. `t@x.com` (c2) can't read or create c1 appointments or history.
   5. Schedule: the owner writes a valid `settings/schedule` (`updatedBy: "o@x.com"`). The member's write is denied and the member's read succeeds. `slotMinutes: 3`, an extra key, a weekday key `"xyz"`, or 4 sessions on `mon` are each denied.
   6. `settings/other` is still denied for the owner.
@@ -215,25 +226,25 @@ test("parseSchedule fills defaults; hasHours", () => {
   - `interface Appointment { id; date; start; end; patientId: string | null; patientName; phone; serialNo: number | null; status: AppointmentStatus; note; createdBy; createdAt; consultationId: string | null }`.
   - `interface ClosedAppointment extends Omit<Appointment, "status"> { status: "cancelled" | "no-show"; closedAt: number; closedBy: string }`.
   - `historyId(a: { start: number; createdAt: number }): string`, which returns `` `${a.start}_${a.createdAt}` ``.
-  - `listAppointmentsForDay(dayStart: number): Promise<Appointment[]>` (`where("date","==",dayStart)`, sorted by `start`).
-  - `listFutureAppointments(now: number): Promise<Appointment[]>` (`where("start", ">=", now)`).
-  - `useDayAppointments(dayStart: number)`, with key `["appointments", "day", dayStart]`.
+  - `listAppointmentsForDay(clinicId: string, dayStart: number): Promise<Appointment[]>` (`where("date","==",dayStart)`, sorted by `start`).
+  - `listFutureAppointments(clinicId: string, now: number): Promise<Appointment[]>`. It queries `where("start", ">=", now - 2 * 3600_000)` and then filters to `end > now`, so the appointment running now is included.
+  - `useDayAppointments(clinicId: string, dayStart: number)`, with key `["appointments", "day", clinicId, dayStart]`.
 - Produces, in `src/lib/schedule.ts`:
   - `getSchedule(clinicId): Promise<Schedule>`
   - `class OffGridError extends Error { appointments: Appointment[] }`
-  - `saveSchedule(clinicId, s: Schedule, by: string, tz: string, now?: number): Promise<void>`. It drops holidays before `dayStartInZone(now)`, then runs `offGridAppointments(await listFutureAppointments(now), s, tz)`. If that finds any, it throws `OffGridError`; otherwise it `setDoc`s `settings/schedule` with `updatedAt` and `updatedBy`.
+  - `saveSchedule(clinicId, s: Schedule, by: string, tz: string, now?: number): Promise<void>`. It drops holidays before `dayStartInZone(now)`, then runs `offGridAppointments(await listFutureAppointments(clinicId, now), s, tz)`. If that finds any, it throws `OffGridError`; otherwise it `setDoc`s `settings/schedule` with `updatedAt` and `updatedBy`.
   - `useSchedule(clinicId)` (key `["schedule", clinicId]`) and `useSaveSchedule(clinicId)` (invalidates that key).
 - Produces, in `bookingSchema.ts`: `bookingFormSchema` and `type BookingFormValues = { patientId: string | null; patientName: string; phone: string; serialNo: number | null; note: string }`. Phone is required when `patientId` is null.
 - Produces, in `bookingsRepo.ts`:
   - `class SlotTakenError extends Error`
   - `bookAppointment(slot: { start: number; end: number }, values: BookingFormValues, by: string, tz: string): Promise<void>`. It runs `runTransaction`, `tx.get`s the appointment doc, throws `SlotTakenError` if it exists, and otherwise `tx.set`s with `date: dayStartInZone(start, tz)`, `status: "booked"`, `createdAt: Date.now()` and `consultationId: null`. The clinic is pinned via `getActiveClinic()`.
-  - `closeAppointment(a: Appointment, status: "cancelled" | "no-show", by: string): Promise<void>`, one `writeBatch`: set history `historyId(a)` and delete the appointment.
+  - `closeAppointment(a: Appointment, status: "cancelled" | "no-show", by: string): Promise<void>`, one `writeBatch`: set history `historyId(a)` and delete the appointment. The history doc is the appointment without `id`, plus `status`, `closedAt` and `closedBy`.
   - `markArrived(id: string): Promise<void>`
   - `listDayHistory(dayStart: number): Promise<ClosedAppointment[]>`, sorted by `start`.
   - `interface PatientChoice { id; name; serialNo; phone }` and `listPatientChoices(): Promise<PatientChoice[]>` (`orderBy("nameLower")`).
 - Produces, in `useBookings.ts`:
   - `useDayHistory(dayStart)` (key `["appointments","history",dayStart]`) and `usePatientChoices()`.
-  - `useBookAppointment()`, `useCloseAppointment()` and `useMarkArrived()`. Each invalidates `["appointments"]`.
+  - `useBookAppointment()` (vars `{ slot, values, by, tz }`), `useCloseAppointment()` (vars `{ appointment, status, by }`) and `useMarkArrived()` (vars `id`). Each invalidates `["appointments"]`.
 - `by` arguments are `normalizeEmail(user.email)`, matching `authEmail()` in rules.
 
 - [ ] **Step 1: Write failing tests**, mocking `firebase/firestore` the way `staffRepo.test.ts` and `serial.test.ts` do:
@@ -244,6 +255,9 @@ test("parseSchedule fills defaults; hasHours", () => {
     - It throws `OffGridError` listing a future 09:45 booking when slot length changes 15 → 20 on a `09:30–10:10` Monday, and `setDoc` isn't called.
     - It saves when only a holiday is added on that booked day.
     - It drops a holiday dated before today.
+    - It blocks on an appointment that started 10 minutes ago and is still running.
+    - It queries the `clinicId` it's given, not the active clinic.
+  - `closeAppointment`: the history payload has no `id` key.
   - `bookingFormSchema`: name-only with `patientId: null` fails (phone required). The same with a `patientId` passes. `note` of 201 characters fails.
 - [ ] **Step 2: Run** `npm test -- schedule appointments bookingSchema bookingsRepo`. Expected: FAIL.
 - [ ] **Step 3: Implement** the modules listed under Interfaces.
@@ -286,7 +300,14 @@ test("parseSchedule fills defaults; hasHours", () => {
 
 **Files:**
 - Create: `src/features/bookings/dayRows.ts`, `dayRows.test.ts`, `BookingsPage.tsx`, `BookingsPage.test.tsx`, `BookDialog.tsx`, `BookDialog.test.tsx`
-- Modify: `src/App.tsx` (route `bookings`), `src/components/AppShell.tsx` (`NAV` gains `{ to: "bookings", label: "Bookings", icon: <EventIcon /> }` after Patients), `AppShell.test.tsx`/`BottomDock.test.tsx` if they count items
+- Modify:
+  - `src/App.tsx` (route `bookings`)
+  - `src/components/AppShell.tsx`:
+    - `NAV` gains `{ to: "bookings", label: "Bookings", icon: <EventIcon /> }` after Patients.
+    - The bottom-bar actions get the compact `sx` from the header.
+  - `src/theme/theme.ts` (pill padding)
+  - `src/components/RowMenu.tsx` + `RowMenu.test.tsx`: add `actions?: { label: string; icon?: ReactNode; onClick: () => void }[]`, rendered before Edit/Delete, so existing callers are unchanged.
+  - `AppShell.test.tsx` and `BottomDock.test.tsx` if they count items
 
 **Interfaces:**
 - Consumes: Tasks 1 and 3 hooks and helpers, `useMembership` + `canManageClinic` (owner link), `useClinicPath`, `RowMenu`, `ConfirmDialog` and `QueryStates`.
@@ -327,9 +348,10 @@ test("parseSchedule fills defaults; hasHours", () => {
     - Confirming "Cancel" calls `closeAppointment` with `"cancelled"`.
     - "Start consultation" on an appointment without `patientId` navigates to the patients/new URL with `then=consultation`.
   - `BookDialog`: picking an existing patient submits with their `patientId`/`serialNo`. A new name without a phone shows a validation error. A rejected `SlotTakenError` shows "Slot just taken".
-  - `AppShell`: "Bookings" shows for members.
+  - `AppShell`: "Bookings" shows for members. The owner's mobile bottom bar renders 6 actions with `min-width: 0`.
+  - `RowMenu`: custom `actions` render and fire `onClick`. Existing edit/delete tests are unchanged.
 - [ ] **Step 2: Run** `npm test -- dayRows BookingsPage BookDialog AppShell BottomDock`. Expected: FAIL.
-- [ ] **Step 3: Implement** the page, dialog, route and nav item. Check the bottom bar at 360px width with 6 items (owner); apply the fallback from the header if it doesn't fit.
+- [ ] **Step 3: Implement** the page, dialog, route, nav item, compact bottom bar and `RowMenu` actions.
 - [ ] **Step 4: Run** the same command. Expected: PASS.
 - [ ] **Step 5: Commit**: `feat(booking): day view, book dialog and Bookings nav`
 
@@ -340,29 +362,37 @@ test("parseSchedule fills defaults; hasHours", () => {
 **Files:**
 - Modify:
   - `src/features/patients/patientsRepo.ts` + test
-  - `src/features/patients/usePatients.ts`
+  - `src/features/patients/usePatients.ts` + `usePatients.test.tsx`
   - `src/features/patients/PatientFormPage.tsx` + test
   - `src/features/consultations/consultationsRepo.ts` + test
-  - `src/features/consultations/useConsultations.ts`
+  - `src/features/consultations/useConsultations.ts` + `useConsultations.test.tsx`
   - `src/features/consultations/ConsultationFormPage.tsx` + test
 
 **Interfaces:**
 - Produces:
   - `createPatient(values: PatientFormValues, appointmentId?: string): Promise<string>`.
-    - With `appointmentId`, it uses a `writeBatch`. The patient goes in via `doc(clinicCollection(...))` + `set`, and `update(clinicDoc("appointments", appointmentId, clinic), { patientId, serialNo, patientName: values.name, phone: values.phone })` happens in the same batch.
+    - With `appointmentId`, it uses a `writeBatch`. The patient goes in via `doc(clinicCollection(...))` + `set`. In the same batch, `update(clinicDoc("appointments", appointmentId, clinic), { patientId, serialNo, patientName, phone })` runs, but only when the appointment exists and isn't done; the values are clamped as in the header.
     - Without it, behaviour is unchanged.
     - The `"appointments"` path is a local const, the same way `consultationsRepo` uses `PATIENTS`.
   - `useCreatePatient` mutation vars become `{ values, appointmentId? }`. Update existing call sites. On success it also invalidates `["appointments"]`.
-  - `createConsultation(patient, values, record, appointmentId?: string)`. With an id, the same batch does `update(appointments/{id}, { status: "done", consultationId: ref.id, patientId: patient.id, serialNo: patient.serialNo, patientName: patient.name })`. `useCreateConsultation` takes `appointmentId?` in its vars and invalidates `["appointments"]`. `updateConsultation` is untouched.
+  - `createConsultation(patient, values, record, appointmentId?: string)`. With an id, and when that appointment exists and isn't done, the same batch does `update(appointments/{id}, { status: "done", consultationId: ref.id, patientId: patient.id, serialNo, patientName })`, with the values clamped as in the header. `useCreateConsultation` takes `appointmentId?` in its vars and invalidates `["appointments"]`. `updateConsultation` is untouched.
 - `PatientFormPage` (create mode only):
   - Reads `appointment`, `name`, `phone`, `day` and `then` from `useSearchParams`, and prefills `name`/`phone`.
-  - After saving, `then=consultation` goes to `cp(\`/patients/${newId}/consultations/new?appointment=${appointment}\`)`. Otherwise, when `appointment` is set, it goes to `cp(\`/bookings?day=${day}\`)`. With no `appointment`, the existing navigation stays.
+  - Both existing buttons pass `appointmentId`. With `appointment` set:
+    - "Save & start consultation" goes to `cp(\`/patients/${newId}/consultations/new?appointment=${appointment}\`)`.
+    - Plain "Save" goes to `cp(\`/bookings?day=${day}\`)`.
+    - `then=consultation` makes "Save & start consultation" the primary (contained) button.
+  - With no `appointment`, the existing navigation stays.
 - `ConsultationFormPage` (create mode only) reads `appointment` from the search params and passes it to the create mutation.
 
 - [ ] **Step 1: Write failing tests:**
   - `patientsRepo`: `createPatient(values, "123")` commits one batch that sets the patient (with `serialNo`) and updates `appointments/123` with `{ patientId: <new id>, serialNo, patientName, phone }`. Without an id, the existing assertions still hold.
   - `consultationsRepo`: `createConsultation(p, v, r, "123")` adds `update(appointments/123, { status: "done", consultationId: <ref id>, ... })` to the same batch. Without an id, no appointments write happens.
-  - `PatientFormPage` at `/c1/patients/new?appointment=123&name=Ravi&phone=98&day=2026-11-02&then=consultation`: the name and phone fields are prefilled. Saving calls create with `appointmentId: "123"` and navigates to `/c1/patients/<newId>/consultations/new?appointment=123`. Without `then`, it navigates to `/c1/bookings?day=2026-11-02`.
+  - Both repos:
+    - When the appointment `getDoc` says it doesn't exist (cancelled meanwhile), the patient or consultation still commits and the appointment isn't updated.
+    - A 100-character patient name is written to the appointment as 80 characters.
+    - A non-integer `serialNo` is written as `null`.
+  - `PatientFormPage` at `/c1/patients/new?appointment=123&name=Ravi&phone=98&day=2026-11-02&then=consultation`: the name and phone fields are prefilled. "Save & start consultation" calls create with `appointmentId: "123"` and navigates to `/c1/patients/<newId>/consultations/new?appointment=123`. Plain "Save" navigates to `/c1/bookings?day=2026-11-02`.
   - `ConsultationFormPage` at `.../consultations/new?appointment=123`: saving passes `appointmentId: "123"`. Edit mode never passes one.
 - [ ] **Step 2: Run** `npm test -- patientsRepo consultationsRepo PatientFormPage ConsultationFormPage`. Expected: FAIL.
 - [ ] **Step 3: Implement** the changes listed under Interfaces.
@@ -378,7 +408,7 @@ test("parseSchedule fills defaults; hasHours", () => {
 - Modify: `src/features/patients/PatientListPage.tsx` (render it above the list) + test (mock the component or the hook)
 
 **Interfaces:**
-- Consumes: `useDayAppointments`, `useClinicTimeZone`, `dayStartInZone`, `formatZonedTime` and `useClinicPath`.
+- Consumes: `useDayAppointments(clinicId, dayStart)`, `useClinicTimeZone`, `dayStartInZone`, `formatZonedTime` and `useClinicPath`.
 - Produces: `TodayAppointments({ clinicId }: { clinicId: string })`.
   - It shows the heading "Today's appointments", then one chip or row per appointment (`h:mm A · patientName · status`).
   - Each item, and a "View all" link, goes to `cp("/bookings")`.
