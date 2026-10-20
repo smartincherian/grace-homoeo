@@ -5,6 +5,7 @@ import {
   getExpense,
   listExpenses,
   listIncome,
+  listSalaryTotals,
   updateExpense,
 } from "./fundsRepo";
 import type { ExpenseFormValues } from "./fundsSchema";
@@ -20,6 +21,15 @@ export function useExpenses(startMs: number, endMs: number) {
   return useQuery({
     queryKey: ["funds", "expenses", startMs, endMs],
     queryFn: () => listExpenses(startMs, endMs),
+  });
+}
+
+/** Owner-only: pass `enabled` false for members so salaryPayments is never queried. */
+export function useSalaries(startMs: number, endMs: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ["funds", "salaries", startMs, endMs],
+    queryFn: () => listSalaryTotals(startMs, endMs),
+    enabled,
   });
 }
 

@@ -18,6 +18,10 @@ const EXPENSES = "expenses";
 // (rather than importing the consultations feature) to respect feature boundaries.
 const CONSULTATIONS = "consultations";
 
+// Read-only salary payments total (owner/superadmin only by rules; members must
+// never call this).
+const SALARY_PAYMENTS = "salaryPayments";
+
 function toExpense(
   snap: QueryDocumentSnapshot<DocumentData> | DocumentSnapshot<DocumentData>,
 ): Expense {
@@ -67,6 +71,24 @@ export async function listIncome(
       date: data.date,
     };
   });
+}
+
+/** Salary payments with `paidOn` within [startMs, endMs]: sum of `net` and count. */
+export async function listSalaryTotals(
+  startMs: number,
+  endMs: number,
+): Promise<{ total: number; count: number }> {
+  const snap = await getDocs(
+    query(
+      clinicCollection(SALARY_PAYMENTS),
+      where("paidOn", ">=", startMs),
+      where("paidOn", "<=", endMs),
+    ),
+  );
+  return {
+    total: snap.docs.reduce((sum, d) => sum + (d.data().net ?? 0), 0),
+    count: snap.size,
+  };
 }
 
 export async function getExpense(id: string): Promise<Expense | null> {

@@ -28,6 +28,9 @@ import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { useClinicPath } from "../auth/useClinicPath";
 
+const SALARY_HELPER =
+  "Staff salaries marked paid in Payroll are added to Funds automatically — don't enter them here.";
+
 const DEFAULTS: Partial<ExpenseFormValues> = {
   category: "Other",
   amount: 0,
@@ -144,7 +147,10 @@ export default function ExpenseFormPage() {
                   required
                   {...field}
                   error={!!errors.category}
-                  helperText={errors.category?.message}
+                  helperText={
+                    errors.category?.message ??
+                    (field.value === "Salary" ? SALARY_HELPER : undefined)
+                  }
                 >
                   {EXPENSE_CATEGORIES.map((c) => (
                     <MenuItem key={c} value={c}>

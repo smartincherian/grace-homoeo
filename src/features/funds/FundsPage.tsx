@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
-import {
-  Box,
-  Stack,
-  TextField,
-  Typography,
-} from "@mui/material";
+import { Box, Stack, TextField, Typography } from "@mui/material";
 import dayjs from "dayjs";
-import { useNavigate } from "react-router-dom";
-import { useIncome, useExpenses, useDeleteExpense } from "./useFunds";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  useIncome,
+  useExpenses,
+  useSalaries,
+  useDeleteExpense,
+} from "./useFunds";
 import { summarizePeriod } from "./fundsSchema";
 import type { Expense } from "./fundsSchema";
 import { formatDate, msToDateInput, dateInputToMs } from "../../lib/dates";
@@ -21,6 +21,8 @@ import { PageHeader } from "../../components/PageLayout";
 import { CARD_SX, GRADIENT, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
 import { useClinicPath } from "../auth/useClinicPath";
+import { useMembership } from "../auth/AuthGuard";
+import { canManageClinic } from "../../lib/access";
 
 const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -48,10 +50,19 @@ function StatCard({
           : { ...CARD_SX }),
       }}
     >
-      <Typography sx={{ fontSize: 13, opacity: highlight ? 0.85 : 1, color: highlight ? "inherit" : "text.secondary" }}>
+      <Typography
+        sx={{
+          fontSize: 13,
+          opacity: highlight ? 0.85 : 1,
+          color: highlight ? "inherit" : "text.secondary",
+        }}
+      >
         {label}
       </Typography>
-      <Typography sx={{ fontSize: { xs: 18, sm: 26 }, fontWeight: 800, color }} noWrap>
+      <Typography
+        sx={{ fontSize: { xs: 18, sm: 26 }, fontWeight: 800, color }}
+        noWrap
+      >
         {value}
       </Typography>
     </Box>
@@ -62,6 +73,8 @@ export default function FundsPage() {
   const cp = useClinicPath();
   useSetPageTitle("Funds");
   const navigate = useNavigate();
+  const { clinicSlug } = useParams<{ clinicSlug: string }>();
+  const isOwner = canManageClinic(useMembership(), clinicSlug);
   const { showToast } = useToast();
   const [startMs, setStartMs] = useState(() =>
     dayjs().startOf("month").valueOf(),
@@ -71,14 +84,23 @@ export default function FundsPage() {
 
   const income = useIncome(startMs, endMs);
   const expenses = useExpenses(startMs, endMs);
+  const salaries = useSalaries(startMs, endMs, isOwner);
   const deleteExpense = useDeleteExpense();
 
   const summary = useMemo(
-    () => summarizePeriod(income.data ?? [], expenses.data ?? []),
-    [income.data, expenses.data],
+    () =>
+      summarizePeriod(
+        income.data ?? [],
+        expenses.data ?? [],
+        salaries.data?.total ?? 0,
+      ),
+    [income.data, expenses.data, salaries.data],
   );
-  const summaryLoading = income.isPending || expenses.isPending;
-  const summaryError = income.isError || expenses.isError;
+  const summaryLoading =
+    income.isPending || expenses.isPending || (isOwner && salaries.isPending);
+  const summaryError =
+    income.isError || expenses.isError || (isOwner && salaries.isError);
+  const salaryCount = salaries.data?.count ?? 0;
   const stat = (value: number) =>
     summaryError ? "—" : summaryLoading ? "…" : inr(value);
 
@@ -95,11 +117,18 @@ export default function FundsPage() {
 
   return (
     <Box sx={{ position: "relative", minHeight: "60vh" }}>
-      <PageHeader title="Funds" subtitle="Income from consultations, minus expenses" />
+      <PageHeader
+        title="Funds"
+        subtitle="Income from consultations, minus expenses"
+      />
       <Stack
         direction={{ xs: "column", sm: "row" }}
         spacing={2}
-        sx={{ mb: 2.5, maxWidth: { sm: 520 }, "& .MuiOutlinedInput-root": { bgcolor: TOKENS.white } }}
+        sx={{
+          mb: 2.5,
+          maxWidth: { sm: 520 },
+          "& .MuiOutlinedInput-root": { bgcolor: TOKENS.white },
+        }}
       >
         <TextField
           label="From"
@@ -170,6 +199,18 @@ export default function FundsPage() {
       <Typography sx={{ fontSize: 18, fontWeight: 800, mb: 1.5 }}>
         Expenses
       </Typography>
+
+      {isOwner && salaryCount > 0 && (
+        <ListCard
+          primary="Salaries"
+          secondary={`${salaryCount} payment${salaryCount === 1 ? "" : "s"} · from Payroll`}
+          trailing={
+            <Typography sx={{ color: TOKENS.danger, fontWeight: 700 }}>
+              {inr(salaries.data?.total ?? 0)}
+            </Typography>
+          }
+        />
+      )}
 
       <QueryStates
         status={expenses.status}

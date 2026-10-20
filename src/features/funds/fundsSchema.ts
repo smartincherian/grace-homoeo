@@ -43,7 +43,9 @@ export interface IncomeRecord {
 
 export interface PeriodSummary {
   totalIncome: number;
+  /** Includes salaries. */
   totalExpenses: number;
+  totalSalaries: number;
   balance: number;
   /** Income split by payment mode (e.g. Cash, UPI, Debt, No Fees), highest first. */
   incomeByMode: { mode: string; amount: number }[];
@@ -51,15 +53,17 @@ export interface PeriodSummary {
 
 /**
  * Pure aggregation: total income (sum of consultation amounts), total expenses,
- * balance (income − expenses), and an income breakdown by payment mode so Debt /
+ * balance (income − expenses, where expenses include owner-only salaries), and an income breakdown by payment mode so Debt /
  * No Fees stay visible separately from cash received.
  */
 export function summarizePeriod(
   income: Pick<IncomeRecord, "amount" | "paymentMode">[],
   expenses: Pick<Expense, "amount">[],
+  salaries = 0,
 ): PeriodSummary {
   const totalIncome = income.reduce((sum, r) => sum + r.amount, 0);
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalExpenses =
+    expenses.reduce((sum, e) => sum + e.amount, 0) + salaries;
 
   const byMode = new Map<string, number>();
   for (const r of income) {
@@ -72,6 +76,7 @@ export function summarizePeriod(
   return {
     totalIncome,
     totalExpenses,
+    totalSalaries: salaries,
     balance: totalIncome - totalExpenses,
     incomeByMode,
   };
