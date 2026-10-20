@@ -24,6 +24,12 @@ vi.mock("../../lib/useBranding", () => ({
 }));
 vi.mock("../../lib/clinicQueries", () => ({
   useClinic: () => ({ data: { id: "c1", name: "Clinic One", createdAt: 0 } }),
+  useClinicTimeZone: () => "Asia/Kolkata",
+}));
+vi.mock("../../lib/schedule", async (orig) => ({
+  ...(await orig<typeof import("../../lib/schedule")>()),
+  useSchedule: () => ({ data: undefined, isError: false }),
+  useSaveSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({ user: { email: "Owner@X.com" }, loading: false }),

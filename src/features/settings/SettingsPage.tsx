@@ -22,6 +22,7 @@ import { displayNameOf, type Branding, type Contact } from "../../lib/branding";
 import { BRAND_PRESETS, ensureContrast } from "../../theme/brand";
 import { CARD_SX, GRADIENT, TOKENS } from "../../theme/theme";
 import { resizeLogo } from "./resizeLogo";
+import ClinicHoursSection from "./ClinicHoursSection";
 
 const NAME_MAX = 60;
 const CONTACT_MAX = 120;
@@ -311,6 +312,8 @@ export default function SettingsPage() {
           Stored for future printing.
         </Typography>
       </Section>
+
+      <ClinicHoursSection clinicId={clinicSlug} />
 
       <Box
         sx={{
