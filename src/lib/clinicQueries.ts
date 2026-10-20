@@ -3,11 +3,14 @@ import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { CLINICS } from "./clinic";
 
+export const DEFAULT_TIME_ZONE = "Asia/Kolkata";
+
 export interface Clinic {
   id: string;
   name: string;
   createdAt: number;
   ownerEmail?: string;
+  timeZone?: string;
 }
 
 export async function getClinic(id: string): Promise<Clinic | null> {
@@ -20,6 +23,7 @@ export async function getClinic(id: string): Promise<Clinic | null> {
     createdAt: data.createdAt ?? 0,
     ownerEmail:
       typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
+    timeZone: typeof data.timeZone === "string" ? data.timeZone : undefined,
   };
 }
 
@@ -29,4 +33,8 @@ export function useClinic(id: string | undefined) {
     queryFn: () => getClinic(id!),
     enabled: !!id,
   });
+}
+
+export function useClinicTimeZone(clinicId: string | undefined): string {
+  return useClinic(clinicId).data?.timeZone ?? DEFAULT_TIME_ZONE;
 }

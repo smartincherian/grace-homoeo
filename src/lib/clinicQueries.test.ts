@@ -23,6 +23,21 @@ describe("getClinic", () => {
     expect(doc).toHaveBeenCalledWith({}, "clinics", "c1");
   });
 
+  it("returns the stored timeZone, and undefined when absent", async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      id: "c1",
+      data: () => ({ name: "C", createdAt: 5, timeZone: "Asia/Dubai" }),
+    });
+    expect((await getClinic("c1"))?.timeZone).toBe("Asia/Dubai");
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      id: "c1",
+      data: () => ({ name: "C", createdAt: 5 }),
+    });
+    expect((await getClinic("c1"))?.timeZone).toBeUndefined();
+  });
+
   it("returns null when not found", async () => {
     getDoc.mockResolvedValue({ exists: () => false });
     expect(await getClinic("nope")).toBeNull();
