@@ -189,9 +189,7 @@ test("adds a user with the clinic's current seats", () => {
   fireEvent.change(screen.getByLabelText("Add user to Sunrise"), {
     target: { value: "New@X.com" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Add to Sunrise" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Add to Sunrise" }));
   expect(m.addUser).toHaveBeenCalledWith(
     {
       email: "new@x.com",
@@ -216,9 +214,7 @@ test("blocks adding an email that belongs to another clinic", () => {
   fireEvent.change(screen.getByLabelText("Add user to Moonlight"), {
     target: { value: "own@x.com" },
   });
-  fireEvent.click(
-    screen.getByRole("button", { name: "Add to Moonlight" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Add to Moonlight" }));
   expect(
     screen.getByText("Already assigned to Sunrise. Remove it there first."),
   ).toBeInTheDocument();
