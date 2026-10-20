@@ -23,6 +23,7 @@ import StaffListPage from "./features/staff/StaffListPage";
 import StaffFormPage from "./features/staff/StaffFormPage";
 import StaffDetailPage from "./features/staff/StaffDetailPage";
 import LeaveFormPage from "./features/staff/LeaveFormPage";
+import PayrollPage from "./features/staff/PayrollPage";
 import AccessPage from "./features/access/AccessPage";
 
 export default function App() {
@@ -80,6 +81,14 @@ export default function App() {
             element={
               <OwnerOnly>
                 <StaffListPage />
+              </OwnerOnly>
+            }
+          />
+          <Route
+            path="staff/payroll"
+            element={
+              <OwnerOnly>
+                <PayrollPage />
               </OwnerOnly>
             }
           />
