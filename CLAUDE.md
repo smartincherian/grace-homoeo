@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-"HomoeoDesk" (originally "Grace Homoeo") — an installable multi-clinic PWA for homoeopathy clinics, built with **Vite + React + TypeScript + MUI + Firebase**. Hosted on Firebase Hosting; data lives in Cloud Firestore on the **`grace-homoeo`** Firebase project.
+"Homoeo Desk" (originally "Grace Homoeo") — an installable multi-clinic PWA for homoeopathy clinics, built with **Vite + React + TypeScript + MUI + Firebase**. Hosted on Firebase Hosting; data lives in Cloud Firestore on the **`grace-homoeo`** Firebase project.
 
 **Status:** Auth, the adaptive app shell, multi-clinic tenancy (superadmin, owners, seats), and the Patients & Consultations, Inventory, Funds, Calculator and Bookings (slot booking) modules are built. Each clinic can set its own name, logo, colour, scripture banner and contact details (owner Settings page). See `docs/superpowers/specs/` and `docs/superpowers/plans/`. The old Bible-in-a-Year helper is intentionally out of scope.
 
-**Live:** the multi-clinic cutover and all four HomoeoDesk phases (roles, branding, staff, booking) were deployed together (rules + hosting) on 2026-10-21 to https://grace-homoeo.web.app. Grace's data lives in `clinics/grace-homoeo` (owner `brigittarinny1989@gmail.com`, seat 1). The empty test clinics `grace` and `test` remain, and the legacy top-level collections (incl. one old-format `consultation` doc) are still there until a later cleanup. Migration (`--resync`) must not be re-run now that the rules are live.
+**Live:** the multi-clinic cutover and all four Homoeo Desk phases (roles, branding, staff, booking) were deployed together (rules + hosting) on 2026-10-21 to https://grace-homoeo.web.app. Grace's data lives in `clinics/grace-homoeo` (owner `brigittarinny1989@gmail.com`, seat 1). The empty test clinics `grace` and `test` remain, and the legacy top-level collections (incl. one old-format `consultation` doc) are still there until a later cleanup. Migration (`--resync`) must not be re-run now that the rules are live.
 
 ## Commands
 

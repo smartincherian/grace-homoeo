@@ -29,7 +29,7 @@ test("applies the clinic colour and title, then restores defaults", () => {
     </BrandScope>,
   );
   expect(root()).toBe(ensureContrast("#0f766e"));
-  expect(document.title).toBe("Teal Clinic · HomoeoDesk");
+  expect(document.title).toBe("Teal Clinic · Homoeo Desk");
   useBranding.mockReturnValue({ data: undefined });
   rerender(
     <BrandScope clinicId={undefined}>
@@ -37,7 +37,7 @@ test("applies the clinic colour and title, then restores defaults", () => {
     </BrandScope>,
   );
   expect(root()).toBe(ensureContrast(DEFAULT_BRAND));
-  expect(document.title).toBe("HomoeoDesk");
+  expect(document.title).toBe("Homoeo Desk");
 });
 
 test("falls back to the clinic name when the display name is empty", () => {
@@ -49,7 +49,7 @@ test("falls back to the clinic name when the display name is empty", () => {
       <p>x</p>
     </BrandScope>,
   );
-  expect(document.title).toBe("One · HomoeoDesk");
+  expect(document.title).toBe("One · Homoeo Desk");
 });
 
 test("restores defaults on unmount", () => {
@@ -60,7 +60,7 @@ test("restores defaults on unmount", () => {
   );
   unmount();
   expect(root()).toBe(ensureContrast(DEFAULT_BRAND));
-  expect(document.title).toBe("HomoeoDesk");
+  expect(document.title).toBe("Homoeo Desk");
 });
 
 test("switching clinics updates the colour", () => {
@@ -78,5 +78,5 @@ test("switching clinics updates the colour", () => {
     </BrandScope>,
   );
   expect(root()).toBe(ensureContrast("#b91c1c"));
-  expect(document.title).toBe("Red · HomoeoDesk");
+  expect(document.title).toBe("Red · Homoeo Desk");
 });

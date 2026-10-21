@@ -34,7 +34,6 @@ vi.mock("../../lib/access", () => ({
   homePath: vi.fn(),
 }));
 vi.mock("./ensureUserDoc", () => ({ ensureUserDoc: vi.fn() }));
-vi.mock("../../components/ScriptureBanner", () => ({ default: () => null }));
 const showToast = vi.fn();
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast }),
@@ -62,10 +61,11 @@ beforeEach(() => {
 test("shows the generic brand and footer, no Grace text", () => {
   const { container } = renderLogin();
   expect(
-    screen.getByRole("heading", { name: "HomoeoDesk" }),
+    screen.getByRole("heading", { name: "Homoeo Desk" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Homoeo Clinic Manager")).toBeInTheDocument();
   expect(screen.getByText(/developed by/i)).toBeInTheDocument();
+  expect(screen.queryByLabelText("Scripture")).toBeNull();
   // The developer credit links to graceissufficient.net; check the rest.
   container.querySelector("footer")?.remove();
   expect(container.textContent).not.toMatch(/grace/i);

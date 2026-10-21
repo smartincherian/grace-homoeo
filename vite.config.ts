@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "HomoeoDesk",
-        short_name: "HomoeoDesk",
+        name: "Homoeo Desk",
+        short_name: "Homoeo Desk",
         description: "Homoeo Clinic Manager",
         theme_color: "#f5f7fc",
         background_color: "#f5f7fc",

@@ -90,7 +90,7 @@ function ShellInner({
   const branding = useBranding(clinicId).data;
   const shownName = clinicId
     ? displayNameOf(branding, clinicName)
-    : "HomoeoDesk";
+    : "Homoeo Desk";
   const mark = (size: number, decorative = false) =>
     clinicId ? (
       <ClinicMark
@@ -103,7 +103,7 @@ function ShellInner({
       <ProductMark size={size} />
     );
   const showScripture =
-    !clinicId || (branding ?? DEFAULT_BRANDING).showScripture;
+    !!clinicId && (branding ?? DEFAULT_BRANDING).showScripture;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();

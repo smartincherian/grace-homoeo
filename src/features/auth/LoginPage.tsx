@@ -217,7 +217,7 @@ export default function LoginPage() {
             <ProductMark />
             <Box>
               <Typography variant="h1" sx={{ fontSize: 22 }}>
-                HomoeoDesk
+                Homoeo Desk
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
                 Homoeo Clinic Manager
@@ -296,7 +296,7 @@ export default function LoginPage() {
         </CardContent>
       </Card>
       <Box sx={{ width: "100%", maxWidth: 880 }}>
-        <BottomDock pinned={false} />
+        <BottomDock pinned={false} showScripture={false} />
       </Box>
     </Box>
   );
