@@ -300,3 +300,13 @@ test("the owner's mobile bottom bar fits 6 compact actions", () => {
   expect(actions).toHaveLength(6);
   actions.forEach((a) => expect(a).toHaveStyle("min-width: 0"));
 });
+
+test("the sidebar clinic name link is not underlined", () => {
+  useBranding.mockReturnValue(branded({}));
+  renderShell(["/c1/patients"]);
+  const link = screen
+    .getAllByText("Teal Clinic")
+    .map((el) => el.closest("a"))
+    .find(Boolean)!;
+  expect(link).toHaveStyle({ textDecoration: "none" });
+});

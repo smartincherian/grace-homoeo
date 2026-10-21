@@ -237,7 +237,7 @@ function ShellInner({
           <Box
             component={Link}
             to={homeHref}
-            sx={{ display: "block", px: 1.5, pt: 0.5 }}
+            sx={{ display: "block", px: 1.5, pt: 0.5, textDecoration: "none" }}
           >
             <Box sx={{ display: "flex", justifyContent: "center" }}>
               {mark(56, true)}
@@ -463,9 +463,9 @@ function ShellInner({
         }}
       >
         <Box sx={{ flex: 1 }}>
-            {clinicId && <TrialBanner clinicId={clinicId} />}
-            {children ?? <Outlet />}
-          </Box>
+          {clinicId && <TrialBanner clinicId={clinicId} />}
+          {children ?? <Outlet />}
+        </Box>
         <BottomDock showScripture={showScripture} />
       </Box>
 
