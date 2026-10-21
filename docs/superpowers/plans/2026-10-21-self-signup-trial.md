@@ -15,7 +15,7 @@
 - Trial length `TRIAL_DAYS = 21`, `TRIAL_MS = 1814400000` (21 × 86 400 000).
 - WhatsApp number `919036209639`; link `https://wa.me/919036209639?text=<encodeURIComponent(msg)>`.
 - Pre-filled message exactly: `Hi, I'd like to know the Homoeo Desk subscription pricing. Clinic: <clinic name> (<slug>), email: <owner email>.`
-- Active = `authorized === true` OR `trialEndsAt` absent OR `now < trialEndsAt`. Otherwise expired.
+- Trial OK = `authorized === true` OR `trialEndsAt` absent OR `now < trialEndsAt`. Otherwise expired.
 - Expired = read-only: reads unchanged, every write under `clinics/{id}/…` and owner `allowedEmails` writes denied (superadmin exempt).
 - Every newly created clinic (self-signup or `/admin`) gets `trialEndsAt = createdAt + TRIAL_MS`.
 - Self-signup `createdAt` must be within ±10 minutes (600000 ms) of `request.time`.
@@ -23,6 +23,26 @@
 - Product name in copy is "Homoeo Desk" (with a space). Use `TOKENS`/`GRADIENT`, never raw accent hex; `useToast`, never `alert()`.
 - Features must not import each other's internals; shared code goes in `src/lib/` or `src/components/`.
 - Do not deploy. Release (`npm run release`) is the user's call after the plan is done.
+
+## Fit with the existing "inactive" feature (added after the spec)
+
+Commits `3d2dc84`..`194b9d5` added a superadmin **inactive** switch: `clinics/{id}.active` and
+`allowedEmails/{email}.active` (`false` = fully blocked, reads too), rules `clinicActive(c)` /
+`entryActive()` folded into `member()`, `Membership.inactive?: "user" | "clinic"` with an
+"inactive" screen in `AuthGuard`, `Clinic.active`, `clinicAdminRepo.ts` (`setClinicActive`,
+`setUserActive`, `deleteClinic`), and a clinics **table** on `/admin` (`ClinicRow` with a menu,
+"Active/Inactive" chip). Build on it; do not change its behaviour:
+
+- **Naming:** the spec's rules `active(c)` is called **`trialOk(c)`** here, and the TS
+  helper is **`trialOk(status)`**, so they never clash with the existing `active` field. Trial
+  fields never use the name `active`.
+- Inactive (blocked) and trial-ended (read-only) are independent; inactive wins on screen
+  (AuthGuard already shows its screen before the shell renders).
+- `clinics/{id}` `get` rule already lets a clinic's own users read it; Task 2 only **adds**
+  the `resource == null` branch.
+- `deleteClinic` (superadmin) must keep working on expired clinics — superadmin is exempt.
+- Task 6 adds the trial status chip next to the existing Active/Inactive chip in `ClinicRow`
+  and "Authorize" / "Remove authorization" as items in that row's existing menu.
 
 ## Review Focus
 
@@ -46,7 +66,7 @@
   - `TRIAL_DAYS = 21`, `TRIAL_MS = 1814400000`, `WHATSAPP_NUMBER = "919036209639"`.
   - `type ClinicStatus = { kind: "authorized" } | { kind: "legacy" } | { kind: "trial"; daysLeft: number } | { kind: "expired" }`
   - `clinicStatus(c: Pick<Clinic, "authorized" | "trialEndsAt">, now: number): ClinicStatus` — authorized wins; no `trialEndsAt` → legacy; `now < trialEndsAt` → trial with `daysLeft = Math.ceil((trialEndsAt - now) / 86400000)`; else expired.
-  - `isActive(s: ClinicStatus): boolean` (`kind !== "expired"`).
+  - `trialOk(s: ClinicStatus): boolean` (`kind !== "expired"`).
   - `pricingWhatsAppUrl(p: { clinicName: string; clinicId: string; email: string }): string`
   - `RESERVED_SLUGS` includes `"setup"` and `"signup"`.
 
@@ -70,14 +90,14 @@
 - Modify: `firestore.rules`, `rules-tests/firestore.rules.test.ts`
 
 **Interfaces:**
-- Produces (rules functions): `active(c)`, `canWrite(c)` = `superadmin() || active(c)`, `reservedSlugs()` list, `selfSignupClinic(clinicId)`.
+- Produces (rules functions): `trialOk(c)`, `canWrite(c)` = `superadmin() || trialOk(c)`, `reservedSlugs()` list, `selfSignupClinic(clinicId)`.
 - Consumes: `TRIAL_MS` value `1814400000`, reserved list from Task 1.
 
 Rules changes:
-- `active(c)`: `clinicData(c).get('authorized', false) == true || !('trialEndsAt' in clinicData(c)) || request.time.toMillis() < clinicData(c).trialEndsAt`.
+- `trialOk(c)`: `clinicData(c).get('authorized', false) == true || !('trialEndsAt' in clinicData(c)) || request.time.toMillis() < clinicData(c).trialEndsAt`.
 - Add `&& canWrite(clinicId)` to every write under `clinics/{clinicId}`: seats create/delete, settings create/update/delete, appointments create/update/delete, appointmentHistory create, staff/leaves/salaryPayments writes, catch-all `{sub}/{document=**}`. Split `allow read, write` lines into separate `read` and `write`.
 - `allowedEmails` create/delete via `manager(...)` additionally require `canWrite(<clinicId>)` (use `request.resource.data.clinicId` on create, `resource.data.clinicId` on delete).
-- `clinics/{clinicId}` **get**: also allow when `signedIn() && verified() && resource == null`.
+- `clinics/{clinicId}` **get**: keep the existing branches and also allow when `signedIn() && verified() && resource == null`.
 - `clinics/{clinicId}` **create** self-signup branch (keep the superadmin branch): verified, not superadmin, `!exists(allowedEmails/$(authEmail()))`, `clinicId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')`, `clinicId.size()` 3–40, `!(clinicId in reservedSlugs())`, keys `hasOnly`+`hasAll` `['name','createdAt','ownerEmail','timeZone','trialEndsAt','authorized','authorizedAt','selfSignup']`, `name is string` size 1–60, `ownerEmail == authEmail()`, `authorized == false`, `authorizedAt == null`, `selfSignup == true`, `timeZone == 'Asia/Kolkata'`, `createdAt is int` and `abs(createdAt - request.time.toMillis()) <= 600000` (write as two comparisons), `trialEndsAt == createdAt + 1814400000`, `entryAfterIs(authEmail(), clinicId, '1')`, `seatAfterIs(clinicId, '1', authEmail())`.
 - `seats/{seatId}` create self-signup branch: `seatId == '1'`, data keys only `email`, `email == authEmail()`, `!exists(clinics/$(clinicId))`, `getAfter(clinics/$(clinicId)).data.ownerEmail == authEmail()`, `getAfter(...).data.get('selfSignup', false) == true`, `entryAfterIs(authEmail(), clinicId, '1')`.
 - `allowedEmails/{email}` create self-signup branch: `email == authEmail()`, keys only `['email','clinicId','seat','addedAt','addedBy']`, `seat == '1'`, `addedBy == authEmail()`, clinic `!exists` before and `getAfter(...).data.ownerEmail == email` and `selfSignup == true` after, `seatAfterIs(clinicId, '1', email)`.
@@ -208,7 +228,7 @@ AccessPage behaviour:
 **Files:**
 - Modify: `CLAUDE.md`
 
-- [ ] **Step 1: Update CLAUDE.md**: Status mentions self-signup + trial; Routing adds `/setup` (verified users with no allow-list entry); Data model: `clinics/{id}` trial fields and active rule, self-signup batch, `"setup"`/`"signup"` reserved; Conventions: rules `active()` write gating, superadmin exempt; post-deploy step "authorize `grace-homoeo` on `/admin`"; `src/lib/subscription.ts` holds trial length and WhatsApp number.
+- [ ] **Step 1: Update CLAUDE.md**: Status mentions self-signup + trial; Routing adds `/setup` (verified users with no allow-list entry); Data model: `clinics/{id}` trial fields and the `trialOk` rule, self-signup batch, `"setup"`/`"signup"` reserved; Conventions: rules `trialOk()` write gating, superadmin exempt; post-deploy step "authorize `grace-homoeo` on `/admin`"; `src/lib/subscription.ts` holds trial length and WhatsApp number.
 - [ ] **Step 2: Run** `npm run build && npm test && npm run lint && npm run test:rules` — expect build OK, all tests PASS, 0 lint errors.
 - [ ] **Step 3: Commit** `docs: self-signup and free trial in CLAUDE.md`
 - [ ] **Step 4:** Report to the user that release (`npm run release`) and authorizing `grace-homoeo` afterwards are pending their go-ahead.
