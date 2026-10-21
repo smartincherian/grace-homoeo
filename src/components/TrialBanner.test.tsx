@@ -29,7 +29,9 @@ beforeEach(() => {
 
 describe("TrialBanner", () => {
   it("shows days left with a WhatsApp link", () => {
-    useClinic.mockReturnValue(clinic({ trialEndsAt: Date.now() + 3 * DAY - 1000 }));
+    useClinic.mockReturnValue(
+      clinic({ trialEndsAt: Date.now() + 3 * DAY - 1000 }),
+    );
     render(<TrialBanner clinicId="c1" />);
     expect(screen.getByText(/Free trial · 3 days left/)).toBeInTheDocument();
     expect(
@@ -87,5 +89,21 @@ describe("TrialBanner", () => {
     rerender(<TrialBanner clinicId="c1" />);
     act(() => notifyWriteDenied());
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("uses readable warning text in the last five days", () => {
+    useClinic.mockReturnValue(clinic({ trialEndsAt: Date.now() + 2 * DAY }));
+    render(<TrialBanner clinicId="c1" />);
+    expect(getComputedStyle(screen.getByRole("status")).color).toBe(
+      "rgb(138, 83, 0)",
+    );
+  });
+
+  it("uses readable danger text when expired", () => {
+    useClinic.mockReturnValue(clinic({ trialEndsAt: Date.now() - 1000 }));
+    render(<TrialBanner clinicId="c1" />);
+    expect(getComputedStyle(screen.getByRole("status")).color).toBe(
+      "rgb(168, 36, 60)",
+    );
   });
 });

@@ -61,7 +61,7 @@ export default function TrialBanner({ clinicId }: { clinicId: string }) {
           fontSize: 13,
           fontWeight: 600,
           bgcolor: warn ? "warning.light" : TOKENS.blue50,
-          color: warn ? "warning.contrastText" : TOKENS.blue700,
+          color: warn ? TOKENS.warn : TOKENS.blue700,
         }}
       >
         <span>
@@ -96,7 +96,7 @@ export default function TrialBanner({ clinicId }: { clinicId: string }) {
           py: 1,
           borderRadius: "10px",
           bgcolor: "error.light",
-          color: "error.contrastText",
+          color: TOKENS.danger,
         }}
       >
         <Typography sx={{ fontSize: 13, fontWeight: 600 }}>
