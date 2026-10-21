@@ -240,7 +240,8 @@ test("shows Homoeo Desk and no clinic name on the admin page", () => {
   expect(screen.getAllByText("Homoeo Desk").length).toBeGreaterThan(0);
   expect(screen.queryByText(/^Clinic /)).toBeNull();
   expect(useBranding).not.toHaveBeenCalledWith("admin");
-  expect(screen.queryByText(/\d+:\d+/)).toBeNull();
+  // The verse shows on the superadmin pages.
+  expect(screen.getAllByText(/\d+:\d+/).length).toBeGreaterThan(0);
 });
 
 test("shows scripture when branding leaves it on", () => {
