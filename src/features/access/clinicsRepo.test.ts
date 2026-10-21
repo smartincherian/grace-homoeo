@@ -48,6 +48,34 @@ describe("clinicsRepo", () => {
     expect(list[1].ownerEmail).toBeUndefined();
   });
 
+  it("maps trial fields in the list, undefined when absent", async () => {
+    getDocs.mockResolvedValue({
+      docs: [
+        {
+          id: "a",
+          data: () => ({
+            name: "A",
+            createdAt: 1,
+            authorized: true,
+            trialEndsAt: 9,
+            selfSignup: true,
+            authorizedAt: 3,
+          }),
+        },
+        { id: "b", data: () => ({ name: "B", createdAt: 2 }) },
+      ],
+    });
+    const [a, b] = await listClinics();
+    expect(a).toMatchObject({
+      authorized: true,
+      trialEndsAt: 9,
+      selfSignup: true,
+      authorizedAt: 3,
+    });
+    expect(b.authorized).toBeUndefined();
+    expect(b.trialEndsAt).toBeUndefined();
+  });
+
   it("creates clinic, seat 1 and allow-list entry in one batch", async () => {
     getDoc.mockResolvedValue({ exists: () => false });
     await createClinic(

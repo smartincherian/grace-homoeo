@@ -13,6 +13,30 @@ export interface Clinic {
   timeZone?: string;
   /** False when the superadmin turned the clinic off; listClinics always sets it. */
   active?: boolean;
+  /** Superadmin-authorized (paid): never expires. */
+  authorized?: boolean;
+  authorizedAt?: number | null;
+  /** Epoch ms when the free trial ends; absent for legacy clinics. */
+  trialEndsAt?: number;
+  selfSignup?: boolean;
+}
+
+/** Trial fields from a clinic doc's data, with type guards (absent -> undefined). */
+export function trialFields(
+  data: Record<string, unknown>,
+): Pick<Clinic, "authorized" | "authorizedAt" | "trialEndsAt" | "selfSignup"> {
+  return {
+    authorized:
+      typeof data.authorized === "boolean" ? data.authorized : undefined,
+    authorizedAt:
+      typeof data.authorizedAt === "number" || data.authorizedAt === null
+        ? data.authorizedAt
+        : undefined,
+    trialEndsAt:
+      typeof data.trialEndsAt === "number" ? data.trialEndsAt : undefined,
+    selfSignup:
+      typeof data.selfSignup === "boolean" ? data.selfSignup : undefined,
+  };
 }
 
 export async function getClinic(id: string): Promise<Clinic | null> {
@@ -26,6 +50,7 @@ export async function getClinic(id: string): Promise<Clinic | null> {
     ownerEmail:
       typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
     timeZone: typeof data.timeZone === "string" ? data.timeZone : undefined,
+    ...trialFields(data),
   };
 }
 

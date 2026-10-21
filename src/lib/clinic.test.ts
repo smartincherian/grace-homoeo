@@ -100,7 +100,7 @@ describe("isValidSlug", () => {
     expect(isValidSlug("grace-homoeo")).toBe(true);
     expect(isValidSlug("abc")).toBe(true);
   });
-  it.each(["ab", "Grace", "-x-", "a--b", "patients", "admin", "a".repeat(41)])(
+  it.each(["ab", "Grace", "-x-", "a--b", "patients", "admin", "setup", "signup", "a".repeat(41)])(
     "rejects %s",
     (s) => expect(isValidSlug(s)).toBe(false),
   );

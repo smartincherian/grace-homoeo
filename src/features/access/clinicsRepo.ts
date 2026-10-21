@@ -13,7 +13,7 @@ import {
   normalizeEmail,
 } from "../../lib/access";
 import { EMAIL_RE, SeatError } from "../../lib/seats";
-import type { Clinic } from "../../lib/clinicQueries";
+import { trialFields, type Clinic } from "../../lib/clinicQueries";
 
 /** All clinics, alphabetically by name. */
 export async function listClinics(): Promise<Clinic[]> {
@@ -28,6 +28,7 @@ export async function listClinics(): Promise<Clinic[]> {
         ownerEmail:
           typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
         active: data.active !== false,
+        ...trialFields(data),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

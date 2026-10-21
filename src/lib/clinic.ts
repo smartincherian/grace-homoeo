@@ -22,6 +22,8 @@ export const RESERVED_SLUGS: readonly string[] = [
   "staff",
   "bookings",
   "verify-email",
+  "setup",
+  "signup",
 ];
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
