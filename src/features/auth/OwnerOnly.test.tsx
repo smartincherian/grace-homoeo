@@ -43,3 +43,10 @@ it("redirects a plain member to the clinic patients page", () => {
   expect(screen.queryByText("secret")).not.toBeInTheDocument();
   expect(screen.getByText("patients page")).toBeInTheDocument();
 });
+
+it("waits instead of redirecting while membership is unresolved", () => {
+  state.membership = undefined;
+  renderAt();
+  expect(screen.queryByText("patients page")).toBeNull();
+  expect(screen.queryByText("secret")).toBeNull();
+});

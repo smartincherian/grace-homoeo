@@ -7,6 +7,8 @@ import { useMembership } from "./AuthGuard";
 export default function OwnerOnly({ children }: { children: ReactNode }) {
   const { clinicSlug } = useParams();
   const membership = useMembership();
+  // Still resolving: wait rather than bounce an owner to patients.
+  if (!membership) return null;
   if (canManageClinic(membership, clinicSlug)) return <>{children}</>;
   return <Navigate to={`/${clinicSlug}/patients`} replace />;
 }
