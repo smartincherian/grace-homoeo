@@ -39,6 +39,20 @@ describe("TrialBanner", () => {
     ).toMatch(/^https:\/\/wa\.me\/919036209639/);
   });
 
+  it("stays hidden until fewer than 8 days are left", () => {
+    useClinic.mockReturnValue(
+      clinic({ trialEndsAt: Date.now() + 8 * DAY - 1000 }),
+    );
+    const { container, unmount } = render(<TrialBanner clinicId="c1" />);
+    expect(container).toBeEmptyDOMElement();
+    unmount();
+    useClinic.mockReturnValue(
+      clinic({ trialEndsAt: Date.now() + 7 * DAY - 1000 }),
+    );
+    render(<TrialBanner clinicId="c1" />);
+    expect(screen.getByText(/Free trial · 7 days left/)).toBeInTheDocument();
+  });
+
   it("uses the singular for the last day", () => {
     useClinic.mockReturnValue(clinic({ trialEndsAt: Date.now() + 3_600_000 }));
     render(<TrialBanner clinicId="c1" />);

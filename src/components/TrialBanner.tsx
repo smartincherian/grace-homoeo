@@ -18,6 +18,9 @@ import { clinicStatus, pricingWhatsAppUrl } from "../lib/subscription";
 import { onWriteDenied } from "../lib/writeDenied";
 import { TOKENS } from "../theme/theme";
 
+/** The trial countdown shows only when fewer than this many days are left. */
+const TRIAL_BANNER_DAYS = 8;
+
 export default function TrialBanner({ clinicId }: { clinicId: string }) {
   const membership = useMembership();
   const clinic = useClinic(clinicId).data;
@@ -45,6 +48,8 @@ export default function TrialBanner({ clinicId }: { clinicId: string }) {
   });
 
   if (status.kind === "trial") {
+    // Quiet for most of the trial; only the last week shows the countdown.
+    if (status.daysLeft >= TRIAL_BANNER_DAYS) return null;
     const warn = status.daysLeft <= 5;
     return (
       <Box
