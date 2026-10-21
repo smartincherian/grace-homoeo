@@ -7,13 +7,22 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("../auth/useAuth", () => ({ useAuth: () => auth.value }));
 vi.mock("../../lib/firebase", () => ({ db: {} }));
-type Entry = { email: string; clinicId: string; seat: string; addedAt: number };
+type Entry = {
+  email: string;
+  clinicId: string;
+  seat: string;
+  addedAt: number;
+  active?: boolean;
+};
 const m = vi.hoisted(() => ({
   addUser: vi.fn(),
   removeUser: vi.fn(),
   setOwner: vi.fn(),
   removeUnassigned: vi.fn(),
   createClinic: vi.fn(),
+  setClinicActive: vi.fn(),
+  setUserActive: vi.fn(),
+  deleteClinic: vi.fn(),
   toast: vi.fn(),
   emails: [] as Entry[],
   clinics: [] as {
@@ -21,6 +30,7 @@ const m = vi.hoisted(() => ({
     name: string;
     createdAt: number;
     ownerEmail?: string;
+    active?: boolean;
   }[],
 }));
 vi.mock("./useClinics", () => ({
@@ -29,9 +39,15 @@ vi.mock("./useClinics", () => ({
     data: m.clinics,
   }),
   useCreateClinic: () => ({ mutate: m.createClinic, isPending: false }),
+  useSetClinicActive: () => ({ mutate: m.setClinicActive, isPending: false }),
+  useSetUserActive: () => ({ mutate: m.setUserActive, isPending: false }),
+  useDeleteClinic: () => ({ mutate: m.deleteClinic, isPending: false }),
 }));
 vi.mock("./useAllowedEmails", () => ({
-  useAllowedEmails: () => ({ status: "success", data: m.emails }),
+  useAllowedEmails: () => ({
+    status: "success",
+    data: m.emails.map((e) => ({ ...e, active: e.active ?? true })),
+  }),
   useRemoveUnassigned: () => ({ mutate: m.removeUnassigned, isPending: false }),
 }));
 vi.mock("../../lib/useSeats", () => ({
@@ -81,6 +97,9 @@ const asAdmin = () => {
     m.removeUser,
     m.setOwner,
     m.createClinic,
+    m.setClinicActive,
+    m.setUserActive,
+    m.deleteClinic,
     m.toast,
   ])
     f.mockReset();
@@ -92,6 +111,11 @@ const asAdmin = () => {
     { email: "two@x.com", clinicId: "c1", seat: "2", addedAt: 0 },
   ];
 };
+
+const expand = (name = "Sunrise") =>
+  fireEvent.click(
+    screen.getByRole("button", { name: `Show users of ${name}` }),
+  );
 
 const fillCreate = (name: string, owner: string) => {
   fireEvent.change(screen.getByLabelText("Clinic name"), {
@@ -146,8 +170,10 @@ test("invalid slug disables create and shows helper text", () => {
 test("lists clinic users with seat, owner chip and actions", () => {
   asAdmin();
   renderAt();
-  expect(screen.getByText("own@x.com")).toBeInTheDocument();
-  expect(screen.getByText("Owner")).toBeInTheDocument();
+  expand();
+  expect(screen.getAllByText("own@x.com")).toHaveLength(2);
+  // The column header and the owner chip.
+  expect(screen.getAllByText("Owner")).toHaveLength(2);
   expect(screen.getByText("Seat 2")).toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Remove own@x.com" }),
@@ -166,6 +192,7 @@ test("lists clinic users with seat, owner chip and actions", () => {
 test("remove asks for confirmation then removes the seat", () => {
   asAdmin();
   renderAt();
+  expand();
   fireEvent.click(screen.getByRole("button", { name: "Remove two@x.com" }));
   fireEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", { name: "Remove" }),
@@ -182,12 +209,14 @@ test("clinic without owner shows No owner set; legacy entry shows a dash seat", 
   m.emails = [{ email: "old@x.com", clinicId: "c1", seat: "", addedAt: 0 }];
   renderAt();
   expect(screen.getByText("No owner set")).toBeInTheDocument();
+  expand();
   expect(screen.getByText("No seat (legacy)")).toBeInTheDocument();
 });
 
 test("adds a user with the clinic's current seats", () => {
   asAdmin();
   renderAt();
+  expand();
   fireEvent.change(screen.getByLabelText("Add user to Sunrise"), {
     target: { value: "New@X.com" },
   });
@@ -213,6 +242,7 @@ test("blocks adding an email that belongs to another clinic", () => {
   ];
   m.emails = [{ email: "own@x.com", clinicId: "c1", seat: "1", addedAt: 0 }];
   renderAt();
+  expand("Moonlight");
   fireEvent.change(screen.getByLabelText("Add user to Moonlight"), {
     target: { value: "own@x.com" },
   });
@@ -230,6 +260,7 @@ test("seat-less users cannot be removed or made owner", () => {
     { email: "old@x.com", clinicId: "c1", seat: "", addedAt: 0 },
   ];
   renderAt();
+  expand();
   expect(
     screen.getByRole("button", { name: "Remove old@x.com" }),
   ).toBeDisabled();
@@ -270,6 +301,7 @@ test("adding an orphan email to a clinic points to Unassigned", () => {
   asAdmin();
   m.emails = [{ email: "orph@x.com", clinicId: "", seat: "", addedAt: 0 }];
   renderAt();
+  expand();
   fireEvent.change(screen.getByLabelText("Add user to Sunrise"), {
     target: { value: "orph@x.com" },
   });
@@ -291,4 +323,91 @@ test("creating a clinic with an owner already in another clinic is blocked", () 
     screen.getByText("Already assigned to Sunrise. Remove it there first."),
   ).toBeInTheDocument();
   expect(m.createClinic).not.toHaveBeenCalled();
+});
+
+test("clinic rows show owner, user count and status; users stay hidden until expanded", () => {
+  asAdmin();
+  m.clinics.push({ id: "c2", name: "Moonlight", createdAt: 2, active: false });
+  renderAt();
+  const table = screen.getByRole("table", { name: "Clinics" });
+  expect(within(table).getByText("2/3")).toBeInTheDocument();
+  expect(within(table).getByText("0/3")).toBeInTheDocument();
+  expect(within(table).getByText("Active")).toBeInTheDocument();
+  expect(within(table).getByText("Inactive")).toBeInTheDocument();
+  expect(screen.queryByText("Seat 2")).toBeNull();
+  expand();
+  expect(screen.getByText("Seat 2")).toBeInTheDocument();
+});
+
+test("making a clinic inactive asks first", () => {
+  asAdmin();
+  m.clinics.push({ id: "c2", name: "Moonlight", createdAt: 2, active: false });
+  renderAt();
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Make inactive" }));
+  expect(m.setClinicActive).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Make inactive",
+    }),
+  );
+  expect(m.setClinicActive).toHaveBeenCalledWith(
+    { id: "c1", active: false },
+    expect.anything(),
+  );
+});
+
+test("making an inactive clinic active needs no confirmation", () => {
+  asAdmin();
+  m.clinics.push({ id: "c2", name: "Moonlight", createdAt: 2, active: false });
+  renderAt();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Actions for Moonlight" }),
+  );
+  fireEvent.click(screen.getByRole("menuitem", { name: "Make active" }));
+  expect(m.setClinicActive).toHaveBeenLastCalledWith(
+    { id: "c2", active: true },
+    expect.anything(),
+  );
+});
+
+test("a user can be made inactive and back, with an Inactive chip", () => {
+  asAdmin();
+  m.emails[1].active = false;
+  renderAt();
+  expand();
+  expect(screen.getByText("Inactive")).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Make own@x.com inactive" }),
+  );
+  expect(m.setUserActive).toHaveBeenCalledWith(
+    { email: "own@x.com", active: false },
+    expect.anything(),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Make two@x.com active" }),
+  );
+  expect(m.setUserActive).toHaveBeenLastCalledWith(
+    { email: "two@x.com", active: true },
+    expect.anything(),
+  );
+});
+
+test("deleting a clinic needs its slug typed", () => {
+  asAdmin();
+  renderAt();
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Delete clinic" }));
+  const dialog = screen.getByRole("dialog");
+  const del = within(dialog).getByRole("button", { name: "Delete clinic" });
+  expect(del).toBeDisabled();
+  fireEvent.change(within(dialog).getByLabelText("Type c1 to confirm"), {
+    target: { value: "Sunrise" },
+  });
+  expect(del).toBeDisabled();
+  fireEvent.change(within(dialog).getByLabelText("Type c1 to confirm"), {
+    target: { value: "c1" },
+  });
+  fireEvent.click(del);
+  expect(m.deleteClinic).toHaveBeenCalledWith("c1", expect.anything());
 });
