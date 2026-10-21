@@ -9,7 +9,7 @@ vi.mock("firebase/firestore", () => ({
   setDoc: (...a: unknown[]) => setDoc(...a),
   doc: (...a: unknown[]) => doc(...a),
 }));
-vi.mock("../../lib/firebase", () => ({ db: {} }));
+vi.mock("./firebase", () => ({ db: {} }));
 
 import { ensureUserDoc } from "./ensureUserDoc";
 

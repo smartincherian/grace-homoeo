@@ -28,7 +28,7 @@ vi.mock("../../lib/access", () => ({
   homePath: (m: { superadmin: boolean; clinicId: string | null }) =>
     m.superadmin ? "/admin" : `/${m.clinicId}/patients`,
 }));
-vi.mock("./ensureUserDoc", () => ({
+vi.mock("../../lib/ensureUserDoc", () => ({
   ensureUserDoc: (...a: unknown[]) => eud.ensureUserDoc(...a),
 }));
 const showToast = vi.fn();

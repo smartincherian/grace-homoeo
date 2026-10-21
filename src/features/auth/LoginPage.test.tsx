@@ -34,7 +34,7 @@ vi.mock("../../lib/access", () => ({
   getAccess: vi.fn(),
   homePath: vi.fn(),
 }));
-vi.mock("./ensureUserDoc", () => ({ ensureUserDoc: vi.fn() }));
+vi.mock("../../lib/ensureUserDoc", () => ({ ensureUserDoc: vi.fn() }));
 const showToast = vi.fn();
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast }),
@@ -42,7 +42,7 @@ vi.mock("../../components/useToast", () => ({
 
 import { FirebaseError } from "firebase/app";
 import { getAccess } from "../../lib/access";
-import { ensureUserDoc } from "./ensureUserDoc";
+import { ensureUserDoc } from "../../lib/ensureUserDoc";
 import LoginPage from "./LoginPage";
 
 const renderLogin = () =>

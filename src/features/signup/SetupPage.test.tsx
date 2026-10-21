@@ -18,7 +18,7 @@ vi.mock("../../lib/firebase", () => ({ auth: {} }));
 vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({ user: h.user, loading: false }),
 }));
-vi.mock("../auth/ensureUserDoc", () => ({
+vi.mock("../../lib/ensureUserDoc", () => ({
   ensureUserDoc: (...a: unknown[]) => h.ensureUserDoc(...a),
 }));
 vi.mock("../../lib/access", () => ({
@@ -163,5 +163,22 @@ describe("SetupPage", () => {
         "error",
       ),
     );
+  });
+
+  it("re-resolves access when a step after the commit fails", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const qc = new QueryClient();
+    renderPage(qc);
+    h.getAccess
+      .mockRejectedValueOnce(new Error("offline")) // right after the commit
+      .mockResolvedValue({ superadmin: false, clinicId: "sun-clinic" });
+    await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Start free trial" }),
+    );
+    expect(
+      await screen.findByText("PATIENTS-ROUTE-RENDERED"),
+    ).toBeInTheDocument();
+    expect(h.createOwnClinic).toHaveBeenCalledTimes(1);
   });
 });

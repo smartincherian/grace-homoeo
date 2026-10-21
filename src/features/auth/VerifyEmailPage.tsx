@@ -6,7 +6,7 @@ import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
 import { getAccess, homePath } from "../../lib/access";
-import { ensureUserDoc } from "./ensureUserDoc";
+import { ensureUserDoc } from "../../lib/ensureUserDoc";
 import { useAuth } from "./useAuth";
 import { useToast } from "../../components/useToast";
 import ProductMark from "../../components/ProductMark";

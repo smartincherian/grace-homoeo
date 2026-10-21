@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
 import { getAccess, homePath } from "../../lib/access";
-import { ensureUserDoc } from "./ensureUserDoc";
+import { ensureUserDoc } from "../../lib/ensureUserDoc";
 import { useToast } from "../../components/useToast";
 import { TOKENS } from "../../theme/theme";
 import BottomDock from "../../components/BottomDock";

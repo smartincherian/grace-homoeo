@@ -17,7 +17,7 @@ import { getAccess, homePath } from "../../lib/access";
 import { isValidSlug, slugify } from "../../lib/clinic";
 import { pricingWhatsAppUrl } from "../../lib/subscription";
 import { useAuth } from "../auth/useAuth";
-import { ensureUserDoc } from "../auth/ensureUserDoc";
+import { ensureUserDoc } from "../../lib/ensureUserDoc";
 import { useToast } from "../../components/useToast";
 import ProductMark from "../../components/ProductMark";
 import BottomDock from "../../components/BottomDock";
@@ -84,9 +84,18 @@ export default function SetupPage() {
         );
         return;
       }
-      const fresh = await getAccess(user);
-      queryClient.setQueryData(["access", user.uid], fresh);
-      await ensureUserDoc(user);
+      try {
+        const fresh = await getAccess(user);
+        queryClient.setQueryData(["access", user.uid], fresh);
+        await ensureUserDoc(user);
+      } catch (err) {
+        // The clinic exists now; re-resolve access so the page redirects home
+        // instead of leaving the user here with "slug taken" on a retry.
+        console.error(err);
+        void queryClient.invalidateQueries({ queryKey: ["access", user.uid] });
+        showToast("Something went wrong. Please try again.", "error");
+        return;
+      }
       navigate(`/${slug}/settings`, { replace: true });
     } catch (err) {
       console.error(err);
