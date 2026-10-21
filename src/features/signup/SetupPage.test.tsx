@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   getAccess: vi.fn(),
   ensureUserDoc: vi.fn(),
   showToast: vi.fn(),
+  patientsRendered: vi.fn(),
 }));
 vi.mock("firebase/auth", () => ({ signOut: vi.fn() }));
 vi.mock("../../lib/firebase", () => ({ auth: {} }));
@@ -35,6 +36,11 @@ vi.mock("./signupRepo", () => ({
 
 import SetupPage from "./SetupPage";
 
+function Patients() {
+  h.patientsRendered();
+  return <div>PATIENTS-ROUTE-RENDERED</div>;
+}
+
 function renderPage(qc = new QueryClient()) {
   return render(
     <QueryClientProvider client={qc}>
@@ -44,10 +50,7 @@ function renderPage(qc = new QueryClient()) {
           <Route path="/login" element={<div>login page</div>} />
           <Route path="/verify-email" element={<div>verify page</div>} />
           <Route path="/:slug/settings" element={<div>settings page</div>} />
-          <Route
-            path="/:slug/patients"
-            element={<div>PATIENTS-ROUTE-RENDERED</div>}
-          />
+          <Route path="/:slug/patients" element={<Patients />} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -117,6 +120,10 @@ describe("SetupPage", () => {
   it("creates the clinic, refreshes access and lands on settings", async () => {
     const qc = new QueryClient();
     renderPage(qc);
+    // Like the real network write: slow enough for the access update to render.
+    h.ensureUserDoc.mockImplementation(
+      () => new Promise((r) => setTimeout(r, 50)),
+    );
     h.getAccess.mockResolvedValue({
       superadmin: false,
       clinicId: "sun-clinic",
@@ -131,7 +138,7 @@ describe("SetupPage", () => {
       "Sun Clinic",
       "o@x.com",
     );
-    expect(screen.queryByText("PATIENTS-ROUTE-RENDERED")).toBeNull();
+    expect(h.patientsRendered).not.toHaveBeenCalled();
     expect(h.ensureUserDoc).toHaveBeenCalled();
     expect(h.createOwnClinic.mock.invocationCallOrder[0]).toBeLessThan(
       h.ensureUserDoc.mock.invocationCallOrder[0],
