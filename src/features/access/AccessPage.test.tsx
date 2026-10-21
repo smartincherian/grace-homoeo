@@ -22,6 +22,7 @@ const m = vi.hoisted(() => ({
   createClinic: vi.fn(),
   setClinicActive: vi.fn(),
   setClinicAuthorized: vi.fn(),
+  setClinicType: vi.fn(),
   setUserActive: vi.fn(),
   deleteClinic: vi.fn(),
   toast: vi.fn(),
@@ -35,6 +36,7 @@ const m = vi.hoisted(() => ({
     authorized?: boolean;
     trialEndsAt?: number;
     selfSignup?: boolean;
+    type?: "homoeo" | "general";
   }[],
 }));
 vi.mock("./useClinics", () => ({
@@ -48,6 +50,7 @@ vi.mock("./useClinics", () => ({
     mutate: m.setClinicAuthorized,
     isPending: false,
   }),
+  useSetClinicType: () => ({ mutate: m.setClinicType, isPending: false }),
   useSetUserActive: () => ({ mutate: m.setUserActive, isPending: false }),
   useDeleteClinic: () => ({ mutate: m.deleteClinic, isPending: false }),
 }));
@@ -159,6 +162,7 @@ test("slug auto-fills from name; create needs a valid owner email", () => {
       ownerEmail: "dr@x.com",
       addedBy: "smartin.cherian@gmail.com",
       authorized: false,
+      type: "homoeo",
     },
     expect.anything(),
   );
@@ -496,6 +500,58 @@ test("the create form can create an authorized clinic", () => {
   fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
   expect(m.createClinic).toHaveBeenCalledWith(
     expect.objectContaining({ authorized: true }),
+    expect.anything(),
+  );
+});
+
+test("the create form passes the chosen clinic type", () => {
+  asAdmin();
+  renderAt();
+  fillCreate("Sunrise Clinic", "dr@x.com");
+  fireEvent.mouseDown(screen.getByRole("combobox", { name: "Clinic type" }));
+  fireEvent.click(screen.getByRole("option", { name: "General practice" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  expect(m.createClinic).toHaveBeenCalledWith(
+    expect.objectContaining({ type: "general" }),
+    expect.anything(),
+  );
+});
+
+test("the create form defaults to homoeopathy", () => {
+  asAdmin();
+  renderAt();
+  fillCreate("Sunrise Clinic", "dr@x.com");
+  fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  expect(m.createClinic).toHaveBeenCalledWith(
+    expect.objectContaining({ type: "homoeo" }),
+    expect.anything(),
+  );
+});
+
+test("shows each clinic's type", () => {
+  asAdmin();
+  m.clinics = [
+    { id: "a", name: "Aa", createdAt: 1, type: "general" },
+    { id: "b", name: "Bb", createdAt: 1 },
+  ];
+  renderAt();
+  const row = (name: string) => screen.getByText(name).closest("tr")!;
+  expect(within(row("Aa")).getByText("General practice")).toBeInTheDocument();
+  expect(within(row("Bb")).getByText("Homoeopathy")).toBeInTheDocument();
+});
+
+test("changing a clinic's type picks the new type, then saves it", () => {
+  asAdmin();
+  m.clinics = [{ id: "c1", name: "Sunrise", createdAt: 1, type: "homoeo" }];
+  renderAt();
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Change type" }));
+  const dialog = screen.getByRole("dialog");
+  fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: "Clinic type" }));
+  fireEvent.click(screen.getByRole("option", { name: "General practice" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }));
+  expect(m.setClinicType).toHaveBeenCalledWith(
+    { id: "c1", type: "general" },
     expect.anything(),
   );
 });

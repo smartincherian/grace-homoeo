@@ -866,8 +866,9 @@ describe("trial & self-signup", () => {
   ) {
     const createdAt = (overrides.createdAt as number | undefined) ?? Date.now();
     const b = writeBatch(db);
-    b.set(doc(db, `clinics/${slug}`), {
+    const clinic: Record<string, unknown> = {
       name: "Sun Clinic",
+      type: "homoeo",
       createdAt,
       ownerEmail: email,
       timeZone: "Asia/Kolkata",
@@ -876,7 +877,11 @@ describe("trial & self-signup", () => {
       authorizedAt: null,
       selfSignup: true,
       ...overrides,
-    });
+    };
+    // An `undefined` override leaves the field out.
+    for (const k of Object.keys(clinic))
+      if (clinic[k] === undefined) delete clinic[k];
+    b.set(doc(db, `clinics/${slug}`), clinic);
     b.set(doc(db, `clinics/${slug}/seats/1`), { email });
     b.set(doc(db, `allowedEmails/${email}`), {
       email,
@@ -933,6 +938,32 @@ describe("trial & self-signup", () => {
         setDoc(doc(dbFor(email), `clinics/${clinic}/patients/p2`), { name: "N" }),
       );
     }
+  });
+
+  it("self-signup needs a known clinic type", async () => {
+    await assertSucceeds(
+      signupBatch(dbFor("g1@x.com"), "gen-one", "g1@x.com", { type: "general" }),
+    );
+    await assertFails(
+      signupBatch(dbFor("g2@x.com"), "gen-two", "g2@x.com", { type: undefined }),
+    );
+    await assertFails(
+      signupBatch(dbFor("g3@x.com"), "gen-three", "g3@x.com", { type: "x" }),
+    );
+  });
+
+  it("the superadmin sets a clinic type, only to a known one", async () => {
+    const db = dbFor(SUPER);
+    await assertSucceeds(updateDoc(doc(db, "clinics/c1"), { type: "general" }));
+    await assertFails(updateDoc(doc(db, "clinics/c1"), { type: 5 }));
+    await assertFails(updateDoc(doc(db, "clinics/c1"), { type: "dental" }));
+    await assertSucceeds(updateDoc(doc(db, "clinics/c1"), { active: true }));
+  });
+
+  it("an owner cannot change the clinic type", async () => {
+    await assertFails(
+      updateDoc(doc(dbFor("o@x.com"), "clinics/c1"), { type: "general" }),
+    );
   });
 
   it("a new verified user signs up their own clinic", async () => {

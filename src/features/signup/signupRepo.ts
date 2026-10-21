@@ -4,6 +4,7 @@ import { db } from "../../lib/firebase";
 import { CLINICS } from "../../lib/clinic";
 import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
 import { TRIAL_MS } from "../../lib/subscription";
+import type { ClinicType } from "../../lib/clinicType";
 
 /** A free slug reads as "not found"; a taken one is denied by the rules. */
 export async function isSlugTaken(slug: string): Promise<boolean> {
@@ -22,12 +23,14 @@ export async function createOwnClinic(
   slug: string,
   name: string,
   email: string,
+  type: ClinicType,
   now: number = Date.now(),
 ): Promise<void> {
   const owner = normalizeEmail(email);
   const batch = writeBatch(db);
   batch.set(doc(db, CLINICS, slug), {
     name,
+    type,
     createdAt: now,
     ownerEmail: owner,
     timeZone: "Asia/Kolkata",

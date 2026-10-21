@@ -80,6 +80,12 @@ describe("clinicsRepo", () => {
     expect(b.trialEndsAt).toBeUndefined();
   });
 
+  it("writes the given clinic type", async () => {
+    getDoc.mockResolvedValue({ exists: () => false });
+    await createClinic("c1", "C", "o@x.com", "s", false, 1000, "general");
+    expect(batchSet.mock.calls[0][1]).toMatchObject({ type: "general" });
+  });
+
   it("creates clinic, seat 1 and allow-list entry in one batch", async () => {
     getDoc.mockResolvedValue({ exists: () => false });
     await createClinic(
@@ -97,6 +103,7 @@ describe("clinicsRepo", () => {
     );
     expect(byPath["clinics/c1"]).toMatchObject({
       name: "Clinic One",
+      type: "homoeo",
       ownerEmail: "owner@x.com",
       timeZone: "Asia/Kolkata",
     });

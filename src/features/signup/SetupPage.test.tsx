@@ -140,6 +140,29 @@ describe("SetupPage", () => {
     expect(h.createOwnClinic).not.toHaveBeenCalled();
   });
 
+  it("passes the chosen clinic type", async () => {
+    renderPage(new QueryClient());
+    h.getAccess.mockResolvedValue({ superadmin: false, clinicId: "sun-clinic" });
+    expect(screen.getByRole("combobox", { name: /Clinic type/ })).toHaveTextContent(
+      "Homoeopathy",
+    );
+    await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✓ Available");
+    await userEvent.click(screen.getByRole("combobox", { name: /Clinic type/ }));
+    await userEvent.click(screen.getByRole("option", { name: "General practice" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Register for free" }),
+    );
+    await waitFor(() =>
+      expect(h.createOwnClinic).toHaveBeenCalledWith(
+        "sun-clinic",
+        "Sun Clinic",
+        "o@x.com",
+        "general",
+      ),
+    );
+  });
+
   it("creates the clinic, refreshes access and lands on settings", async () => {
     const qc = new QueryClient();
     renderPage(qc);
@@ -161,6 +184,7 @@ describe("SetupPage", () => {
       "sun-clinic",
       "Sun Clinic",
       "o@x.com",
+      "homoeo",
     );
     expect(h.patientsRendered).not.toHaveBeenCalled();
     expect(h.ensureUserDoc).toHaveBeenCalled();

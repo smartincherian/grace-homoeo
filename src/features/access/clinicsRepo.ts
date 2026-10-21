@@ -15,7 +15,7 @@ import {
 } from "../../lib/access";
 import { EMAIL_RE, SeatError } from "../../lib/seats";
 import { trialFields, type Clinic } from "../../lib/clinicQueries";
-import { parseClinicType } from "../../lib/clinicType";
+import { parseClinicType, type ClinicType } from "../../lib/clinicType";
 import { TRIAL_MS, clinicStatus } from "../../lib/subscription";
 
 /** Expired first, then trials by days left, then authorized/legacy; names break ties. */
@@ -58,6 +58,7 @@ export async function createClinic(
   addedBy: string,
   authorized = false,
   now = Date.now(),
+  type: ClinicType = "homoeo",
 ): Promise<void> {
   const owner = normalizeEmail(ownerEmail);
   if (!EMAIL_RE.test(owner)) throw new SeatError("invalid");
@@ -68,6 +69,7 @@ export async function createClinic(
   const batch = writeBatch(db);
   batch.set(ref, {
     name,
+    type,
     createdAt: now,
     ownerEmail: owner,
     timeZone: "Asia/Kolkata",

@@ -29,6 +29,7 @@ import {
   CLINIC_COLLECTIONS,
   deleteClinic,
   setClinicActive,
+  setClinicType,
   setUserActive,
 } from "./clinicAdminRepo";
 
@@ -48,6 +49,14 @@ describe("clinicAdminRepo", () => {
     expect(updateDoc).toHaveBeenCalledWith(
       { path: "clinics/c1" },
       { active: false },
+    );
+  });
+
+  it("sets a clinic's type", async () => {
+    await setClinicType("c1", "general");
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: "clinics/c1" },
+      { type: "general" },
     );
   });
 

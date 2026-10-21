@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClinic, listClinics, setClinicAuthorized } from "./clinicsRepo";
 import type { Clinic } from "../../lib/clinicQueries";
+import type { ClinicType } from "../../lib/clinicType";
 import {
   deleteClinic,
   setClinicActive,
+  setClinicType,
   setUserActive,
 } from "./clinicAdminRepo";
 
@@ -20,13 +22,16 @@ export function useCreateClinic() {
       ownerEmail,
       addedBy,
       authorized,
+      type,
     }: {
       id: string;
       name: string;
       ownerEmail: string;
       addedBy: string;
       authorized?: boolean;
-    }) => createClinic(id, name, ownerEmail, addedBy, authorized),
+      type?: ClinicType;
+    }) =>
+      createClinic(id, name, ownerEmail, addedBy, authorized, undefined, type),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["clinics"] });
       void qc.invalidateQueries({ queryKey: ["allowedEmails"] });
@@ -54,6 +59,17 @@ export function useSetClinicAuthorized() {
       authorized: boolean;
     }) => setClinicAuthorized(clinic, authorized),
     onSettled: () => void qc.invalidateQueries({ queryKey: ["clinics"] }),
+  });
+}
+
+export function useSetClinicType() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, type }: { id: string; type: ClinicType }) =>
+      setClinicType(id, type),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ["clinics"] });
+    },
   });
 }
 

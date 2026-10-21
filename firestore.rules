@@ -44,6 +44,11 @@ service cloud.firestore {
       return ['login', 'admin', 'access', 'patients', 'inventory', 'calculator', 'funds', 'clinics',
               'people', 'settings', 'staff', 'bookings', 'verify-email', 'setup', 'signup'];
     }
+
+    // Mirrors CLINIC_TYPES in src/lib/clinicType.ts; a missing type means homoeo.
+    function clinicTypes() {
+      return ['homoeo', 'general'];
+    }
     // After this write, clinic c exists as a self-signup owned by e (and did not exist before).
     function selfSignupClinic(c, e) {
       return !exists(/databases/$(database)/documents/clinics/$(c))
@@ -181,6 +186,7 @@ service cloud.firestore {
         && (!('active' in request.resource.data) || request.resource.data.active is bool)
         && (!('trialEndsAt' in request.resource.data) || request.resource.data.trialEndsAt is int)
         && (!('authorized' in request.resource.data) || request.resource.data.authorized is bool)
+        && (!('type' in request.resource.data) || request.resource.data.type in clinicTypes())
         && (!('ownerEmail' in request.resource.data)
             || entryAfterIs(request.resource.data.ownerEmail, clinicId,
                  getAfter(/databases/$(database)/documents/allowedEmails/$(request.resource.data.ownerEmail)).data.seat));
@@ -191,14 +197,15 @@ service cloud.firestore {
         && clinicId.matches('^[a-z0-9]+(-[a-z0-9]+)*$')
         && clinicId.size() >= 3 && clinicId.size() <= 40
         && !(clinicId in reservedSlugs())
-        && request.resource.data.keys().hasOnly(['name', 'createdAt', 'ownerEmail', 'timeZone', 'trialEndsAt', 'authorized', 'authorizedAt', 'selfSignup'])
-        && request.resource.data.keys().hasAll(['name', 'createdAt', 'ownerEmail', 'timeZone', 'trialEndsAt', 'authorized', 'authorizedAt', 'selfSignup'])
+        && request.resource.data.keys().hasOnly(['name', 'type', 'createdAt', 'ownerEmail', 'timeZone', 'trialEndsAt', 'authorized', 'authorizedAt', 'selfSignup'])
+        && request.resource.data.keys().hasAll(['name', 'type', 'createdAt', 'ownerEmail', 'timeZone', 'trialEndsAt', 'authorized', 'authorizedAt', 'selfSignup'])
         && request.resource.data.name is string
         && request.resource.data.name.size() >= 1 && request.resource.data.name.size() <= 60
         && request.resource.data.ownerEmail == authEmail()
         && request.resource.data.authorized == false
         && request.resource.data.authorizedAt == null
         && request.resource.data.selfSignup == true
+        && request.resource.data.type in clinicTypes()
         && request.resource.data.timeZone == 'Asia/Kolkata'
         && request.resource.data.createdAt is int
         && request.resource.data.createdAt <= request.time.toMillis() + 600000

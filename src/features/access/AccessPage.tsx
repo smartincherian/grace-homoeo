@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -34,11 +35,17 @@ import {
   useDeleteClinic,
   useSetClinicActive,
   useSetClinicAuthorized,
+  useSetClinicType,
   useSetUserActive,
 } from "./useClinics";
 import { useAddUser, useRemoveUser, useSetOwner } from "../../lib/useSeats";
 import { EMAIL_RE, SeatError, type Seat, type SeatId } from "../../lib/seats";
 import type { Clinic } from "../../lib/clinicQueries";
+import {
+  CLINIC_TYPES,
+  clinicTypeLabel,
+  type ClinicType,
+} from "../../lib/clinicType";
 import { formatDate } from "../../lib/dates";
 import { clinicStatus, type ClinicStatus } from "../../lib/subscription";
 import { isValidSlug, slugify } from "../../lib/clinic";
@@ -86,6 +93,7 @@ export default function AccessPage() {
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [authorizedNew, setAuthorizedNew] = useState(false);
+  const [typeNew, setTypeNew] = useState<ClinicType>("homoeo");
 
   // useAuth starts with no user, so wait for it before deciding to redirect.
   if (loading) return null;
@@ -115,6 +123,7 @@ export default function AccessPage() {
         ownerEmail: normalizeEmail(ownerEmail),
         addedBy: user?.email ?? "",
         authorized: authorizedNew,
+        type: typeNew,
       },
       {
         onSuccess: () => {
@@ -123,6 +132,7 @@ export default function AccessPage() {
           setOwnerEmail("");
           setSlugEdited(false);
           setAuthorizedNew(false);
+          setTypeNew("homoeo");
           showToast(`${name} created`, "success");
         },
         onError: (err) =>
@@ -181,6 +191,7 @@ export default function AccessPage() {
                 : " "
             }
           />
+          <ClinicTypeSelect value={typeNew} onChange={setTypeNew} />
           <TextField
             label="Owner email"
             type="email"
@@ -332,6 +343,7 @@ function ClinicRow({
   const [expanded, setExpanded] = useState(false);
   const [confirmInactive, setConfirmInactive] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [changingType, setChangingType] = useState(false);
   const active = clinic.active !== false;
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
@@ -490,6 +502,12 @@ function ClinicRow({
             color={chip.color}
             sx={{ ml: 0.5 }}
           />
+          <Chip
+            size="small"
+            variant="outlined"
+            label={clinicTypeLabel(clinic.type ?? "homoeo")}
+            sx={{ ml: 0.5 }}
+          />
           {clinic.selfSignup && (
             <Chip size="small" label="Self signup" sx={{ ml: 0.5 }} />
           )}
@@ -517,6 +535,7 @@ function ClinicRow({
                     : "Authorize",
                 onClick: () => setConfirmAuth(true),
               },
+              { label: "Change type", onClick: () => setChangingType(true) },
               { label: "Delete clinic", onClick: () => setDeleting(true) },
             ]}
           />
@@ -687,6 +706,12 @@ function ClinicRow({
         }}
         onClose={() => setConfirmAuth(false)}
       />
+      {changingType && (
+        <ChangeTypeDialog
+          clinic={clinic}
+          onClose={() => setChangingType(false)}
+        />
+      )}
       {deleting && (
         <DeleteClinicDialog
           clinic={clinic}
@@ -694,6 +719,83 @@ function ClinicRow({
         />
       )}
     </>
+  );
+}
+
+function ClinicTypeSelect({
+  value,
+  onChange,
+}: {
+  value: ClinicType;
+  onChange: (t: ClinicType) => void;
+}) {
+  return (
+    <TextField
+      select
+      label="Clinic type"
+      size="small"
+      fullWidth
+      value={value}
+      onChange={(e) => onChange(e.target.value as ClinicType)}
+      helperText=" "
+    >
+      {CLINIC_TYPES.map((t) => (
+        <MenuItem key={t.value} value={t.value}>
+          {t.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  );
+}
+
+/** Hiding parts is display only, so a type change never loses data. */
+function ChangeTypeDialog({
+  clinic,
+  onClose,
+}: {
+  clinic: Clinic;
+  onClose: () => void;
+}) {
+  const { showToast } = useToast();
+  const [type, setType] = useState<ClinicType>(clinic.type ?? "homoeo");
+  const save = useSetClinicType();
+  const confirm = () =>
+    save.mutate(
+      { id: clinic.id, type },
+      {
+        onSuccess: () => {
+          showToast(
+            `${clinic.name} is now ${clinicTypeLabel(type)}`,
+            "success",
+          );
+          onClose();
+        },
+        onError: () =>
+          showToast("Could not change the clinic. Please try again.", "error"),
+      },
+    );
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>{`Change ${clinic.name}'s type`}</DialogTitle>
+      <DialogContent>
+        <Typography sx={{ mb: 2 }}>
+          The type decides which case-taking parts show (such as LSMC for
+          homoeopathy). No data is deleted.
+        </Typography>
+        <ClinicTypeSelect value={type} onChange={setType} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          disabled={save.isPending}
+          onClick={confirm}
+        >
+          Save
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

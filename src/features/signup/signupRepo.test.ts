@@ -19,12 +19,13 @@ beforeEach(() => vi.clearAllMocks());
 
 describe("createOwnClinic", () => {
   it("writes clinic, seat and allow-list entry in one batch", async () => {
-    await createOwnClinic("sun", "Sun", "A@B.com", 1000);
+    await createOwnClinic("sun", "Sun", "A@B.com", "general", 1000);
     expect(h.set).toHaveBeenCalledTimes(3);
     expect(h.set).toHaveBeenCalledWith(
       { path: "clinics/sun" },
       {
         name: "Sun",
+        type: "general",
         createdAt: 1000,
         ownerEmail: "a@b.com",
         timeZone: "Asia/Kolkata",

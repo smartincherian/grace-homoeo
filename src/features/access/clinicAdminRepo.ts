@@ -12,6 +12,7 @@ import {
 import { db } from "../../lib/firebase";
 import { CLINICS } from "../../lib/clinic";
 import { ALLOWED_EMAILS, normalizeEmail } from "../../lib/access";
+import type { ClinicType } from "../../lib/clinicType";
 
 /**
  * Every subcollection a clinic can hold. Keep in sync with firestore.rules:
@@ -44,6 +45,14 @@ export async function setClinicActive(
   active: boolean,
 ): Promise<void> {
   await updateDoc(doc(db, CLINICS, id), { active });
+}
+
+/** Changes which case-taking parts a clinic shows (superadmin only). */
+export async function setClinicType(
+  id: string,
+  type: ClinicType,
+): Promise<void> {
+  await updateDoc(doc(db, CLINICS, id), { type });
 }
 
 /** Turns one user's access on or off; their seat is kept (superadmin only). */

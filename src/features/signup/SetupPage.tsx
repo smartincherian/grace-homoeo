@@ -7,6 +7,7 @@ import {
   Card,
   CardContent,
   InputAdornment,
+  MenuItem,
   TextField,
   Typography,
 } from "@mui/material";
@@ -20,6 +21,7 @@ import { useToast } from "../../components/useToast";
 import ProductMark from "../../components/ProductMark";
 import BottomDock from "../../components/BottomDock";
 import { CARD_SX, TOKENS } from "../../theme/theme";
+import { CLINIC_TYPES, type ClinicType } from "../../lib/clinicType";
 import { createOwnClinic, isSlugTaken } from "./signupRepo";
 
 export default function SetupPage() {
@@ -30,6 +32,7 @@ export default function SetupPage() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
+  const [type, setType] = useState<ClinicType>("homoeo");
   const [taken, setTaken] = useState(false);
   const [busy, setBusy] = useState(false);
   // Live availability of `slug`: checked a moment after typing stops.
@@ -104,7 +107,7 @@ export default function SetupPage() {
         return;
       }
       try {
-        await createOwnClinic(slug, name.trim(), email);
+        await createOwnClinic(slug, name.trim(), email, type);
       } catch (err) {
         console.error(err);
         showToast(
@@ -213,6 +216,20 @@ export default function SetupPage() {
               fullWidth
               sx={{ mb: 2 }}
             />
+            <TextField
+              select
+              label="Clinic type"
+              value={type}
+              onChange={(e) => setType(e.target.value as ClinicType)}
+              fullWidth
+              sx={{ mb: 2 }}
+            >
+              {CLINIC_TYPES.map((t) => (
+                <MenuItem key={t.value} value={t.value}>
+                  {t.label}
+                </MenuItem>
+              ))}
+            </TextField>
             <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 2 }}>
               Free for 21 days, no payment needed.
             </Typography>
