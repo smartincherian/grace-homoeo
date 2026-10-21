@@ -45,7 +45,8 @@ export default function SetupPage() {
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (!user.emailVerified) return <Navigate to="/verify-email" replace />;
-  if (typeof access.data === "object" && access.data !== null)
+  // Not while submitting: the success path sets access, then goes to settings.
+  if (!busy && typeof access.data === "object" && access.data !== null)
     return <Navigate to={homePath(access.data)} replace />;
 
   const email = user.email ?? "";

@@ -44,7 +44,10 @@ function renderPage(qc = new QueryClient()) {
           <Route path="/login" element={<div>login page</div>} />
           <Route path="/verify-email" element={<div>verify page</div>} />
           <Route path="/:slug/settings" element={<div>settings page</div>} />
-          <Route path="/:slug/patients" element={<div>patients page</div>} />
+          <Route
+            path="/:slug/patients"
+            element={<div>PATIENTS-ROUTE-RENDERED</div>}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -75,7 +78,9 @@ describe("SetupPage", () => {
   it("redirects existing members home", async () => {
     h.getAccess.mockResolvedValue({ superadmin: false, clinicId: "abc" });
     renderPage();
-    expect(await screen.findByText("patients page")).toBeInTheDocument();
+    expect(
+      await screen.findByText("PATIENTS-ROUTE-RENDERED"),
+    ).toBeInTheDocument();
   });
 
   it("derives the web address and gates the button on the name", async () => {
@@ -126,7 +131,11 @@ describe("SetupPage", () => {
       "Sun Clinic",
       "o@x.com",
     );
+    expect(screen.queryByText("PATIENTS-ROUTE-RENDERED")).toBeNull();
     expect(h.ensureUserDoc).toHaveBeenCalled();
+    expect(h.createOwnClinic.mock.invocationCallOrder[0]).toBeLessThan(
+      h.ensureUserDoc.mock.invocationCallOrder[0],
+    );
     expect(qc.getQueryData(["access", "u1"])).toEqual({
       superadmin: false,
       clinicId: "sun-clinic",
