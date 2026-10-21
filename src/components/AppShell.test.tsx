@@ -235,9 +235,9 @@ test("hides scripture but keeps the footer when branding turns it off", () => {
   expect(screen.queryByText(/\d+:\d+/)).toBeNull();
 });
 
-test("shows Homoeo Desk and no clinic name on the admin page", () => {
+test("shows ClinicDesk and no clinic name on the admin page", () => {
   renderShell(["/admin"]);
-  expect(screen.getAllByText("Homoeo Desk").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("ClinicDesk").length).toBeGreaterThan(0);
   expect(screen.queryByText(/^Clinic /)).toBeNull();
   expect(useBranding).not.toHaveBeenCalledWith("admin");
   // The verse shows on the superadmin pages.

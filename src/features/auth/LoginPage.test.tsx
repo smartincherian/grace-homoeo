@@ -63,7 +63,7 @@ beforeEach(() => {
 test("shows the generic brand and footer, no Grace text", () => {
   const { container } = renderLogin();
   expect(
-    screen.getByRole("heading", { name: "Homoeo Desk" }),
+    screen.getByRole("heading", { name: "ClinicDesk" }),
   ).toBeInTheDocument();
   expect(screen.getByText("Homoeo Clinic Manager")).toBeInTheDocument();
   expect(screen.getByText(/developed by/i)).toBeInTheDocument();

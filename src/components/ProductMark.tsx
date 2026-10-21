@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { GRADIENT } from "../theme/theme";
 
-/** The Homoeo Desk mark: a gradient rounded square with a white plus and dot. */
+/** The ClinicDesk mark: a gradient rounded square with a white plus and dot. */
 export default function ProductMark({ size = 44 }: { size?: number }) {
   return (
     <Box

@@ -162,7 +162,7 @@ export default function SetupPage() {
           <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
             <ProductMark size={40} />
             <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-              Homoeo Desk
+              ClinicDesk
             </Typography>
           </Box>
           <Typography variant="h1" sx={{ fontSize: 22, mb: 2 }}>
@@ -200,7 +200,7 @@ export default function SetupPage() {
                 input: {
                   startAdornment: (
                     <InputAdornment position="start" sx={{ mr: 0 }}>
-                      homoeodesk.web.app/
+                      clinicdesk.web.app/
                     </InputAdornment>
                   ),
                 },

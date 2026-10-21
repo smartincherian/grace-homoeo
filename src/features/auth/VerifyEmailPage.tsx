@@ -115,7 +115,7 @@ export default function VerifyEmailPage() {
             <ProductMark size={40} />
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-                Homoeo Desk
+                ClinicDesk
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
                 Homoeo Clinic Manager

@@ -33,6 +33,21 @@
           "destination": "/index.html"
         }
       ]
+    },
+    {
+      "site": "clinicdesk",
+      "public": "dist",
+      "ignore": [
+        "firebase.json",
+        "**/.*",
+        "**/node_modules/**"
+      ],
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ]
     }
   ],
   "emulators": {

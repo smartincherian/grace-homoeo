@@ -222,7 +222,7 @@ export default function LoginPage() {
             <ProductMark />
             <Box>
               <Typography variant="h1" sx={{ fontSize: 22 }}>
-                Homoeo Desk
+                ClinicDesk
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
                 Homoeo Clinic Manager

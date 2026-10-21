@@ -15,7 +15,7 @@ function applyVars(vars: Record<string, string>) {
 
 /**
  * Applies a clinic's colour (CSS variables + MUI theme) and browser title to
- * everything inside. With no clinic, or on unmount, Homoeo Desk defaults return.
+ * everything inside. With no clinic, or on unmount, ClinicDesk defaults return.
  */
 export default function BrandScope({
   clinicId,
@@ -29,8 +29,8 @@ export default function BrandScope({
   const color = clinicId ? branding?.primaryColor : undefined;
   const theme = useMemo(() => buildTheme(color), [color]);
   const title = clinicId
-    ? `${displayNameOf(branding, clinicName)} · Homoeo Desk`
-    : "Homoeo Desk";
+    ? `${displayNameOf(branding, clinicName)} · ClinicDesk`
+    : "ClinicDesk";
 
   useEffect(() => {
     applyVars(color ? brandCssVars(derivePalette(color)) : DEFAULT_VARS);
@@ -38,7 +38,7 @@ export default function BrandScope({
   useEffect(
     () => () => {
       applyVars(DEFAULT_VARS);
-      document.title = "Homoeo Desk";
+      document.title = "ClinicDesk";
     },
     [],
   );

@@ -52,7 +52,7 @@ describe("pricingWhatsAppUrl", () => {
     ).toBe(
       "https://wa.me/919036209639?text=" +
         encodeURIComponent(
-          "Hi, I'd like to know the Homoeo Desk subscription pricing. Clinic: Sun Clinic (sun), email: a@b.com.",
+          "Hi, I'd like to know the ClinicDesk subscription pricing. Clinic: Sun Clinic (sun), email: a@b.com.",
         ),
     );
   });

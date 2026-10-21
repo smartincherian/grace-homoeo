@@ -115,7 +115,7 @@ describe("displayNameOf", () => {
       displayNameOf({ ...DEFAULT_BRANDING, displayName: " Mine " }, "Clinic"),
     ).toBe("Mine");
     expect(displayNameOf(DEFAULT_BRANDING, "Clinic")).toBe("Clinic");
-    expect(displayNameOf(undefined, undefined)).toBe("Homoeo Desk");
+    expect(displayNameOf(undefined, undefined)).toBe("ClinicDesk");
   });
 });
 

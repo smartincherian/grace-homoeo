@@ -121,5 +121,5 @@ export function displayNameOf(
   clinicName: string | undefined,
 ): string {
   const n = typeof b?.displayName === "string" ? b.displayName.trim() : "";
-  return n || clinicName || "Homoeo Desk";
+  return n || clinicName || "ClinicDesk";
 }
