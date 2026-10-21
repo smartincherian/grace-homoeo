@@ -11,7 +11,7 @@ import SiteFooter from "./SiteFooter";
  */
 export default function BottomDock({
   pinned = true,
-  showScripture = true,
+  showScripture = false,
 }: {
   pinned?: boolean;
   showScripture?: boolean;

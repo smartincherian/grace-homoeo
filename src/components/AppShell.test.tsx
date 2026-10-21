@@ -240,11 +240,17 @@ test("shows Grace Medica and no clinic name on the admin page", () => {
   expect(screen.getAllByText("Grace Medica").length).toBeGreaterThan(0);
   expect(screen.queryByText(/^Clinic /)).toBeNull();
   expect(useBranding).not.toHaveBeenCalledWith("admin");
-  // The verse shows on the superadmin pages.
-  expect(screen.getAllByText(/\d+:\d+/).length).toBeGreaterThan(0);
+  // The verse is a clinic setting; the superadmin pages have none.
+  expect(screen.queryByText(/\d+:\d+/)).toBeNull();
 });
 
-test("shows scripture when branding leaves it on", () => {
+test("hides scripture when the clinic has not turned it on", () => {
+  renderShell(["/c1/patients"]);
+  expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  expect(screen.queryByText(/\d+:\d+/)).toBeNull();
+});
+
+test("shows scripture when branding turns it on", () => {
   useBranding.mockReturnValue(branded({ showScripture: true }));
   renderShell(["/c1/patients"]);
   expect(screen.getByText(/\d+:\d+/)).toBeInTheDocument();

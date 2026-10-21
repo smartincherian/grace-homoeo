@@ -103,6 +103,10 @@ describe("cache", () => {
     expect(readCachedBranding("c1")).toEqual(DEFAULT_BRANDING);
   });
 
+  it("leaves the scripture banner off by default", () => {
+    expect(DEFAULT_BRANDING.showScripture).toBe(false);
+  });
+
   it("ignores corrupt JSON", () => {
     localStorage.setItem("homoeodesk.branding.c1", "{nope");
     expect(readCachedBranding("c1")).toBeUndefined();

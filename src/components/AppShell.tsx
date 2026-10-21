@@ -103,9 +103,9 @@ function ShellInner({
     ) : (
       <ProductMark size={size} />
     );
-  // Outside a clinic (the superadmin pages) the verse always shows.
+  // The verse is a clinic setting (off unless turned on); none outside a clinic.
   const showScripture =
-    !clinicId || (branding ?? DEFAULT_BRANDING).showScripture;
+    !!clinicId && (branding ?? DEFAULT_BRANDING).showScripture;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { user } = useAuth();

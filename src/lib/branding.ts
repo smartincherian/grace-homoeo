@@ -32,7 +32,8 @@ export const DEFAULT_BRANDING: Branding = {
   displayName: "",
   logoDataUrl: "",
   primaryColor: DEFAULT_BRAND,
-  showScripture: true,
+  // Optional per clinic; owners turn it on in Settings.
+  showScripture: false,
   contact: EMPTY_CONTACT,
 };
 
