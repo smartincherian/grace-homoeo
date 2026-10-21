@@ -29,7 +29,7 @@ function toPatient(
     id: snap.id,
     name: d.name,
     nameLower: d.nameLower,
-    dob: d.dob,
+    dob: typeof d.dob === "number" ? d.dob : null,
     gender: d.gender,
     place: d.place ?? "",
     phone: d.phone ?? "",

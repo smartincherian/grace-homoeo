@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import type { Patient } from "./patientSchema";
 import { useConsultations } from "../consultations/useConsultations";
 import AvatarTile from "../../components/AvatarTile";
-import { calcAge, daysAgoLabel } from "../../lib/dates";
+import { ageLabel, daysAgoLabel } from "../../lib/dates";
 import { CAPTION_SX, CARD_SX, LINE, TOKENS } from "../../theme/theme";
 import { useClinicPath } from "../auth/useClinicPath";
 
@@ -66,7 +66,7 @@ export default function PatientPreview({ patient }: { patient: Patient }) {
             <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
               {[
                 `#${patient.serialNo}`,
-                `${calcAge(patient.dob)} yrs`,
+                ageLabel(patient.dob, " yrs"),
                 patient.gender,
                 patient.place,
               ]

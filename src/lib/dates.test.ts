@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ageLabel,
   calcAge,
   formatDate,
   msToDateInput,
@@ -47,5 +48,13 @@ describe("daysAgoLabel", () => {
   });
   it("handles a future date", () => {
     expect(daysAgoLabel(ms("2026-10-21"), now)).toBe("In 2 days");
+  });
+});
+
+describe("ageLabel", () => {
+  it("shows the age with a unit, or nothing without a date of birth", () => {
+    const now = ms("2026-01-01");
+    expect(ageLabel(ms("2000-01-01"), " yrs", now)).toBe("26 yrs");
+    expect(ageLabel(null, " yrs", now)).toBe("");
   });
 });

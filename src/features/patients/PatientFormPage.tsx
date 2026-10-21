@@ -29,6 +29,7 @@ import {
   useUpdatePatient,
 } from "./usePatients";
 import {
+  ageLabel,
   calcAge,
   daysAgoLabel,
   msToDateInput,
@@ -235,7 +236,9 @@ export default function PatientFormPage() {
         >
           <Box>
             {label(
-              dob ? `Date of birth · ${calcAge(dob)} yrs` : "Date of birth",
+              dob
+                ? `Date of birth · ${calcAge(dob)} yrs`
+                : "Date of birth (optional)",
             )}
             <Controller
               name="dob"
@@ -244,14 +247,11 @@ export default function PatientFormPage() {
                 <TextField
                   type="date"
                   fullWidth
-                  required
                   inputProps={{ "aria-label": "Date of birth" }}
                   value={field.value ? msToDateInput(field.value) : ""}
                   onChange={(e) =>
                     field.onChange(
-                      e.target.value
-                        ? dateInputToMs(e.target.value)
-                        : undefined,
+                      e.target.value ? dateInputToMs(e.target.value) : null,
                     )
                   }
                   error={!!errors.dob}
@@ -411,7 +411,8 @@ export default function PatientFormPage() {
                       {p.name}
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
-                      #{p.serialNo} · {calcAge(p.dob)} {p.gender[0]}
+                      #{p.serialNo} ·{" "}
+                      {[ageLabel(p.dob), p.gender[0]].filter(Boolean).join(" ")}
                       {p.place ? ` · ${p.place}` : ""}
                     </Typography>
                   </Box>

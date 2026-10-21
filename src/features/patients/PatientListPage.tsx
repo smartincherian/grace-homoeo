@@ -22,7 +22,7 @@ import AddButton from "../../components/AddButton";
 import AvatarTile from "../../components/AvatarTile";
 import { PageHeader } from "../../components/PageLayout";
 import { useSetPageTitle } from "../../components/PageChrome";
-import { calcAge, daysAgoLabel } from "../../lib/dates";
+import { ageLabel, daysAgoLabel } from "../../lib/dates";
 import { CARD_SX, LINE, TOKENS } from "../../theme/theme";
 import { useClinicPath } from "../auth/useClinicPath";
 
@@ -215,7 +215,7 @@ export default function PatientListPage() {
               </Box>
             </Box>
             <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
-              {calcAge(p.dob)} {sexLetter(p.gender)}
+              {[ageLabel(p.dob), sexLetter(p.gender)].filter(Boolean).join(" ")}
             </Typography>
             <Typography noWrap sx={{ fontSize: 14, color: "text.secondary" }}>
               {p.place || "—"}
@@ -262,7 +262,14 @@ export default function PatientListPage() {
               {p.name}
             </Typography>
             <Typography noWrap sx={{ fontSize: 12, color: "text.secondary" }}>
-              {`#${p.serialNo} · ${calcAge(p.dob)} ${sexLetter(p.gender)}`}
+              {[
+                `#${p.serialNo}`,
+                [ageLabel(p.dob), sexLetter(p.gender)]
+                  .filter(Boolean)
+                  .join(" "),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
               {p.place ? ` · ${p.place}` : ""}
             </Typography>
           </Box>

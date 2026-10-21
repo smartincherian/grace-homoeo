@@ -40,6 +40,7 @@ function renderCreate(url = "/c1/patients/new") {
 }
 
 describe("PatientFormPage (create)", () => {
+  beforeEach(() => mutateAsync.mockClear());
   it("submits a valid new patient", async () => {
     const user = userEvent.setup();
     renderCreate();
@@ -51,6 +52,19 @@ describe("PatientFormPage (create)", () => {
     const arg = mutateAsync.mock.calls[0][0].values;
     expect(arg.name).toBe("Asha");
     expect(typeof arg.dob).toBe("number");
+  });
+
+  it("saves a patient with only a name (no date of birth or phone)", async () => {
+    const user = userEvent.setup();
+    renderCreate();
+    await user.type(screen.getByLabelText(/name/i), "Asha");
+    await user.click(screen.getByRole("button", { name: /save only/i }));
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+    expect(mutateAsync.mock.calls[0][0].values).toMatchObject({
+      name: "Asha",
+      dob: null,
+      phone: "",
+    });
   });
 
   it("shows a validation error when name is empty", async () => {

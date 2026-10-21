@@ -18,10 +18,10 @@ describe("patientFormSchema", () => {
       patientFormSchema.parse({ name: "   ", dob: 1, gender: "Male" }),
     ).toThrow();
   });
-  it("rejects a missing dob", () => {
-    expect(() =>
-      patientFormSchema.parse({ name: "A", gender: "Male" }),
-    ).toThrow();
+  it("allows a missing dob (stored as null)", () => {
+    expect(
+      patientFormSchema.parse({ name: "A", gender: "Male" }).dob,
+    ).toBeNull();
   });
   it("rejects an unknown gender", () => {
     expect(() =>

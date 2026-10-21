@@ -75,7 +75,10 @@ function renderPage() {
   render(
     <MemoryRouter initialEntries={["/c1/patients/p1"]}>
       <Routes>
-        <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
+        <Route
+          path="/:clinicSlug/patients/:id"
+          element={<PatientDetailPage />}
+        />
         <Route
           path="/:clinicSlug/patients/:id/consultations/:cid"
           element={<div>consultation page</div>}
@@ -97,7 +100,10 @@ describe("PatientDetailPage", () => {
     render(
       <MemoryRouter initialEntries={["/c1/patients/p1"]}>
         <Routes>
-          <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
+          <Route
+            path="/:clinicSlug/patients/:id"
+            element={<PatientDetailPage />}
+          />
         </Routes>
       </MemoryRouter>,
     );
@@ -111,7 +117,10 @@ describe("PatientDetailPage", () => {
     render(
       <MemoryRouter initialEntries={["/c1/patients/p1"]}>
         <Routes>
-          <Route path="/:clinicSlug/patients/:id" element={<PatientDetailPage />} />
+          <Route
+            path="/:clinicSlug/patients/:id"
+            element={<PatientDetailPage />}
+          />
         </Routes>
       </MemoryRouter>,
     );

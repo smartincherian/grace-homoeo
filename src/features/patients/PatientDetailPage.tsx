@@ -19,7 +19,7 @@ import AvatarTile from "../../components/AvatarTile";
 import ConfirmDialog from "../../components/ConfirmDialog";
 import { useToast } from "../../components/useToast";
 import { useSetPageTitle } from "../../components/PageChrome";
-import { calcAge, daysAgoLabel, formatDate } from "../../lib/dates";
+import { ageLabel, daysAgoLabel, formatDate } from "../../lib/dates";
 import { CARD_SX, GRADIENT, LINE, PILL_SX, TOKENS } from "../../theme/theme";
 import { useClinicPath } from "../auth/useClinicPath";
 
@@ -113,7 +113,9 @@ export default function PatientDetailPage() {
           <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
             {[
               `#${patient.serialNo}`,
-              `${calcAge(patient.dob)} yrs · ${patient.gender}`,
+              [ageLabel(patient.dob, " yrs"), patient.gender]
+                .filter(Boolean)
+                .join(" · "),
               patient.place,
               patient.phone,
             ]

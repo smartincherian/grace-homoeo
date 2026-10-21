@@ -4,6 +4,15 @@ export function calcAge(dobMs: number, nowMs: number = Date.now()): number {
   return Math.max(0, dayjs(nowMs).diff(dayjs(dobMs), "year"));
 }
 
+/** "26 yrs", or "" when the date of birth is unknown. */
+export function ageLabel(
+  dobMs: number | null | undefined,
+  unit = "",
+  nowMs: number = Date.now(),
+): string {
+  return typeof dobMs === "number" ? `${calcAge(dobMs, nowMs)}${unit}` : "";
+}
+
 export function formatDate(ms: number): string {
   return dayjs(ms).format("D MMM YYYY");
 }

@@ -10,8 +10,8 @@ const base = {
 };
 
 describe("bookingFormSchema", () => {
-  it("requires phone when no patient is picked", () => {
-    expect(bookingFormSchema.safeParse(base).success).toBe(false);
+  it("allows a new patient without a phone", () => {
+    expect(bookingFormSchema.safeParse(base).success).toBe(true);
   });
   it("allows empty phone with an existing patient", () => {
     expect(

@@ -76,15 +76,14 @@ test("matches patients by phone", async () => {
   expect(screen.queryByRole("option", { name: /asha/i })).toBeNull();
 });
 
-test("a new name without a phone shows a validation error", async () => {
+test("a new name without a phone still books", async () => {
   const user = userEvent.setup();
+  bookAsync.mockResolvedValue(undefined);
   renderDialog();
   await user.type(screen.getByLabelText(/patient name/i), "Newcomer");
   await user.click(screen.getByRole("button", { name: "Book" }));
-  expect(
-    await screen.findByText("Phone is required for a new patient"),
-  ).toBeInTheDocument();
-  expect(bookAsync).not.toHaveBeenCalled();
+  await waitFor(() => expect(bookAsync).toHaveBeenCalledTimes(1));
+  expect(bookAsync.mock.calls[0][0].values.phone).toBe("");
 });
 
 test("a new patient with a phone books without a patient id", async () => {
