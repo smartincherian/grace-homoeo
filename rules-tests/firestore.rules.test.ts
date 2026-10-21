@@ -796,3 +796,195 @@ describe("superadmin deleting a whole clinic", () => {
     await assertFails(deleteDoc(doc(dbFor("t@x.com"), "allowedEmails/a@x.com")));
   });
 });
+
+describe("trial & self-signup", () => {
+  const TRIAL_MS = 1814400000;
+  const contact = {
+    doctorName: "Dr A",
+    qualifications: "BHMS",
+    registrationNo: "123",
+    address: "Street",
+    phone: "999",
+    email: "d@x.com",
+  };
+  const branding = (by: string) => ({
+    displayName: "Grace",
+    logoDataUrl: "",
+    primaryColor: "#0f766e",
+    showScripture: true,
+    contact,
+    updatedAt: 1,
+    updatedBy: by,
+  });
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      const seed = async (
+        clinic: string,
+        data: Record<string, unknown>,
+        users: [string, string][],
+      ) => {
+        await setDoc(doc(db, `clinics/${clinic}`), data);
+        for (const [seat, email] of users) {
+          await setDoc(doc(db, `clinics/${clinic}/seats/${seat}`), { email });
+          await setDoc(doc(db, `allowedEmails/${email}`), {
+            email,
+            clinicId: clinic,
+            seat,
+          });
+        }
+      };
+      await seed("legacy", { name: "L", ownerEmail: "l@x.com" }, [["1", "l@x.com"]]);
+      await seed(
+        "live",
+        { name: "V", ownerEmail: "v@x.com", trialEndsAt: Date.now() + 86400000, authorized: false },
+        [["1", "v@x.com"]],
+      );
+      await seed(
+        "expired",
+        { name: "E", ownerEmail: "e@x.com", trialEndsAt: Date.now() - 1, authorized: false },
+        [
+          ["1", "e@x.com"],
+          ["2", "m@x.com"],
+        ],
+      );
+      await setDoc(doc(db, "clinics/expired/patients/p1"), { name: "P1" });
+      await seed(
+        "paid",
+        { name: "P", ownerEmail: "p@x.com", trialEndsAt: 1, authorized: true },
+        [["1", "p@x.com"]],
+      );
+    });
+  });
+
+  function signupBatch(
+    db: Firestore,
+    slug: string,
+    email: string,
+    overrides: Record<string, unknown> = {},
+  ) {
+    const createdAt = (overrides.createdAt as number | undefined) ?? Date.now();
+    const b = writeBatch(db);
+    b.set(doc(db, `clinics/${slug}`), {
+      name: "Sun Clinic",
+      createdAt,
+      ownerEmail: email,
+      timeZone: "Asia/Kolkata",
+      trialEndsAt: createdAt + TRIAL_MS,
+      authorized: false,
+      authorizedAt: null,
+      selfSignup: true,
+      ...overrides,
+    });
+    b.set(doc(db, `clinics/${slug}/seats/1`), { email });
+    b.set(doc(db, `allowedEmails/${email}`), {
+      email,
+      clinicId: slug,
+      seat: "1",
+      addedAt: createdAt,
+      addedBy: email,
+    });
+    return b.commit();
+  }
+
+  it("an expired clinic is read-only for its users", async () => {
+    const m = dbFor("m@x.com");
+    await assertSucceeds(getDoc(doc(m, "clinics/expired/patients/p1")));
+    await assertFails(setDoc(doc(m, "clinics/expired/patients/p2"), { name: "N" }));
+    const e = dbFor("e@x.com");
+    await assertFails(
+      setDoc(doc(e, "clinics/expired/settings/branding"), branding("e@x.com")),
+    );
+    const s = Date.now() + 86_400_000;
+    await assertFails(
+      setDoc(doc(m, `clinics/expired/appointments/${s}`), {
+        date: s - (s % 86_400_000),
+        start: s,
+        end: s + 900_000,
+        patientId: null,
+        patientName: "Asha",
+        phone: "9999999999",
+        serialNo: null,
+        status: "booked",
+        note: "",
+        createdBy: "m@x.com",
+        createdAt: 1,
+        consultationId: null,
+      }),
+    );
+    await assertFails(setDoc(doc(e, "clinics/expired/staff/s1"), { name: "S" }));
+    await assertFails(addUser(e, "expired", "3", "n@x.com"));
+  });
+
+  it("the superadmin still writes to an expired clinic", async () => {
+    await assertSucceeds(
+      setDoc(doc(dbFor(SUPER), "clinics/expired/patients/p2"), { name: "N" }),
+    );
+  });
+
+  it("legacy, live and paid clinics stay writable", async () => {
+    for (const [clinic, email] of [
+      ["legacy", "l@x.com"],
+      ["live", "v@x.com"],
+      ["paid", "p@x.com"],
+    ]) {
+      await assertSucceeds(
+        setDoc(doc(dbFor(email), `clinics/${clinic}/patients/p2`), { name: "N" }),
+      );
+    }
+  });
+
+  it("a new verified user signs up their own clinic", async () => {
+    const db = dbFor("new@x.com");
+    await assertSucceeds(signupBatch(db, "sun-clinic", "new@x.com"));
+    await assertSucceeds(getDoc(doc(db, "clinics/sun-clinic")));
+  });
+
+  it("rejects bad self-signups", async () => {
+    const db = dbFor("new@x.com");
+    await assertFails(signupBatch(db, "sun-clinic", "new@x.com", { authorized: true }));
+    const createdAt = Date.now();
+    await assertFails(
+      signupBatch(db, "sun-clinic", "new@x.com", {
+        createdAt,
+        trialEndsAt: createdAt + TRIAL_MS + 1,
+      }),
+    );
+    await assertFails(
+      signupBatch(db, "sun-clinic", "new@x.com", { ownerEmail: "other@x.com" }),
+    );
+    await assertFails(signupBatch(db, "live", "new@x.com"));
+    await assertFails(signupBatch(db, "setup", "new@x.com"));
+    await assertFails(signupBatch(db, "ab", "new@x.com"));
+    await assertFails(signupBatch(dbFor("m@x.com"), "sun-clinic", "m@x.com"));
+    await assertFails(
+      signupBatch(
+        dbFor("new@x.com", { email_verified: false }),
+        "sun-clinic",
+        "new@x.com",
+      ),
+    );
+    await assertFails(
+      signupBatch(db, "sun-clinic", "new@x.com", { createdAt: Date.now() - 700000 }),
+    );
+  });
+
+  it("anyone verified may check that a slug is free, but not read a taken one", async () => {
+    const db = dbFor("new@x.com");
+    await assertSucceeds(getDoc(doc(db, "clinics/nope")));
+    await assertFails(getDoc(doc(db, "clinics/live")));
+  });
+
+  it("only the superadmin authorizes a clinic", async () => {
+    await assertSucceeds(
+      updateDoc(doc(dbFor(SUPER), "clinics/expired"), { authorized: true, authorizedAt: 1 }),
+    );
+    await assertFails(
+      updateDoc(doc(dbFor("e@x.com"), "clinics/expired"), {
+        authorized: true,
+        authorizedAt: 1,
+      }),
+    );
+  });
+});
