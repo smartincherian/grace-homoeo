@@ -976,6 +976,12 @@ describe("trial & self-signup", () => {
     await assertFails(getDoc(doc(db, "clinics/live")));
   });
 
+  it("the superadmin cannot write a non-int trialEndsAt", async () => {
+    const sa = dbFor(SUPER);
+    await assertFails(updateDoc(doc(sa, "clinics/live"), { trialEndsAt: null }));
+    await assertSucceeds(updateDoc(doc(sa, "clinics/live"), { trialEndsAt: 5 }));
+  });
+
   it("only the superadmin authorizes a clinic", async () => {
     await assertSucceeds(
       updateDoc(doc(dbFor(SUPER), "clinics/expired"), { authorized: true, authorizedAt: 1 }),
@@ -986,5 +992,23 @@ describe("trial & self-signup", () => {
         authorizedAt: 1,
       }),
     );
+  });
+
+  it("a non-member cannot attach themselves to a clinic without creating it", async () => {
+    const db = dbFor("new@x.com");
+    // existing clinic, clinic doc not written
+    const b = writeBatch(db);
+    b.set(doc(db, "clinics/live/seats/1"), { email: "new@x.com" });
+    b.set(doc(db, "allowedEmails/new@x.com"), {
+      email: "new@x.com",
+      clinicId: "live",
+      seat: "1",
+      addedAt: Date.now(),
+      addedBy: "new@x.com",
+    });
+    await assertFails(b.commit());
+    await assertFails(setDoc(doc(db, "clinics/live/seats/1"), { email: "new@x.com" }));
+    // seat alone for a clinic that does not exist
+    await assertFails(setDoc(doc(db, "clinics/ghost/seats/1"), { email: "new@x.com" }));
   });
 });

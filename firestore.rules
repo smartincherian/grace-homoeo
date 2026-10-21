@@ -179,6 +179,8 @@ service cloud.firestore {
       // ownerEmail, when set, must name a user allow-listed into this clinic.
       allow create, update: if superadmin()
         && (!('active' in request.resource.data) || request.resource.data.active is bool)
+        && (!('trialEndsAt' in request.resource.data) || request.resource.data.trialEndsAt is int)
+        && (!('authorized' in request.resource.data) || request.resource.data.authorized is bool)
         && (!('ownerEmail' in request.resource.data)
             || entryAfterIs(request.resource.data.ownerEmail, clinicId,
                  getAfter(/databases/$(database)/documents/allowedEmails/$(request.resource.data.ownerEmail)).data.seat));
