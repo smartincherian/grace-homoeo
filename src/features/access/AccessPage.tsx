@@ -131,7 +131,7 @@ export default function AccessPage() {
   };
 
   return (
-    <PageColumn>
+    <PageColumn maxWidth={1100}>
       <PageHeader
         title="Admin"
         subtitle="Create clinics and manage who can sign in to each, up to three users per clinic."
@@ -388,8 +388,16 @@ function ClinicRow({
           <Stack direction="row" alignItems="center" spacing={1.5}>
             <AvatarTile name={clinic.name} seed={clinic.name.length} />
             <Box sx={{ minWidth: 0 }}>
-              <Typography sx={{ fontWeight: 700 }}>{clinic.name}</Typography>
-              <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+              <Typography sx={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                {clinic.name}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 13,
+                  color: "text.secondary",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 {clinic.id}
               </Typography>
             </Box>
