@@ -11,6 +11,7 @@ vi.mock("./firebase", () => ({ db: {} }));
 
 import {
   canManageClinic,
+  getAccess,
   getMembership,
   homePath,
   isSuperadmin,
@@ -156,6 +157,36 @@ describe("getMembership", () => {
       .mockRejectedValueOnce(new FirebaseError("unavailable", "offline"));
     await expect(getMembership(user("dr@clinic.com"))).rejects.toMatchObject({
       code: "unavailable",
+    });
+  });
+});
+
+describe("getAccess", () => {
+  it('resolves "signup" for a missing allow-list entry', async () => {
+    getDoc.mockResolvedValue({ exists: () => false, data: () => undefined });
+    expect(await getAccess(user("new@gmail.com"))).toBe("signup");
+  });
+
+  it("resolves null for an entry with an empty clinicId", async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      data: () => ({ clinicId: "" }),
+    });
+    expect(await getAccess(user("a@b.com"))).toBeNull();
+  });
+
+  it("returns the membership, inactive flag included", async () => {
+    getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ clinicId: "c1", active: false }),
+      })
+      .mockResolvedValueOnce({ data: () => ({ ownerEmail: "x@y.com" }) });
+    expect(await getAccess(user("dr@clinic.com"))).toEqual({
+      superadmin: false,
+      clinicId: "c1",
+      owner: false,
+      inactive: "user",
     });
   });
 });

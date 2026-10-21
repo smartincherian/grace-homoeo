@@ -21,10 +21,10 @@ vi.mock("../../lib/firebase", () => ({ auth: h.fbAuth }));
 vi.mock("./useAuth", () => ({
   useAuth: () => ({ user: h.authUser, loading: false }),
 }));
-const access = vi.hoisted(() => ({ getMembership: vi.fn() }));
+const access = vi.hoisted(() => ({ getAccess: vi.fn() }));
 const eud = vi.hoisted(() => ({ ensureUserDoc: vi.fn() }));
 vi.mock("../../lib/access", () => ({
-  getMembership: (...a: unknown[]) => access.getMembership(...a),
+  getAccess: (...a: unknown[]) => access.getAccess(...a),
   homePath: (m: { superadmin: boolean; clinicId: string | null }) =>
     m.superadmin ? "/admin" : `/${m.clinicId}/patients`,
 }));
@@ -45,6 +45,7 @@ const renderPage = (qc = new QueryClient(), state?: unknown) =>
         <Routes>
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/login" element={<div>login page</div>} />
+          <Route path="/setup" element={<div>setup page</div>} />
           <Route path="/" element={<div>home page</div>} />
           <Route path="/c1/patients" element={<div>clinic page</div>} />
         </Routes>
@@ -57,7 +58,7 @@ beforeEach(() => {
     .filter((v): v is ReturnType<typeof vi.fn> => typeof v === "function")
     .forEach((f) => f.mockReset());
   showToast.mockReset();
-  access.getMembership.mockReset();
+  access.getAccess.mockReset();
   eud.ensureUserDoc.mockReset();
   h.sendEmailVerification.mockResolvedValue(undefined);
   h.reload.mockResolvedValue(undefined);
@@ -117,7 +118,7 @@ const verifyNow = () =>
 test("I've verified with a membership caches it, ensures the user doc and goes to the clinic", async () => {
   verifyNow();
   const m = { superadmin: false, clinicId: "c1", owner: false };
-  access.getMembership.mockResolvedValue(m);
+  access.getAccess.mockResolvedValue(m);
   const qc = new QueryClient();
   renderPage(qc);
   await userEvent.click(screen.getByRole("button", { name: "I've verified" }));
@@ -130,7 +131,7 @@ test("I've verified with a membership caches it, ensures the user doc and goes t
 
 test("I've verified without a membership toasts and signs out", async () => {
   verifyNow();
-  access.getMembership.mockResolvedValue(null);
+  access.getAccess.mockResolvedValue(null);
   h.signOut.mockResolvedValue(undefined);
   renderPage();
   await userEvent.click(screen.getByRole("button", { name: "I've verified" }));
@@ -183,4 +184,14 @@ test("Use a different account signs out and goes to /login", async () => {
   );
   expect(await screen.findByText("login page")).toBeInTheDocument();
   expect(h.signOut).toHaveBeenCalledWith(h.fbAuth);
+});
+
+test("I've verified with no clinic goes to /setup without ensureUserDoc", async () => {
+  verifyNow();
+  access.getAccess.mockResolvedValue("signup");
+  renderPage();
+  await userEvent.click(screen.getByRole("button", { name: "I've verified" }));
+  expect(await screen.findByText("setup page")).toBeInTheDocument();
+  expect(eud.ensureUserDoc).not.toHaveBeenCalled();
+  expect(h.signOut).not.toHaveBeenCalled();
 });

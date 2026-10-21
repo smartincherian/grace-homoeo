@@ -16,7 +16,7 @@ vi.mock("firebase/auth", () => ({ signOut: vi.fn() }));
 vi.mock("../lib/firebase", () => ({ auth: {} }));
 vi.mock("../lib/access", async (orig) => ({
   ...(await orig<typeof import("../lib/access")>()),
-  getMembership: () =>
+  getAccess: () =>
     Promise.resolve({ superadmin: false, clinicId: "c1", owner: false }),
 }));
 vi.mock("../lib/clinicQueries", () => ({

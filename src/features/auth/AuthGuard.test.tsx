@@ -11,7 +11,7 @@ import { afterEach, vi } from "vitest";
 
 const h = vi.hoisted(() => ({
   signOut: vi.fn(),
-  getMembership: vi.fn(),
+  getAccess: vi.fn(),
   authUser: { uid: "u1", email: "a@b.com", emailVerified: true },
 }));
 vi.mock("firebase/auth", () => ({
@@ -22,7 +22,7 @@ vi.mock("./useAuth", () => ({
   useAuth: () => ({ user: h.authUser, loading: false }),
 }));
 vi.mock("../../lib/access", () => ({
-  getMembership: (...a: unknown[]) => h.getMembership(...a),
+  getAccess: (...a: unknown[]) => h.getAccess(...a),
 }));
 
 import AuthGuard from "./AuthGuard";
@@ -34,6 +34,7 @@ const renderGuard = (qc: QueryClient) =>
         <Routes>
           <Route path="/login" element={<div>login page</div>} />
           <Route path="/verify-email" element={<div>verify page</div>} />
+          <Route path="/setup" element={<div>setup page</div>} />
           <Route
             path="/"
             element={
@@ -49,7 +50,7 @@ const renderGuard = (qc: QueryClient) =>
 
 it("signs out and redirects to /login when a previously valid membership resolves null", async () => {
   const qc = new QueryClient();
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: false,
@@ -57,7 +58,7 @@ it("signs out and redirects to /login when a previously valid membership resolve
   renderGuard(qc);
   expect(await screen.findByText("app")).toBeInTheDocument();
 
-  h.getMembership.mockResolvedValueOnce(null);
+  h.getAccess.mockResolvedValueOnce(null);
   await qc.refetchQueries({ queryKey: ["access", "u1"] });
 
   expect(await screen.findByText("login page")).toBeInTheDocument();
@@ -66,29 +67,29 @@ it("signs out and redirects to /login when a previously valid membership resolve
 
 afterEach(() => {
   focusManager.setFocused(undefined);
-  h.getMembership.mockReset();
+  h.getAccess.mockReset();
   h.signOut.mockReset();
   h.authUser.emailVerified = true;
 });
 
 it("re-checks membership on window focus and signs out a removed user", async () => {
   const qc = new QueryClient();
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: false,
   });
   renderGuard(qc);
   expect(await screen.findByText("app")).toBeInTheDocument();
-  expect(h.getMembership).toHaveBeenCalledTimes(1);
+  expect(h.getAccess).toHaveBeenCalledTimes(1);
 
-  h.getMembership.mockResolvedValueOnce(null);
+  h.getAccess.mockResolvedValueOnce(null);
   act(() => {
     focusManager.setFocused(false);
     focusManager.setFocused(true);
   });
 
-  await waitFor(() => expect(h.getMembership).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(h.getAccess).toHaveBeenCalledTimes(2));
   expect(await screen.findByText("login page")).toBeInTheDocument();
   await waitFor(() => expect(h.signOut).toHaveBeenCalled());
 });
@@ -97,13 +98,13 @@ it("sends an unverified user to /verify-email without checking membership", asyn
   h.authUser.emailVerified = false;
   renderGuard(new QueryClient());
   expect(await screen.findByText("verify page")).toBeInTheDocument();
-  expect(h.getMembership).not.toHaveBeenCalled();
+  expect(h.getAccess).not.toHaveBeenCalled();
   expect(h.signOut).not.toHaveBeenCalled();
 });
 
 it("keeps rendering children when a focus refetch fails with a network error", async () => {
   const qc = new QueryClient();
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: false,
@@ -111,12 +112,12 @@ it("keeps rendering children when a focus refetch fails with a network error", a
   renderGuard(qc);
   expect(await screen.findByText("app")).toBeInTheDocument();
 
-  h.getMembership.mockRejectedValueOnce(new Error("unavailable"));
+  h.getAccess.mockRejectedValueOnce(new Error("unavailable"));
   act(() => {
     focusManager.setFocused(false);
     focusManager.setFocused(true);
   });
-  await waitFor(() => expect(h.getMembership).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(h.getAccess).toHaveBeenCalledTimes(2));
   await waitFor(() =>
     expect(qc.getQueryState(["access", "u1"])?.status).toBe("error"),
   );
@@ -126,7 +127,7 @@ it("keeps rendering children when a focus refetch fails with a network error", a
 
 it("shows a retry state on a first-load error without signing out", async () => {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  h.getMembership.mockRejectedValueOnce(new Error("unavailable"));
+  h.getAccess.mockRejectedValueOnce(new Error("unavailable"));
   renderGuard(qc);
   expect(
     await screen.findByText(
@@ -135,7 +136,7 @@ it("shows a retry state on a first-load error without signing out", async () => 
   ).toBeInTheDocument();
   expect(h.signOut).not.toHaveBeenCalled();
 
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: false,
@@ -145,7 +146,7 @@ it("shows a retry state on a first-load error without signing out", async () => 
 });
 
 it("shows the inactive-account screen instead of the app, with sign out", async () => {
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: false,
@@ -161,13 +162,23 @@ it("shows the inactive-account screen instead of the app, with sign out", async 
 });
 
 it("shows the inactive-clinic screen for every member, owner included", async () => {
-  h.getMembership.mockResolvedValueOnce({
+  h.getAccess.mockResolvedValueOnce({
     superadmin: false,
     clinicId: "c1",
     owner: true,
     inactive: "clinic",
   });
   renderGuard(new QueryClient());
-  expect(await screen.findByText("This clinic is inactive.")).toBeInTheDocument();
+  expect(
+    await screen.findByText("This clinic is inactive."),
+  ).toBeInTheDocument();
   expect(screen.queryByText("app")).toBeNull();
+});
+
+it("sends a user with no clinic to /setup without signing out", async () => {
+  h.getAccess.mockResolvedValueOnce("signup");
+  renderGuard(new QueryClient());
+  expect(await screen.findByText("setup page")).toBeInTheDocument();
+  expect(screen.queryByText("app")).toBeNull();
+  expect(h.signOut).not.toHaveBeenCalled();
 });

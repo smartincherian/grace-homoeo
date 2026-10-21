@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   signInWithEmailAndPassword: vi.fn(),
   createUserWithEmailAndPassword: vi.fn(),
   sendEmailVerification: vi.fn(),
+  signInWithPopup: vi.fn(),
   signOut: vi.fn(),
   navigate: vi.fn(),
 }));
@@ -21,7 +22,7 @@ vi.mock("firebase/auth", () => ({
   createUserWithEmailAndPassword: (...a: unknown[]) =>
     h.createUserWithEmailAndPassword(...a),
   sendEmailVerification: (...a: unknown[]) => h.sendEmailVerification(...a),
-  signInWithPopup: vi.fn(),
+  signInWithPopup: (...a: unknown[]) => h.signInWithPopup(...a),
   signOut: (...a: unknown[]) => h.signOut(...a),
 }));
 vi.mock("react-router-dom", async (orig) => ({
@@ -30,7 +31,7 @@ vi.mock("react-router-dom", async (orig) => ({
 }));
 vi.mock("../../lib/firebase", () => ({ auth: { name: "auth" } }));
 vi.mock("../../lib/access", () => ({
-  getMembership: vi.fn(),
+  getAccess: vi.fn(),
   homePath: vi.fn(),
 }));
 vi.mock("./ensureUserDoc", () => ({ ensureUserDoc: vi.fn() }));
@@ -40,7 +41,8 @@ vi.mock("../../components/useToast", () => ({
 }));
 
 import { FirebaseError } from "firebase/app";
-import { getMembership } from "../../lib/access";
+import { getAccess } from "../../lib/access";
+import { ensureUserDoc } from "./ensureUserDoc";
 import LoginPage from "./LoginPage";
 
 const renderLogin = () =>
@@ -112,7 +114,7 @@ test("password sign-in of an unverified user goes to /verify-email", async () =>
   await waitFor(() =>
     expect(h.navigate).toHaveBeenCalledWith("/verify-email", { replace: true }),
   );
-  expect(getMembership).not.toHaveBeenCalled();
+  expect(getAccess).not.toHaveBeenCalled();
   expect(h.signOut).not.toHaveBeenCalled();
   expect(showToast).not.toHaveBeenCalled();
 });
@@ -187,5 +189,38 @@ test.each([
   await openCreate(user);
   await user.click(screen.getByRole("button", { name: "Create account" }));
   await waitFor(() => expect(showToast).toHaveBeenCalledWith(message, "error"));
+  expect(h.navigate).not.toHaveBeenCalled();
+});
+
+const googleSignIn = async (access: unknown) => {
+  h.signInWithPopup.mockResolvedValue({
+    user: { uid: "u1", email: "new@gmail.com", emailVerified: true },
+  });
+  vi.mocked(getAccess).mockResolvedValue(access as never);
+  renderLogin();
+  await userEvent
+    .setup()
+    .click(screen.getByRole("button", { name: /continue with google/i }));
+};
+
+test("Google sign-in with no clinic goes to /setup without ensureUserDoc or a toast", async () => {
+  await googleSignIn("signup");
+  await waitFor(() =>
+    expect(h.navigate).toHaveBeenCalledWith("/setup", { replace: true }),
+  );
+  expect(ensureUserDoc).not.toHaveBeenCalled();
+  expect(h.signOut).not.toHaveBeenCalled();
+  expect(showToast).not.toHaveBeenCalled();
+});
+
+test("Google sign-in with no access still toasts and signs out", async () => {
+  await googleSignIn(null);
+  await waitFor(() =>
+    expect(showToast).toHaveBeenCalledWith(
+      "new@gmail.com is not allowed to sign in.",
+      "error",
+    ),
+  );
+  expect(h.signOut).toHaveBeenCalled();
   expect(h.navigate).not.toHaveBeenCalled();
 });

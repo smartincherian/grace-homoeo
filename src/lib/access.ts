@@ -29,12 +29,17 @@ export type Membership = {
 const isDenied = (err: unknown) =>
   err instanceof FirebaseError && err.code === "permission-denied";
 
+/** A membership, "signup" (verified user with no allow-list entry), or null (no access). */
+export type Access = Membership | "signup" | null;
+
 /**
  * Resolves what the signed-in user may access: superadmin, a member of one clinic
- * (via their allow-list entry), or null (no access, or the read was permission-denied).
- * Any other failure (e.g. offline) is rethrown so callers don't mistake it for no access.
+ * (via their allow-list entry), "signup" (no allow-list entry at all, so they can
+ * set up their own clinic), or null (unassigned entry, no email, or the read was
+ * permission-denied). Any other failure (e.g. offline) is rethrown so callers
+ * don't mistake it for no access.
  */
-export async function getMembership(user: User): Promise<Membership | null> {
+export async function getAccess(user: User): Promise<Access> {
   if (!user.email) return null;
   if (isSuperadmin(user.email))
     return { superadmin: true, clinicId: null, owner: false };
@@ -42,7 +47,7 @@ export async function getMembership(user: User): Promise<Membership | null> {
     const snap = await getDoc(
       doc(db, ALLOWED_EMAILS, normalizeEmail(user.email)),
     );
-    if (!snap.exists()) return null;
+    if (!snap.exists()) return "signup";
     const clinicId = snap.data()?.clinicId;
     if (typeof clinicId !== "string" || !clinicId) return null;
     const userInactive = snap.data()?.active === false;
@@ -68,6 +73,12 @@ export async function getMembership(user: User): Promise<Membership | null> {
     if (isDenied(err)) return null;
     throw err;
   }
+}
+
+/** Membership only: "signup" and no access both read as null. */
+export async function getMembership(user: User): Promise<Membership | null> {
+  const access = await getAccess(user);
+  return access === "signup" ? null : access;
 }
 
 export function homePath(m: Membership): string {

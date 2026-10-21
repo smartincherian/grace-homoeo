@@ -5,7 +5,7 @@ import { FirebaseError } from "firebase/app";
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 import { useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
-import { getMembership, homePath } from "../../lib/access";
+import { getAccess, homePath } from "../../lib/access";
 import { ensureUserDoc } from "./ensureUserDoc";
 import { useAuth } from "./useAuth";
 import { useToast } from "../../components/useToast";
@@ -59,8 +59,13 @@ export default function VerifyEmailPage() {
       // Refresh the token so Firestore rules see email_verified == true.
       await user.getIdToken(true);
       if (auth.currentUser?.emailVerified) {
-        const membership = await getMembership(user);
-        if (!membership) {
+        const access = await getAccess(user);
+        if (access === "signup") {
+          queryClient.setQueryData(["access", user.uid], access);
+          navigate("/setup", { replace: true });
+          return;
+        }
+        if (!access) {
           showToast(
             `${user.email ?? "This account"} is not allowed to sign in.`,
             "error",
@@ -69,9 +74,9 @@ export default function VerifyEmailPage() {
           navigate("/login", { replace: true });
           return;
         }
-        queryClient.setQueryData(["access", user.uid], membership);
+        queryClient.setQueryData(["access", user.uid], access);
         await ensureUserDoc(user);
-        navigate(homePath(membership), { replace: true });
+        navigate(homePath(access), { replace: true });
       } else {
         showToast(
           "Not verified yet. Check your inbox and spam folder.",

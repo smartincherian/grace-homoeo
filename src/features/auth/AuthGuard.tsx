@@ -5,14 +5,14 @@ import { useQuery } from "@tanstack/react-query";
 import { signOut } from "firebase/auth";
 import { useAuth } from "./useAuth";
 import { auth } from "../../lib/firebase";
-import { getMembership, type Membership } from "../../lib/access";
+import { getAccess, type Membership } from "../../lib/access";
 
 /** The signed-in user's membership; re-checked per session so a removed account is signed out. */
 function useMembershipQuery() {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["access", user?.uid],
-    queryFn: () => getMembership(user!),
+    queryFn: () => getAccess(user!),
     enabled: !!user && user.emailVerified,
     staleTime: Infinity,
     refetchOnWindowFocus: "always",
@@ -21,13 +21,18 @@ function useMembershipQuery() {
 
 /** The current membership (undefined while unresolved, or when there is none). */
 export function useMembership(): Membership | undefined {
-  return useMembershipQuery().data ?? undefined;
+  const data = useMembershipQuery().data;
+  return typeof data === "object" && data !== null ? data : undefined;
 }
 
 export default function AuthGuard({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const access = useMembershipQuery();
   const denied = access.data === null;
+  const membership =
+    typeof access.data === "object" && access.data !== null
+      ? access.data
+      : undefined;
 
   useEffect(() => {
     if (denied) void signOut(auth);
@@ -35,6 +40,9 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
 
   if (user && !user.emailVerified) {
     return <Navigate to="/verify-email" replace />;
+  }
+  if (user && access.data === "signup") {
+    return <Navigate to="/setup" replace />;
   }
   if (user && access.isError && !access.data && !denied) {
     return (
@@ -55,11 +63,11 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       </Box>
     );
   }
-  if (user && access.data?.inactive) {
+  if (user && membership?.inactive) {
     return (
       <Box sx={{ textAlign: "center", mt: 8, px: 2 }}>
         <Typography variant="h2" sx={{ fontSize: 20, fontWeight: 700, mb: 1 }}>
-          {access.data.inactive === "clinic"
+          {membership.inactive === "clinic"
             ? "This clinic is inactive."
             : "Your access to this clinic has been turned off."}
         </Typography>
