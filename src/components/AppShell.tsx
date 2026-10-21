@@ -38,6 +38,7 @@ import { setActiveClinic } from "../lib/clinic";
 import { PageChromeProvider, usePageTitle } from "./PageChrome";
 import BottomDock from "./BottomDock";
 import BrandScope from "./BrandScope";
+import TrialBanner from "./TrialBanner";
 import ClinicMark from "./ClinicMark";
 import ProductMark from "./ProductMark";
 import { DEFAULT_BRANDING, displayNameOf } from "../lib/branding";
@@ -389,7 +390,10 @@ function ShellInner({
               Back
             </ButtonBase>
           )}
-          <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
+          <Box sx={{ flex: 1 }}>
+            {clinicId && <TrialBanner clinicId={clinicId} />}
+            {children ?? <Outlet />}
+          </Box>
           <BottomDock showScripture={showScripture} />
         </Box>
       </Box>
@@ -458,7 +462,10 @@ function ShellInner({
           minHeight: "calc(100vh - 60px)",
         }}
       >
-        <Box sx={{ flex: 1 }}>{children ?? <Outlet />}</Box>
+        <Box sx={{ flex: 1 }}>
+            {clinicId && <TrialBanner clinicId={clinicId} />}
+            {children ?? <Outlet />}
+          </Box>
         <BottomDock showScripture={showScripture} />
       </Box>
 
