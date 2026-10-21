@@ -302,8 +302,20 @@ test("the owner's mobile bottom bar fits 6 compact actions", () => {
 });
 
 test("the sidebar clinic name link is not underlined", () => {
+  // Desktop layout: the sidebar only renders at md and up.
+  const original = window.matchMedia;
+  window.matchMedia = (query: string) =>
+    ({
+      matches: true,
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+    }) as unknown as MediaQueryList;
   useBranding.mockReturnValue(branded({}));
   renderShell(["/c1/patients"]);
+  window.matchMedia = original;
   const link = screen
     .getAllByText("Teal Clinic")
     .map((el) => el.closest("a"))
