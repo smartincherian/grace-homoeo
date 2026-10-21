@@ -9,6 +9,7 @@ vi.mock("./useCaseRecord", () => ({
   useConsultationLsmc: () => ({ data: [] }),
 }));
 import ConsultationHistory from "./ConsultationHistory";
+import { clinicFeatures } from "../../lib/clinicType";
 import type { Consultation } from "./consultationSchema";
 
 const base: Consultation = {
@@ -57,6 +58,50 @@ function renderHistory() {
     </MemoryRouter>,
   );
 }
+
+const lsmcRow = {
+  id: "l1",
+  patientId: "p1",
+  consultationId: "c2",
+  date: 1,
+  location: "Occiput",
+  sensation: "Throbbing",
+  modality: "",
+  concomitant: "",
+  createdAt: 1,
+};
+
+function renderWithLsmc(general: boolean) {
+  render(
+    <MemoryRouter initialEntries={["/c1/patients/p1"]}>
+      <Routes>
+        <Route
+          path="/:clinicSlug/*"
+          element={
+            <ConsultationHistory
+              consultations={visits}
+              patientId="p1"
+              lsmc={[lsmcRow]}
+              features={general ? clinicFeatures("general") : undefined}
+            />
+          }
+        />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+describe("ConsultationHistory LSMC", () => {
+  it("shows a visit's LSMC for a homoeo clinic", () => {
+    renderWithLsmc(false);
+    expect(screen.getByText(/Occiput/)).toBeInTheDocument();
+  });
+
+  it("hides it for a general clinic", () => {
+    renderWithLsmc(true);
+    expect(screen.queryByText(/Occiput/)).not.toBeInTheDocument();
+  });
+});
 
 describe("ConsultationHistory", () => {
   it("lists every visit with its key details as cards", () => {

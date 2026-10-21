@@ -787,11 +787,7 @@ function ChangeTypeDialog({
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
-        <Button
-          variant="contained"
-          disabled={save.isPending}
-          onClick={confirm}
-        >
+        <Button variant="contained" disabled={save.isPending} onClick={confirm}>
           Save
         </Button>
       </DialogActions>

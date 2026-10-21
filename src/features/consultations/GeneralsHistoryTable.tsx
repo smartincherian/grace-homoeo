@@ -10,7 +10,8 @@ import {
 } from "@mui/material";
 import { fieldHistory } from "./caseRecordRepo";
 import type { GeneralsRecord } from "./caseRecordSchema";
-import { GENERALS_GROUPS } from "./generalsFields";
+import { generalsGroupsFor } from "./generalsFields";
+import { clinicFeatures, type ClinicFeatures } from "../../lib/clinicType";
 import { GROUP_ROW_SX, tableSx } from "./tableStyles";
 import { formatDate } from "../../lib/dates";
 import { CARD_SX, TOKENS } from "../../theme/theme";
@@ -34,20 +35,24 @@ const STICKY = {
  */
 export default function GeneralsHistoryTable({
   list,
+  features = clinicFeatures("homoeo"),
 }: {
   list: GeneralsRecord[];
+  features?: ClinicFeatures;
 }) {
-  const groups = GENERALS_GROUPS.map((g) => ({
-    ...g,
-    rows: g.fields
-      .map((f) => ({
-        ...f,
-        changedAt: new Set(
-          fieldHistory(list, f.key).map((e) => e.consultationId),
-        ),
-      }))
-      .filter((f) => f.changedAt.size > 0),
-  })).filter((g) => g.rows.length > 0);
+  const groups = generalsGroupsFor(features.homoeoGenerals)
+    .map((g) => ({
+      ...g,
+      rows: g.fields
+        .map((f) => ({
+          ...f,
+          changedAt: new Set(
+            fieldHistory(list, f.key).map((e) => e.consultationId),
+          ),
+        }))
+        .filter((f) => f.changedAt.size > 0),
+    }))
+    .filter((g) => g.rows.length > 0);
   if (groups.length === 0) return null;
 
   return (

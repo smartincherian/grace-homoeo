@@ -142,14 +142,21 @@ describe("SetupPage", () => {
 
   it("passes the chosen clinic type", async () => {
     renderPage(new QueryClient());
-    h.getAccess.mockResolvedValue({ superadmin: false, clinicId: "sun-clinic" });
-    expect(screen.getByRole("combobox", { name: /Clinic type/ })).toHaveTextContent(
-      "Homoeopathy",
-    );
+    h.getAccess.mockResolvedValue({
+      superadmin: false,
+      clinicId: "sun-clinic",
+    });
+    expect(
+      screen.getByRole("combobox", { name: /Clinic type/ }),
+    ).toHaveTextContent("Homoeopathy");
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
     await screen.findByText("✓ Available");
-    await userEvent.click(screen.getByRole("combobox", { name: /Clinic type/ }));
-    await userEvent.click(screen.getByRole("option", { name: "General practice" }));
+    await userEvent.click(
+      screen.getByRole("combobox", { name: /Clinic type/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: "General practice" }),
+    );
     await userEvent.click(
       screen.getByRole("button", { name: "Register for free" }),
     );

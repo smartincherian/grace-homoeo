@@ -22,9 +22,11 @@ import QueryStates from "../../components/QueryStates";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { daysAgoLabel, formatDate } from "../../lib/dates";
 import { useClinicPath } from "../auth/useClinicPath";
+import { useClinicFeatures } from "../../lib/useClinicFeatures";
 
 export default function ConsultationDetailPage() {
   const cp = useClinicPath();
+  const features = useClinicFeatures();
   const { patientId, cid } = useParams<{ patientId: string; cid: string }>();
   const { status, data: c } = useConsultation(cid);
   const { data: history } = useConsultations(patientId);
@@ -69,6 +71,7 @@ export default function ConsultationDetailPage() {
                 <Divider sx={{ mb: 1.5 }} />
                 <Collapse in={showPrevious} unmountOnExit>
                   <ConsultationHistory
+                    features={features}
                     consultations={previous}
                     patientId={patientId ?? ""}
                   />
@@ -110,7 +113,7 @@ export default function ConsultationDetailPage() {
               </CardContent>
             </Card>
 
-            <ConsultationFields c={c} />
+            <ConsultationFields c={c} features={features} />
           </Stack>
         )}
       </QueryStates>

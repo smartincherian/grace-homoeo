@@ -2,8 +2,9 @@
 import { Box, Typography } from "@mui/material";
 import { fieldHistory } from "./caseRecordRepo";
 import type { GeneralsRecord } from "./caseRecordSchema";
-import { GENERALS_GROUPS } from "./generalsFields";
+import { generalsGroupsFor } from "./generalsFields";
 import { formatDate } from "../../lib/dates";
+import { clinicFeatures, type ClinicFeatures } from "../../lib/clinicType";
 import { LINE, TOKENS } from "../../theme/theme";
 
 const show = (v: string | number) =>
@@ -13,13 +14,21 @@ const show = (v: string | number) =>
  * Each general's latest value, grouped, with no per-field dates. `list` is the
  * patient's generals snapshots, newest first. Renders nothing when empty.
  */
-export default function GeneralsLatest({ list }: { list: GeneralsRecord[] }) {
-  const groups = GENERALS_GROUPS.map((g) => ({
-    ...g,
-    rows: g.fields
-      .map((f) => ({ ...f, latest: fieldHistory(list, f.key)[0] }))
-      .filter((f) => f.latest),
-  })).filter((g) => g.rows.length > 0);
+export default function GeneralsLatest({
+  list,
+  features = clinicFeatures("homoeo"),
+}: {
+  list: GeneralsRecord[];
+  features?: ClinicFeatures;
+}) {
+  const groups = generalsGroupsFor(features.homoeoGenerals)
+    .map((g) => ({
+      ...g,
+      rows: g.fields
+        .map((f) => ({ ...f, latest: fieldHistory(list, f.key)[0] }))
+        .filter((f) => f.latest),
+    }))
+    .filter((g) => g.rows.length > 0);
   if (groups.length === 0) return null;
 
   return (

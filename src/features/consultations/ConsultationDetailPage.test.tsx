@@ -4,6 +4,10 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 
+vi.mock("../../lib/useClinicFeatures", async () => {
+  const { clinicFeatures } = await import("../../lib/clinicType");
+  return { useClinicFeatures: () => clinicFeatures("homoeo") };
+});
 vi.mock("./useCaseRecord", () => ({
   useConsultationGenerals: () => ({ data: null }),
   useConsultationLsmc: () => ({ data: [] }),

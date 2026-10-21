@@ -17,6 +17,7 @@ vi.mock("./useCaseRecord", () => ({
 }));
 
 import ConsultationFields from "./ConsultationFields";
+import { clinicFeatures } from "../../lib/clinicType";
 import type { Consultation } from "./consultationSchema";
 
 beforeEach(() => {
@@ -103,6 +104,62 @@ describe("ConsultationFields", () => {
     expect(screen.getByText("LSMC")).toBeInTheDocument();
     expect(screen.getByText("Head")).toBeInTheDocument();
     expect(screen.queryByText("No details recorded")).not.toBeInTheDocument();
+  });
+
+  it("hides homoeo-only parts for a general clinic", () => {
+    record.generals = {
+      ...EMPTY_GENERALS,
+      thirst: "thirstless",
+      mentals: "anxious",
+      id: "c1",
+      patientId: "p1",
+      consultationId: "c1",
+      date: 1,
+      updatedAt: 1,
+    };
+    record.lsmc = [
+      {
+        id: "l1",
+        patientId: "p1",
+        consultationId: "c1",
+        date: 1,
+        location: "Head",
+        sensation: "",
+        modality: "",
+        concomitant: "",
+        createdAt: 1,
+      },
+    ];
+    render(
+      <ConsultationFields
+        c={{ ...blank, remedy: "Paracetamol", differentialRemedy: "Bry" }}
+        features={clinicFeatures("general")}
+      />,
+    );
+    expect(screen.getByText("Case history")).toBeInTheDocument();
+    expect(screen.getByText("thirstless")).toBeInTheDocument();
+    expect(screen.getByText("Paracetamol")).toBeInTheDocument();
+    expect(screen.queryByText("anxious")).not.toBeInTheDocument();
+    expect(screen.queryByText("Bry")).not.toBeInTheDocument();
+    expect(screen.queryByText("LSMC")).not.toBeInTheDocument();
+    expect(screen.queryByText("Head")).not.toBeInTheDocument();
+  });
+
+  it("has no empty case history when only hidden fields were recorded", () => {
+    record.generals = {
+      ...EMPTY_GENERALS,
+      mentals: "anxious",
+      id: "c1",
+      patientId: "p1",
+      consultationId: "c1",
+      date: 1,
+      updatedAt: 1,
+    };
+    render(
+      <ConsultationFields c={blank} features={clinicFeatures("general")} />,
+    );
+    expect(screen.queryByText("Case history")).not.toBeInTheDocument();
+    expect(screen.getByText("No details recorded")).toBeInTheDocument();
   });
 
   it("shows legacy notes when present", () => {

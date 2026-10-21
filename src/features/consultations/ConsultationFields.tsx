@@ -8,10 +8,11 @@ import {
   Typography,
 } from "@mui/material";
 import type { Consultation } from "./consultationSchema";
-import { isGeneralsBlank } from "./caseRecordSchema";
 import { useConsultationGenerals, useConsultationLsmc } from "./useCaseRecord";
 import GeneralsView from "./GeneralsView";
+import { hasShownGenerals } from "./generalsFields";
 import LsmcTable from "./LsmcTable";
+import { clinicFeatures, type ClinicFeatures } from "../../lib/clinicType";
 
 type FieldDef = { name: keyof Consultation; label: string };
 
@@ -55,17 +56,27 @@ function SectionHeading({ children }: { children: string }) {
 }
 
 /** Clinical card + case notes for one consultation; shared by the page and the history drawer. Blank fields are hidden. */
-export default function ConsultationFields({ c }: { c: Consultation }) {
+export default function ConsultationFields({
+  c,
+  features = clinicFeatures("homoeo"),
+}: {
+  c: Consultation;
+  features?: ClinicFeatures;
+}) {
   const filled = (defs: FieldDef[]) =>
     defs
+      .filter(
+        (f) => features.differentialRemedy || f.name !== "differentialRemedy",
+      )
       .map((f) => ({ ...f, value: String(c[f.name] ?? "").trim() }))
       .filter((f) => f.value);
   const clinical = filled(CLINICAL);
   const caseNotes = filled(CASE_NOTES);
   const { data: generals } = useConsultationGenerals(c.id);
   const { data: lsmc } = useConsultationLsmc(c.id);
-  const hasGenerals = !!generals && !isGeneralsBlank(generals);
-  const lsmcRows = lsmc ?? [];
+  const hasGenerals =
+    !!generals && hasShownGenerals(generals, features.homoeoGenerals);
+  const lsmcRows = features.lsmc ? (lsmc ?? []) : [];
 
   if (
     clinical.length === 0 &&
@@ -92,8 +103,8 @@ export default function ConsultationFields({ c }: { c: Consultation }) {
 
       {hasGenerals && (
         <Box>
-          <SectionHeading>Generals</SectionHeading>
-          <GeneralsView generals={generals} />
+          <SectionHeading>{features.generalsTitle}</SectionHeading>
+          <GeneralsView generals={generals} features={features} />
         </Box>
       )}
 

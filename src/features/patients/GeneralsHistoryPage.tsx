@@ -8,13 +8,16 @@ import QueryStates from "../../components/QueryStates";
 import AvatarTile from "../../components/AvatarTile";
 import { useSetPageTitle } from "../../components/PageChrome";
 import { TOKENS } from "../../theme/theme";
+import { useClinicFeatures } from "../../lib/useClinicFeatures";
 
 /** Every recorded general compared visit by visit, newest first. */
 export default function GeneralsHistoryPage() {
   const { id } = useParams<{ id: string }>();
   const { data: patient } = usePatient(id);
   const { status, data } = usePatientGenerals(id);
-  useSetPageTitle("Generals history");
+  const features = useClinicFeatures();
+  const title = `${features.generalsTitle} history`;
+  useSetPageTitle(title);
   const list = data ?? [];
 
   return (
@@ -23,7 +26,7 @@ export default function GeneralsHistoryPage() {
         {patient && <AvatarTile name={patient.name} size={48} solid />}
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="h1" sx={{ fontSize: { xs: 22, md: 26 } }}>
-            Generals history
+            {title}
           </Typography>
           <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
             {patient ? `${patient.name} · #${patient.serialNo} · ` : ""}
@@ -50,9 +53,9 @@ export default function GeneralsHistoryPage() {
       <QueryStates
         status={status}
         isEmpty={list.length === 0}
-        emptyMessage="No generals recorded yet"
+        emptyMessage={`No ${features.generalsTitle.toLowerCase()} recorded yet`}
       >
-        <GeneralsHistoryTable list={list} />
+        <GeneralsHistoryTable list={list} features={features} />
       </QueryStates>
     </Box>
   );

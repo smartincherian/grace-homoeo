@@ -160,7 +160,11 @@ describe("clinicsRepo", () => {
   });
 
   it("setClinicAuthorized sets trialEndsAt only for a legacy clinic losing it", async () => {
-    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1, type: "homoeo" }, false, 5);
+    await setClinicAuthorized(
+      { id: "c", name: "C", createdAt: 1, type: "homoeo" },
+      false,
+      5,
+    );
     expect(updateDoc).toHaveBeenLastCalledWith(
       { path: "clinics/c" },
       { authorized: false, authorizedAt: null, trialEndsAt: 5 },
@@ -174,7 +178,11 @@ describe("clinicsRepo", () => {
       { path: "clinics/c" },
       { authorized: false, authorizedAt: null },
     );
-    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1, type: "homoeo" }, true, 5);
+    await setClinicAuthorized(
+      { id: "c", name: "C", createdAt: 1, type: "homoeo" },
+      true,
+      5,
+    );
     expect(updateDoc).toHaveBeenLastCalledWith(
       { path: "clinics/c" },
       { authorized: true, authorizedAt: 5 },

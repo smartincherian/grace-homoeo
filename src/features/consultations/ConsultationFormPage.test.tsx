@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
   visitLsmc: [] as LsmcRow[],
   visitGeneralsError: false,
   patientLsmc: [] as LsmcRow[],
+  clinicType: "homoeo" as "homoeo" | "general",
 }));
 const create = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
@@ -46,6 +47,10 @@ vi.mock("./useCaseRecord", () => ({
   usePatientLsmc: () => ({ data: state.patientLsmc, isPending: false }),
   useConsultationLsmc: () => ({ data: state.visitLsmc, isPending: false }),
 }));
+vi.mock("../../lib/useClinicFeatures", async () => {
+  const { clinicFeatures } = await import("../../lib/clinicType");
+  return { useClinicFeatures: () => clinicFeatures(state.clinicType) };
+});
 const showToast = vi.fn();
 vi.mock("../../components/useToast", () => ({
   useToast: () => ({ showToast }),
@@ -136,6 +141,7 @@ beforeEach(() => {
   state.visitLsmc = [];
   state.visitGeneralsError = false;
   state.patientLsmc = [];
+  state.clinicType = "homoeo";
   create.mockReset().mockResolvedValue("c-new");
   update.mockReset().mockResolvedValue(undefined);
 });
@@ -323,5 +329,46 @@ describe("ConsultationFormPage (edit)", () => {
     );
     await user.click(screen.getByRole("button", { name: /save/i }));
     expect(update.mock.calls[0][0].existingLsmcIds).toEqual(["l1"]);
+  });
+});
+
+describe("ConsultationFormPage (general clinic)", () => {
+  it("hides LSMC, differential remedy and homoeo generals", () => {
+    state.clinicType = "general";
+    state.patientLsmc = [lsmcRow("l9", "occiput")];
+    renderNew();
+    expect(
+      screen.queryByLabelText("Differential remedy"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("LSMC")).not.toBeInTheDocument();
+    expect(screen.queryByText(/occiput/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Mentals")).not.toBeInTheDocument();
+    expect(screen.getByText("Case history")).toBeInTheDocument();
+    expect(screen.getAllByText("Sleep").length).toBeGreaterThan(0);
+  });
+
+  it("keeps a visit's hidden LSMC, mentals and differential remedy on save", async () => {
+    const user = userEvent.setup();
+    state.clinicType = "general";
+    state.existing = { ...consultation, differentialRemedy: "Bry 30" };
+    state.visitLsmc = [lsmcRow("l1", "head"), lsmcRow("l2", "knee")];
+    state.visitGenerals = generalsRec({
+      date: consultation.date,
+      id: "c1",
+      consultationId: "c1",
+      mentals: "anxious",
+      thirst: "low",
+    });
+    renderEdit();
+    await screen.findByDisplayValue("low");
+    await user.click(screen.getByRole("button", { name: /save/i }));
+    const vars = update.mock.calls[0][0];
+    expect(vars.existingLsmcIds).toEqual(["l1", "l2"]);
+    expect(vars.record.lsmc.map((r: { id: string }) => r.id)).toEqual([
+      "l1",
+      "l2",
+    ]);
+    expect(vars.record.generals.mentals).toBe("anxious");
+    expect(vars.values.differentialRemedy).toBe("Bry 30");
   });
 });

@@ -8,6 +8,8 @@ import { useDeletePatient, usePatient } from "./usePatients";
 import { useConsultations } from "../consultations/useConsultations";
 import ConsultationHistory from "../consultations/ConsultationHistory";
 import GeneralsLatest from "../consultations/GeneralsLatest";
+import { hasShownGenerals } from "../consultations/generalsFields";
+import { useClinicFeatures } from "../../lib/useClinicFeatures";
 import {
   usePatientGenerals,
   usePatientLsmc,
@@ -54,6 +56,10 @@ export default function PatientDetailPage() {
   const latest = visits[0];
   const { data: generalsList } = usePatientGenerals(id);
   const { data: lsmc } = usePatientLsmc(id);
+  const features = useClinicFeatures();
+  const showGenerals = (generalsList ?? []).some((g) =>
+    hasShownGenerals(g, features.homoeoGenerals),
+  );
   const openVisit = (cid: string) =>
     navigate(cp(`/patients/${id}/consultations/${cid}`));
   const course = visits.filter((v) => v.remedy);
@@ -181,13 +187,14 @@ export default function PatientDetailPage() {
               consultations={visits}
               patientId={id ?? ""}
               lsmc={lsmc ?? []}
+              features={features}
               onSelect={openVisit}
             />
           </QueryStates>
 
-          {(generalsList ?? []).length > 0 && (
+          {showGenerals && (
             <Box sx={{ mt: 3.5 }}>
-              <SectionTitle title="Generals" />
+              <SectionTitle title={features.generalsTitle} />
               <Box sx={{ ...CARD_SX, px: { xs: 2, sm: 2.75 }, py: 2.25 }}>
                 <Box
                   sx={{
@@ -227,7 +234,7 @@ export default function PatientDetailPage() {
                     View past history
                   </Button>
                 </Box>
-                <GeneralsLatest list={generalsList ?? []} />
+                <GeneralsLatest list={generalsList ?? []} features={features} />
               </Box>
             </Box>
           )}

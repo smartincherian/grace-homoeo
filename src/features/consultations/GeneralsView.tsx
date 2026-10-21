@@ -1,8 +1,9 @@
 // src/features/consultations/GeneralsView.tsx
 import { Box, Stack, Typography } from "@mui/material";
 import { isGeneralsBlank, type Generals } from "./caseRecordSchema";
-import { GENERALS_GROUPS } from "./generalsFields";
+import { generalsGroupsFor } from "./generalsFields";
 import { formatDate } from "../../lib/dates";
+import { clinicFeatures, type ClinicFeatures } from "../../lib/clinicType";
 
 function display(g: Generals, key: keyof Generals): string {
   if (key === "lmp") return g.lmp == null ? "" : formatDate(g.lmp);
@@ -10,12 +11,18 @@ function display(g: Generals, key: keyof Generals): string {
 }
 
 /** Read-only generals; blank fields and empty groups are hidden. */
-export default function GeneralsView({ generals }: { generals: Generals }) {
+export default function GeneralsView({
+  generals,
+  features = clinicFeatures("homoeo"),
+}: {
+  generals: Generals;
+  features?: ClinicFeatures;
+}) {
   if (isGeneralsBlank(generals)) return null;
 
   return (
     <Stack spacing={2}>
-      {GENERALS_GROUPS.map((group, gi) => {
+      {generalsGroupsFor(features.homoeoGenerals).map((group, gi) => {
         const filled = group.fields
           .map((f) => ({ ...f, value: display(generals, f.key) }))
           .filter((f) => f.value);

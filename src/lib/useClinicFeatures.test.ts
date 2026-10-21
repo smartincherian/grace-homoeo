@@ -5,7 +5,9 @@ const useClinic = vi.fn();
 vi.mock("./clinicQueries", () => ({
   useClinic: (id: string | undefined) => useClinic(id),
 }));
-vi.mock("react-router-dom", () => ({ useParams: () => ({ clinicSlug: "c1" }) }));
+vi.mock("react-router-dom", () => ({
+  useParams: () => ({ clinicSlug: "c1" }),
+}));
 
 import { useClinicFeatures } from "./useClinicFeatures";
 

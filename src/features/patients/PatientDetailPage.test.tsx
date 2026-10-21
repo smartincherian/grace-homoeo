@@ -11,7 +11,12 @@ import type {
 const record = vi.hoisted(() => ({
   generals: [] as GeneralsRecord[],
   lsmc: [] as LsmcRow[],
+  clinicType: "homoeo" as "homoeo" | "general",
 }));
+vi.mock("../../lib/useClinicFeatures", async () => {
+  const { clinicFeatures } = await import("../../lib/clinicType");
+  return { useClinicFeatures: () => clinicFeatures(record.clinicType) };
+});
 vi.mock("../consultations/useCaseRecord", () => ({
   usePatientGenerals: () => ({ data: record.generals }),
   usePatientLsmc: () => ({ data: record.lsmc }),
@@ -84,6 +89,7 @@ beforeEach(() => {
   deleteMutate.mockReset();
   record.generals = [];
   record.lsmc = [];
+  record.clinicType = "homoeo";
 });
 
 describe("PatientDetailPage", () => {
@@ -168,6 +174,55 @@ describe("PatientDetailPage", () => {
     expect(screen.getByText("Sensation")).toBeInTheDocument();
     await userEvent.setup().click(screen.getByText("Throbbing"));
     expect(await screen.findByText("consultation page")).toBeInTheDocument();
+  });
+
+  it("shows Case history without LSMC for a general clinic", () => {
+    record.clinicType = "general";
+    const meta = { patientId: "p1", updatedAt: 1 };
+    record.generals = [
+      {
+        ...EMPTY_GENERALS,
+        ...meta,
+        id: "c1",
+        consultationId: "c1",
+        date: 946684800000,
+        thirst: "thirstless",
+      },
+    ];
+    record.lsmc = [
+      {
+        id: "l1",
+        patientId: "p1",
+        consultationId: "c1",
+        date: 946684800000,
+        location: "Head",
+        sensation: "Throbbing",
+        modality: "",
+        concomitant: "",
+        createdAt: 1,
+      },
+    ];
+    renderPage();
+    expect(screen.getByText("Case history")).toBeInTheDocument();
+    expect(screen.queryByText("Generals")).not.toBeInTheDocument();
+    expect(screen.queryByText("Throbbing")).not.toBeInTheDocument();
+  });
+
+  it("has no Case history section when only hidden fields were recorded", () => {
+    record.clinicType = "general";
+    record.generals = [
+      {
+        ...EMPTY_GENERALS,
+        patientId: "p1",
+        updatedAt: 1,
+        id: "c1",
+        consultationId: "c1",
+        date: 946684800000,
+        mentals: "anxious",
+      },
+    ];
+    renderPage();
+    expect(screen.queryByText("Case history")).not.toBeInTheDocument();
   });
 
   it("hides Generals and LSMC when the patient has none", () => {

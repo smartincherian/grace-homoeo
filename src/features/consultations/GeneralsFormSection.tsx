@@ -10,7 +10,7 @@ import {
 import { fieldHistory } from "./caseRecordRepo";
 import type { GeneralsRecord } from "./caseRecordSchema";
 import FieldHistoryCell from "./FieldHistoryCell";
-import { GENERALS_GROUPS } from "./generalsFields";
+import { generalsGroupsFor } from "./generalsFields";
 import { dateInputToMs, msToDateInput } from "../../lib/dates";
 import { TOKENS } from "../../theme/theme";
 
@@ -20,6 +20,8 @@ interface Props<T extends FieldValues> {
   showMenstrual: boolean;
   /** Earlier visits' generals, newest first (read-only history). */
   history: GeneralsRecord[];
+  /** False hides the homoeo-only fields (their form values are kept). */
+  homoeo?: boolean;
 }
 
 // Field | Present / history | This visit — stacked on phones.
@@ -51,6 +53,7 @@ export default function GeneralsFormSection<T extends FieldValues>({
   register,
   showMenstrual,
   history,
+  homoeo = true,
 }: Props<T>) {
   return (
     <Box>
@@ -68,8 +71,9 @@ export default function GeneralsFormSection<T extends FieldValues>({
         <Typography sx={HEAD_SX}>Present / history</Typography>
         <Typography sx={HEAD_SX}>This visit (if new)</Typography>
       </Box>
-      {GENERALS_GROUPS.filter((g) => showMenstrual || !g.menstrual).map(
-        (group, gi) => (
+      {generalsGroupsFor(homoeo)
+        .filter((g) => showMenstrual || !g.menstrual)
+        .map((group, gi) => (
           <Box key={group.title ?? gi}>
             {group.title && (
               <Typography
@@ -126,8 +130,7 @@ export default function GeneralsFormSection<T extends FieldValues>({
               );
             })}
           </Box>
-        ),
-      )}
+        ))}
     </Box>
   );
 }

@@ -18,6 +18,7 @@ import { daysAgoLabel, formatDate } from "../../lib/dates";
 import dayjs from "dayjs";
 import type { LsmcRow } from "./caseRecordSchema";
 import LsmcSummary from "./LsmcSummary";
+import { clinicFeatures, type ClinicFeatures } from "../../lib/clinicType";
 import { CARD_SX, PILL_SX, TOKENS } from "../../theme/theme";
 import { useClinicPath } from "../auth/useClinicPath";
 
@@ -28,6 +29,7 @@ interface Props {
   onSelect?: (id: string) => void;
   /** The patient's LSMC rows; each visit card shows its own. */
   lsmc?: LsmcRow[];
+  features?: ClinicFeatures;
 }
 
 export default function ConsultationHistory({
@@ -35,13 +37,14 @@ export default function ConsultationHistory({
   patientId,
   onSelect,
   lsmc,
+  features = clinicFeatures("homoeo"),
 }: Props) {
   const cp = useClinicPath();
   const [openId, setOpenId] = useState<string | null>(null);
   const open = consultations.find((c) => c.id === openId);
 
   const lsmcByVisit = new Map<string, LsmcRow[]>();
-  for (const r of lsmc ?? []) {
+  for (const r of features.lsmc ? (lsmc ?? []) : []) {
     lsmcByVisit.set(r.consultationId, [
       ...(lsmcByVisit.get(r.consultationId) ?? []),
       r,
@@ -176,7 +179,7 @@ export default function ConsultationHistory({
               </IconButton>
             </Stack>
             <Box sx={{ p: 2 }}>
-              <ConsultationFields c={open} />
+              <ConsultationFields c={open} features={features} />
               <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
                 <Button
                   variant="contained"

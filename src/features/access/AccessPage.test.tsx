@@ -547,9 +547,13 @@ test("changing a clinic's type picks the new type, then saves it", () => {
   fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Change type" }));
   const dialog = screen.getByRole("dialog");
-  fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: "Clinic type" }));
+  fireEvent.mouseDown(
+    within(dialog).getByRole("combobox", { name: "Clinic type" }),
+  );
   fireEvent.click(screen.getByRole("option", { name: "General practice" }));
-  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }));
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Save" }),
+  );
   expect(m.setClinicType).toHaveBeenCalledWith(
     { id: "c1", type: "general" },
     expect.anything(),

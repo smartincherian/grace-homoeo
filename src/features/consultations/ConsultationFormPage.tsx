@@ -54,6 +54,7 @@ import { useSetPageTitle } from "../../components/PageChrome";
 import AvatarTile from "../../components/AvatarTile";
 import { CAPTION_SX, CARD_SX, LINE, PILL_SX, TOKENS } from "../../theme/theme";
 import { useClinicPath } from "../auth/useClinicPath";
+import { useClinicFeatures } from "../../lib/useClinicFeatures";
 
 const formSchema = consultationFormSchema.extend({
   generals: generalsSchema,
@@ -152,6 +153,11 @@ export default function ConsultationFormPage() {
   const patientLsmc = usePatientLsmc(patientId);
   const create = useCreateConsultation(patientId ?? "");
   const update = useUpdateConsultation(patientId ?? "");
+  // Hidden parts keep their loaded form values, so saving never drops them.
+  const features = useClinicFeatures();
+  const textFields = TEXT_FIELDS.filter(
+    (f) => features.differentialRemedy || f.name !== "differentialRemedy",
+  );
 
   const {
     control,
@@ -268,7 +274,9 @@ export default function ConsultationFormPage() {
   );
   const lastVisit = earlier[0];
   const lastLsmcId = lastVisit?.id ?? earlierLsmc[0]?.consultationId;
-  const lastLsmc = earlierLsmc.filter((r) => r.consultationId === lastLsmcId);
+  const lastLsmc = features.lsmc
+    ? earlierLsmc.filter((r) => r.consultationId === lastLsmcId)
+    : [];
 
   const copyLastLsmc = () =>
     setValue(
@@ -538,20 +546,22 @@ export default function ConsultationFormPage() {
               {...register("complaint")}
             />
 
-            <Box>
-              <SectionHeading
-                action={
-                  lastLsmc.length > 0 && (
-                    <PillButton onClick={copyLastLsmc}>
-                      Copy from last visit
-                    </PillButton>
-                  )
-                }
-              >
-                LSMC
-              </SectionHeading>
-              <LsmcEditor control={control} register={register} />
-            </Box>
+            {features.lsmc && (
+              <Box>
+                <SectionHeading
+                  action={
+                    lastLsmc.length > 0 && (
+                      <PillButton onClick={copyLastLsmc}>
+                        Copy from last visit
+                      </PillButton>
+                    )
+                  }
+                >
+                  LSMC
+                </SectionHeading>
+                <LsmcEditor control={control} register={register} />
+              </Box>
+            )}
 
             <TextField
               label="Diagnosis"
@@ -589,7 +599,7 @@ export default function ConsultationFormPage() {
                 gap: 1.5,
               }}
             >
-              {TEXT_FIELDS.map((f) => (
+              {textFields.map((f) => (
                 <TextField
                   key={f.name}
                   label={f.label}
@@ -608,10 +618,11 @@ export default function ConsultationFormPage() {
             )}
 
             <Box>
-              <SectionHeading>Generals</SectionHeading>
+              <SectionHeading>{features.generalsTitle}</SectionHeading>
               <GeneralsFormSection
                 control={control}
                 register={register}
+                homoeo={features.homoeoGenerals}
                 showMenstrual={patient?.gender === "Female"}
                 history={priorRecords(patientGenerals.data ?? [], visit)}
               />
