@@ -8,7 +8,7 @@ import {
 } from "./clinicAdminRepo";
 
 export function useClinics() {
-  return useQuery({ queryKey: ["clinics"], queryFn: listClinics });
+  return useQuery({ queryKey: ["clinics"], queryFn: () => listClinics() });
 }
 
 export function useCreateClinic() {
