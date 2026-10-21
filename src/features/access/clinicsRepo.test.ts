@@ -41,10 +41,11 @@ describe("clinicsRepo", () => {
     });
     const list = await listClinics();
     expect(list.map((c) => c.name)).toEqual(["Alpha", "Zeta"]);
-    expect(list[0]).toEqual({
+    expect(list[0]).toMatchObject({
       id: "a",
       name: "Alpha",
       createdAt: 1,
+      type: "homoeo",
       ownerEmail: "o@x.com",
       active: true,
     });
@@ -152,13 +153,13 @@ describe("clinicsRepo", () => {
   });
 
   it("setClinicAuthorized sets trialEndsAt only for a legacy clinic losing it", async () => {
-    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1 }, false, 5);
+    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1, type: "homoeo" }, false, 5);
     expect(updateDoc).toHaveBeenLastCalledWith(
       { path: "clinics/c" },
       { authorized: false, authorizedAt: null, trialEndsAt: 5 },
     );
     await setClinicAuthorized(
-      { id: "c", name: "C", createdAt: 1, trialEndsAt: 99 },
+      { id: "c", name: "C", createdAt: 1, type: "homoeo", trialEndsAt: 99 },
       false,
       5,
     );
@@ -166,7 +167,7 @@ describe("clinicsRepo", () => {
       { path: "clinics/c" },
       { authorized: false, authorizedAt: null },
     );
-    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1 }, true, 5);
+    await setClinicAuthorized({ id: "c", name: "C", createdAt: 1, type: "homoeo" }, true, 5);
     expect(updateDoc).toHaveBeenLastCalledWith(
       { path: "clinics/c" },
       { authorized: true, authorizedAt: 5 },

@@ -19,8 +19,22 @@ describe("getClinic", () => {
       id: "c1",
       data: () => ({ name: "Clinic One", createdAt: 5 }),
     });
-    expect(await getClinic("c1")).toEqual({ id: "c1", name: "Clinic One", createdAt: 5 });
+    expect(await getClinic("c1")).toEqual({
+      id: "c1",
+      name: "Clinic One",
+      createdAt: 5,
+      type: "homoeo",
+    });
     expect(doc).toHaveBeenCalledWith({}, "clinics", "c1");
+  });
+
+  it("maps the clinic type, homoeo when absent", async () => {
+    getDoc.mockResolvedValue({
+      exists: () => true,
+      id: "c1",
+      data: () => ({ name: "C", createdAt: 5, type: "general" }),
+    });
+    expect((await getClinic("c1"))?.type).toBe("general");
   });
 
   it("returns the stored timeZone, and undefined when absent", async () => {

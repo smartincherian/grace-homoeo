@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import { CLINICS } from "./clinic";
+import { parseClinicType, type ClinicType } from "./clinicType";
 
 export const DEFAULT_TIME_ZONE = "Asia/Kolkata";
 
@@ -9,6 +10,8 @@ export interface Clinic {
   id: string;
   name: string;
   createdAt: number;
+  /** Missing in the doc = homoeo. */
+  type: ClinicType;
   ownerEmail?: string;
   timeZone?: string;
   /** False when the superadmin turned the clinic off; listClinics always sets it. */
@@ -47,6 +50,7 @@ export async function getClinic(id: string): Promise<Clinic | null> {
     id: snap.id,
     name: data.name ?? "",
     createdAt: data.createdAt ?? 0,
+    type: parseClinicType(data.type),
     ownerEmail:
       typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
     timeZone: typeof data.timeZone === "string" ? data.timeZone : undefined,

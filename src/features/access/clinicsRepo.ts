@@ -15,6 +15,7 @@ import {
 } from "../../lib/access";
 import { EMAIL_RE, SeatError } from "../../lib/seats";
 import { trialFields, type Clinic } from "../../lib/clinicQueries";
+import { parseClinicType } from "../../lib/clinicType";
 import { TRIAL_MS, clinicStatus } from "../../lib/subscription";
 
 /** Expired first, then trials by days left, then authorized/legacy; names break ties. */
@@ -34,6 +35,7 @@ export async function listClinics(now = Date.now()): Promise<Clinic[]> {
         id: d.id,
         name: data.name ?? "",
         createdAt: data.createdAt ?? 0,
+        type: parseClinicType(data.type),
         ownerEmail:
           typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
         active: data.active !== false,
