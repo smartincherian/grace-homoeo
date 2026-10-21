@@ -1,16 +1,23 @@
 import { z } from "zod";
+import type { ClinicType } from "../../lib/clinicType";
 
 /**
  * Categories on the "Items need to order now" list, in display order.
  * `variant` names the extra detail a category is ordered by (potency, size),
  * with common values offered in the dropdown; `needsName` is false for
  * supplies where the category itself is the item (e.g. butter paper);
- * `names` are common names offered first in the Name dropdown.
+ * `names` are common names offered first in the Name dropdown; `types` are
+ * the clinic types that pick from it (stored items always show).
  */
+const HOMOEO = ["homoeo"] as const;
+const GENERAL = ["general"] as const;
+const BOTH = ["homoeo", "general"] as const;
+
 export const ORDER_CATEGORIES = [
   {
     key: "medicine",
     label: "Medicines",
+    types: HOMOEO,
     needsName: true,
     variant: {
       label: "Potency",
@@ -20,24 +27,86 @@ export const ORDER_CATEGORIES = [
   {
     key: "biochemic",
     label: "Biochemic remedies",
+    types: HOMOEO,
     needsName: true,
     variant: { label: "Potency", options: ["3x", "6x", "12x", "30x"] },
   },
-  { key: "globules", label: "Globules", needsName: false, variant: null },
+  {
+    key: "globules",
+    label: "Globules",
+    types: HOMOEO,
+    needsName: false,
+    variant: null,
+  },
   {
     key: "bottles",
     label: "Bottles",
+    types: HOMOEO,
     needsName: false,
     variant: { label: "Size", options: ["1 dram", "2 dram"] },
   },
-  { key: "butterPaper", label: "Butter paper", needsName: false, variant: null },
-  { key: "blankPowder", label: "Blank powder", needsName: false, variant: null },
-  { key: "blankTablet", label: "Blank tablet", needsName: false, variant: null },
+  {
+    key: "butterPaper",
+    label: "Butter paper",
+    types: HOMOEO,
+    needsName: false,
+    variant: null,
+  },
+  {
+    key: "blankPowder",
+    label: "Blank powder",
+    types: HOMOEO,
+    needsName: false,
+    variant: null,
+  },
+  {
+    key: "blankTablet",
+    label: "Blank tablet",
+    types: HOMOEO,
+    needsName: false,
+    variant: null,
+  },
+  {
+    key: "generalMedicine",
+    label: "Medicines",
+    types: GENERAL,
+    needsName: true,
+    variant: { label: "Strength", options: ["250 mg", "500 mg", "650 mg"] },
+  },
   {
     key: "syrups",
     label: "Syrups",
+    types: BOTH,
     needsName: true,
     names: ["Findrops"],
+    variant: null,
+  },
+  {
+    key: "injections",
+    label: "Injections",
+    types: GENERAL,
+    needsName: true,
+    variant: null,
+  },
+  {
+    key: "syringes",
+    label: "Syringes",
+    types: GENERAL,
+    needsName: false,
+    variant: { label: "Size", options: ["2 ml", "5 ml", "10 ml"] },
+  },
+  {
+    key: "dressings",
+    label: "Dressings",
+    types: GENERAL,
+    needsName: false,
+    variant: null,
+  },
+  {
+    key: "gloves",
+    label: "Gloves",
+    types: GENERAL,
+    needsName: false,
     variant: null,
   },
 ] as const;
@@ -49,6 +118,13 @@ const CATEGORY_KEYS = ORDER_CATEGORIES.map((c) => c.key) as [
   OrderCategory,
   ...OrderCategory[],
 ];
+
+/** The categories a clinic of this type adds to, in display order. */
+export function categoriesFor(type: ClinicType): OrderCategoryInfo[] {
+  return ORDER_CATEGORIES.filter((c) =>
+    (c.types as readonly ClinicType[]).includes(type),
+  );
+}
 
 export function categoryInfo(key: OrderCategory): OrderCategoryInfo {
   return ORDER_CATEGORIES.find((c) => c.key === key) ?? ORDER_CATEGORIES[0];

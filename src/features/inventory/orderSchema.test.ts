@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  categoriesFor,
+  categoryInfo,
   orderFormSchema,
   orderItemLabel,
   suggestionsFor,
@@ -16,6 +18,56 @@ const item = (o: Partial<OrderItem>): OrderItem => ({
   ordered: false,
   createdAt: 1,
   ...o,
+});
+
+describe("categoriesFor", () => {
+  const keys = (t: "homoeo" | "general") => categoriesFor(t).map((c) => c.key);
+
+  it("keeps the homoeo list as it was", () => {
+    expect(keys("homoeo")).toEqual([
+      "medicine",
+      "biochemic",
+      "globules",
+      "bottles",
+      "butterPaper",
+      "blankPowder",
+      "blankTablet",
+      "syrups",
+    ]);
+  });
+
+  it("gives general clinics their own list", () => {
+    expect(keys("general")).toEqual([
+      "generalMedicine",
+      "syrups",
+      "injections",
+      "syringes",
+      "dressings",
+      "gloves",
+    ]);
+    expect(categoryInfo("generalMedicine")).toMatchObject({
+      label: "Medicines",
+      needsName: true,
+      variant: { label: "Strength", options: ["250 mg", "500 mg", "650 mg"] },
+    });
+    expect(categoryInfo("syringes")).toMatchObject({
+      needsName: false,
+      variant: { label: "Size", options: ["2 ml", "5 ml", "10 ml"] },
+    });
+    expect(categoryInfo("injections")).toMatchObject({ needsName: true });
+    expect(categoryInfo("dressings")).toMatchObject({ needsName: false });
+    expect(categoryInfo("gloves")).toMatchObject({ needsName: false });
+  });
+
+  it("still parses items of every category", () => {
+    expect(
+      orderFormSchema.safeParse({ category: "biochemic", name: "Ferrum" })
+        .success,
+    ).toBe(true);
+    expect(orderFormSchema.safeParse({ category: "gloves" }).success).toBe(
+      true,
+    );
+  });
 });
 
 describe("orderFormSchema", () => {

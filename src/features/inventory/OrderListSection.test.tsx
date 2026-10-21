@@ -20,6 +20,11 @@ const data = [
   row({ id: "o2", category: "bottles", variant: "1 dram" }),
   row({ id: "o3", name: "Sulphur", ordered: true }),
 ];
+const clinic = vi.hoisted(() => ({ type: "homoeo" as "homoeo" | "general" }));
+vi.mock("../../lib/useClinicFeatures", async () => {
+  const { clinicFeatures } = await import("../../lib/clinicType");
+  return { useClinicFeatures: () => clinicFeatures(clinic.type) };
+});
 const createMutate = vi.fn();
 const orderedMutate = vi.fn();
 vi.mock("./useOrders", () => ({
@@ -35,6 +40,7 @@ vi.mock("../../components/useToast", () => ({
 import OrderListSection from "./OrderListSection";
 
 beforeEach(() => {
+  clinic.type = "homoeo";
   createMutate.mockReset();
   orderedMutate.mockReset();
 });
@@ -44,7 +50,9 @@ test("shows the heading and pending items grouped by category", () => {
   expect(
     screen.getByRole("heading", { name: "Items need to order now" }),
   ).toBeInTheDocument();
-  expect(screen.getByRole("heading", { name: "Medicines" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Medicines" }),
+  ).toBeInTheDocument();
   expect(screen.getByText("Arnica 200")).toBeInTheDocument();
   expect(screen.getByText("× 2")).toBeInTheDocument();
   expect(screen.getByText("Bottles 1 dram")).toBeInTheDocument();
@@ -88,4 +96,25 @@ test("ticking an item marks it ordered", async () => {
     screen.getByRole("checkbox", { name: "Mark Arnica 200 as ordered" }),
   );
   expect(orderedMutate).toHaveBeenCalledWith("o1", expect.anything());
+});
+
+test("a general clinic picks from its own categories but still lists older items", async () => {
+  clinic.type = "general";
+  data.push(row({ id: "o4", category: "biochemic", name: "Ferrum phos" }));
+  render(<OrderListSection />);
+  expect(
+    screen.getByRole("heading", { name: "Biochemic remedies" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Ferrum phos")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("combobox", { name: "Category" }));
+  const options = screen.getAllByRole("option").map((o) => o.textContent);
+  expect(options).toEqual([
+    "Medicines",
+    "Syrups",
+    "Injections",
+    "Syringes",
+    "Dressings",
+    "Gloves",
+  ]);
+  data.pop();
 });

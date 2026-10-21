@@ -13,6 +13,7 @@ import {
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import {
   ORDER_CATEGORIES,
+  categoriesFor,
   categoryInfo,
   orderFormSchema,
   orderItemLabel,
@@ -29,6 +30,7 @@ import {
 import QueryStates from "../../components/QueryStates";
 import { CAPTION_SX, CARD_SX, LINE, PILL_SX, TOKENS } from "../../theme/theme";
 import { useToast } from "../../components/useToast";
+import { useClinicFeatures } from "../../lib/useClinicFeatures";
 
 const FIELD_SX = { "& .MuiOutlinedInput-root": { bgcolor: TOKENS.white } };
 
@@ -74,7 +76,12 @@ export default function OrderListSection() {
   const remove = useDeleteOrderItem();
   const { showToast } = useToast();
 
-  const [category, setCategory] = useState<OrderCategory>("medicine");
+  const choices = categoriesFor(useClinicFeatures().type);
+  const [picked, setCategory] = useState<OrderCategory>(choices[0].key);
+  // The clinic type can arrive after the first render; fall back to its first.
+  const category = choices.some((c) => c.key === picked)
+    ? picked
+    : choices[0].key;
   const [name, setName] = useState("");
   const [variant, setVariant] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -160,7 +167,7 @@ export default function OrderListSection() {
           onChange={(e) => changeCategory(e.target.value as OrderCategory)}
           sx={{ ...FIELD_SX, minWidth: 190, flex: { xs: "1 1 100%", sm: "0 0 auto" } }}
         >
-          {ORDER_CATEGORIES.map((c) => (
+          {choices.map((c) => (
             <MenuItem key={c.key} value={c.key}>
               {c.label}
             </MenuItem>
