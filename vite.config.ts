@@ -10,8 +10,8 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "ClinicDesk",
-        short_name: "ClinicDesk",
+        name: "Grace Medica",
+        short_name: "Grace Medica",
         description: "Homoeo Clinic Manager",
         theme_color: "#f5f7fc",
         background_color: "#f5f7fc",

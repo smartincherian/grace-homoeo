@@ -222,10 +222,10 @@ export default function LoginPage() {
             <ProductMark />
             <Box>
               <Typography variant="h1" sx={{ fontSize: 22 }}>
-                ClinicDesk
+                Grace Medica
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                Homoeo Clinic Manager
+                Clinic Manager
               </Typography>
             </Box>
           </Box>

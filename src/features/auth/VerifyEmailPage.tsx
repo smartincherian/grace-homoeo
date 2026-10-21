@@ -115,10 +115,10 @@ export default function VerifyEmailPage() {
             <ProductMark size={40} />
             <Box>
               <Typography sx={{ fontWeight: 800, fontSize: 18 }}>
-                ClinicDesk
+                Grace Medica
               </Typography>
               <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                Homoeo Clinic Manager
+                Clinic Manager
               </Typography>
             </Box>
           </Box>

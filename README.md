@@ -1,4 +1,4 @@
-# ClinicDesk
+# Grace Medica
 
 Installable multi-clinic PWA (homoeopathy and general practice) — patients &
 consultations, bookings, inventory, funds and staff. Built with Vite + React + TypeScript + MUI + Firebase

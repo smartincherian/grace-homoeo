@@ -91,7 +91,7 @@ function ShellInner({
   const branding = useBranding(clinicId).data;
   const shownName = clinicId
     ? displayNameOf(branding, clinicName)
-    : "ClinicDesk";
+    : "Grace Medica";
   const mark = (size: number, decorative = false) =>
     clinicId ? (
       <ClinicMark

@@ -60,17 +60,20 @@ beforeEach(() => {
   Object.values(h).forEach((f) => f.mockReset());
 });
 
-test("shows the generic brand and footer, no Grace text", () => {
+test("shows the product brand and footer, no clinic Grace text", () => {
   const { container } = renderLogin();
   expect(
-    screen.getByRole("heading", { name: "ClinicDesk" }),
+    screen.getByRole("heading", { name: "Grace Medica" }),
   ).toBeInTheDocument();
-  expect(screen.getByText("Homoeo Clinic Manager")).toBeInTheDocument();
+  expect(screen.getByText("Clinic Manager")).toBeInTheDocument();
   expect(screen.getByText(/developed by/i)).toBeInTheDocument();
   expect(screen.queryByLabelText("Scripture")).toBeNull();
   // The developer credit links to graceissufficient.net; check the rest.
   container.querySelector("footer")?.remove();
-  expect(container.textContent).not.toMatch(/grace/i);
+  // The product name is "Grace Medica"; nothing else may mention Grace.
+  expect(container.textContent?.replace(/Grace Medica/g, "")).not.toMatch(
+    /grace/i,
+  );
 });
 
 test("Forgot password asks for an email first", async () => {

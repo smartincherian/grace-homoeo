@@ -35,6 +35,6 @@ export function pricingWhatsAppUrl(p: {
   clinicId: string;
   email: string;
 }): string {
-  const msg = `Hi, I'd like to know the ClinicDesk subscription pricing. Clinic: ${p.clinicName} (${p.clinicId}), email: ${p.email}.`;
+  const msg = `Hi, I'd like to know the Grace Medica subscription pricing. Clinic: ${p.clinicName} (${p.clinicId}), email: ${p.email}.`;
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
 }

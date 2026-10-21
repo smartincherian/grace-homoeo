@@ -1,4 +1,4 @@
-// Draws the ClinicDesk mark (same as public/favicon.svg) into the PWA icons.
+// Draws the Grace Medica mark (same as public/favicon.svg) into the PWA icons.
 // No dependencies: PNGs are encoded with node:zlib. Run: npm run icons
 import { deflateSync } from "node:zlib";
 import { writeFileSync } from "node:fs";
