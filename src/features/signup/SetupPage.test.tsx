@@ -88,31 +88,54 @@ describe("SetupPage", () => {
 
   it("derives the web address and gates the button on the name", async () => {
     renderPage();
-    const btn = screen.getByRole("button", { name: "Start free trial" });
+    const btn = screen.getByRole("button", { name: "Register for free" });
     expect(btn).toBeDisabled();
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
     expect(screen.getByLabelText("Web address")).toHaveValue("sun-clinic");
+    expect(await screen.findByText("✓ Available")).toBeInTheDocument();
+    expect(h.isSlugTaken).toHaveBeenLastCalledWith("sun-clinic");
     expect(btn).toBeEnabled();
-    expect(
-      screen.getByText(/Joining a clinic that already uses Homoeo Desk/),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: /Ask on WhatsApp/ }),
-    ).toHaveAttribute(
-      "href",
-      expect.stringMatching(/^https:\/\/wa\.me\/919036209639\?text=/),
-    );
+    expect(screen.queryByText(/WhatsApp/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/People page/)).not.toBeInTheDocument();
   });
 
-  it("shows an error and does not create when the slug is taken", async () => {
+  it("shows a taken web address in red and blocks registering", async () => {
     h.isSlugTaken.mockResolvedValue(true);
     renderPage();
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    expect(
+      await screen.findByText("✗ That web address is taken, try another"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Register for free" }),
+    ).toBeDisabled();
+    expect(h.createOwnClinic).not.toHaveBeenCalled();
+  });
+
+  it("re-checks when the web address is edited", async () => {
+    h.isSlugTaken.mockImplementation(async (s: string) => s === "sun-clinic");
+    renderPage();
+    await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✗ That web address is taken, try another");
+    const field = screen.getByLabelText("Web address");
+    await userEvent.clear(field);
+    await userEvent.type(field, "sun-clinic-kochi");
+    expect(await screen.findByText("✓ Available")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Register for free" }),
+    ).toBeEnabled();
+  });
+
+  it("still blocks a slug taken between the check and the submit", async () => {
+    renderPage();
+    await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✓ Available");
+    h.isSlugTaken.mockResolvedValue(true);
     await userEvent.click(
-      screen.getByRole("button", { name: "Start free trial" }),
+      screen.getByRole("button", { name: "Register for free" }),
     );
     expect(
-      await screen.findByText("That web address is taken, try another"),
+      await screen.findByText("✗ That web address is taken, try another"),
     ).toBeInTheDocument();
     expect(h.createOwnClinic).not.toHaveBeenCalled();
   });
@@ -129,8 +152,9 @@ describe("SetupPage", () => {
       clinicId: "sun-clinic",
     });
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✓ Available");
     await userEvent.click(
-      screen.getByRole("button", { name: "Start free trial" }),
+      screen.getByRole("button", { name: "Register for free" }),
     );
     expect(await screen.findByText("settings page")).toBeInTheDocument();
     expect(h.createOwnClinic).toHaveBeenCalledWith(
@@ -154,8 +178,9 @@ describe("SetupPage", () => {
     h.createOwnClinic.mockRejectedValue(new Error("denied"));
     renderPage();
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✓ Available");
     await userEvent.click(
-      screen.getByRole("button", { name: "Start free trial" }),
+      screen.getByRole("button", { name: "Register for free" }),
     );
     await waitFor(() =>
       expect(h.showToast).toHaveBeenCalledWith(
@@ -173,8 +198,9 @@ describe("SetupPage", () => {
       .mockRejectedValueOnce(new Error("offline")) // right after the commit
       .mockResolvedValue({ superadmin: false, clinicId: "sun-clinic" });
     await userEvent.type(screen.getByLabelText(/Clinic name/), "Sun Clinic");
+    await screen.findByText("✓ Available");
     await userEvent.click(
-      screen.getByRole("button", { name: "Start free trial" }),
+      screen.getByRole("button", { name: "Register for free" }),
     );
     expect(
       await screen.findByText("PATIENTS-ROUTE-RENDERED"),

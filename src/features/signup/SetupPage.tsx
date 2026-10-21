@@ -1,13 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
-  Alert,
   Box,
   Button,
   Card,
   CardContent,
-  Link,
+  InputAdornment,
   TextField,
   Typography,
 } from "@mui/material";
@@ -15,7 +14,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { auth } from "../../lib/firebase";
 import { getAccess, homePath } from "../../lib/access";
 import { isValidSlug, slugify } from "../../lib/clinic";
-import { pricingWhatsAppUrl } from "../../lib/subscription";
 import { useAuth } from "../auth/useAuth";
 import { ensureUserDoc } from "../../lib/ensureUserDoc";
 import { useToast } from "../../components/useToast";
@@ -34,6 +32,11 @@ export default function SetupPage() {
   const [slugEdited, setSlugEdited] = useState(false);
   const [taken, setTaken] = useState(false);
   const [busy, setBusy] = useState(false);
+  // Live availability of `slug`: checked a moment after typing stops.
+  const [avail, setAvail] = useState<{
+    slug: string;
+    state: "free" | "taken" | "error";
+  } | null>(null);
 
   const access = useQuery({
     queryKey: ["access", user?.uid],
@@ -41,6 +44,25 @@ export default function SetupPage() {
     enabled: !!user && user.emailVerified,
     staleTime: Infinity,
   });
+
+  useEffect(() => {
+    if (!isValidSlug(slug)) return;
+    let stale = false;
+    const t = setTimeout(() => {
+      isSlugTaken(slug).then(
+        (isTaken) => {
+          if (!stale) setAvail({ slug, state: isTaken ? "taken" : "free" });
+        },
+        () => {
+          if (!stale) setAvail({ slug, state: "error" });
+        },
+      );
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(t);
+    };
+  }, [slug]);
 
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
@@ -52,7 +74,14 @@ export default function SetupPage() {
   const email = user.email ?? "";
   const slugOk = isValidSlug(slug);
   const slugError = !slug ? false : !slugOk;
-  const canSubmit = name.trim().length > 0 && slugOk && !busy;
+  const state = avail?.slug === slug ? avail.state : "checking";
+  const isTaken = taken || (slugOk && state === "taken");
+  const canSubmit =
+    name.trim().length > 0 &&
+    slugOk &&
+    !busy &&
+    !isTaken &&
+    state !== "checking";
 
   const onName = (v: string) => {
     setName(v);
@@ -115,6 +144,7 @@ export default function SetupPage() {
       sx={{
         minHeight: "100vh",
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
         p: 2,
@@ -133,13 +163,8 @@ export default function SetupPage() {
             </Typography>
           </Box>
           <Typography variant="h1" sx={{ fontSize: 22, mb: 2 }}>
-            Start your clinic on Homoeo Desk
+            Register your clinic for free
           </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Joining a clinic that already uses Homoeo Desk? Don't create one —
-            ask its owner to add {email} on their People page, then sign in
-            again.
-          </Alert>
           <Box component="form" onSubmit={(e) => void submit(e)}>
             <TextField
               label="Clinic name"
@@ -154,19 +179,42 @@ export default function SetupPage() {
               label="Web address"
               value={slug}
               onChange={(e) => onSlug(e.target.value)}
-              error={slugError || taken}
+              error={slugError || isTaken}
               helperText={
-                taken
-                  ? "That web address is taken, try another"
+                !slug
+                  ? "Filled in from the clinic name; you can change it"
                   : slugError
                     ? "3–40 letters, numbers or dashes"
-                    : `homoeodesk.web.app/${slug}`
+                    : isTaken
+                      ? "✗ That web address is taken, try another"
+                      : state === "free"
+                        ? "✓ Available"
+                        : state === "error"
+                          ? "Couldn't check right now; we'll check when you register"
+                          : "Checking…"
               }
+              slotProps={{
+                input: {
+                  startAdornment: (
+                    <InputAdornment position="start" sx={{ mr: 0 }}>
+                      homoeodesk.web.app/
+                    </InputAdornment>
+                  ),
+                },
+                formHelperText: {
+                  sx: {
+                    color:
+                      !slugError && !isTaken && state === "free"
+                        ? TOKENS.ok
+                        : undefined,
+                  },
+                },
+              }}
               fullWidth
               sx={{ mb: 2 }}
             />
             <Typography sx={{ fontSize: 13, color: "text.secondary", mb: 2 }}>
-              21-day free trial, no payment needed.
+              Free for 21 days, no payment needed.
             </Typography>
             <Button
               type="submit"
@@ -176,23 +224,11 @@ export default function SetupPage() {
               disabled={!canSubmit}
               sx={{ mb: 1.5 }}
             >
-              Start free trial
+              Register for free
             </Button>
           </Box>
-          <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+          <Box sx={{ display: "flex", justifyContent: "center" }}>
             <Button onClick={() => void signOutNow()}>Sign out</Button>
-            <Link
-              href={pricingWhatsAppUrl({
-                clinicName: name.trim(),
-                clinicId: slug,
-                email,
-              })}
-              target="_blank"
-              rel="noopener"
-              sx={{ alignSelf: "center", fontSize: 14 }}
-            >
-              Pricing? Ask on WhatsApp
-            </Link>
           </Box>
         </CardContent>
       </Card>
