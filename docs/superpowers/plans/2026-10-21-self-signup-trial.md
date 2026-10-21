@@ -4,7 +4,7 @@
 
 **Goal:** Doctors create their own clinic with a 21-day free trial; after it the clinic is read-only until the superadmin authorizes it; a WhatsApp link (9036209639) asks for pricing.
 
-**Architecture:** Trial state lives on `clinics/{id}` (`trialEndsAt`, `authorized`, `authorizedAt`, `selfSignup`). Firestore rules gate every clinic write on `active(c)` and allow a tightly validated self-signup batch. The client routes users with no allow-list entry to `/setup`, shows a `TrialBanner` in the shell, and turns denied writes in an expired clinic into a "Trial ended" dialog via a global `MutationCache` hook. `/admin` shows status and an authorize toggle.
+**Architecture:** Trial state lives on `clinics/{id}` (`trialEndsAt`, `authorized`, `authorizedAt`, `selfSignup`). Firestore rules gate every clinic write on `trialOk(c)` and allow a tightly validated self-signup batch. The client routes users with no allow-list entry to `/setup`, shows a `TrialBanner` in the shell, and turns denied writes in an expired clinic into a "Trial ended" dialog via a global `MutationCache` hook. `/admin` shows status and an authorize toggle.
 
 **Tech Stack:** Vite + React + TypeScript, MUI v6, TanStack Query, Firebase Auth + Firestore, Vitest + RTL, `@firebase/rules-unit-testing`.
 
