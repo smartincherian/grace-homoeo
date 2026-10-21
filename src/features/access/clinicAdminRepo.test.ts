@@ -6,7 +6,10 @@ const batchDelete = vi.fn();
 const batchCommit = vi.fn();
 const collection = vi.fn((...a: unknown[]) => ({ path: a.slice(1).join("/") }));
 const doc = vi.fn((...a: unknown[]) => ({ path: a.slice(1).join("/") }));
-const query = vi.fn((col: { path: string }, ...c: unknown[]) => ({ ...col, c }));
+const query = vi.fn((col: { path: string }, ...c: unknown[]) => ({
+  ...col,
+  c,
+}));
 const where = vi.fn((...a: unknown[]) => ({ where: a }));
 const limit = vi.fn((n: number) => ({ limit: n }));
 
@@ -42,7 +45,10 @@ beforeEach(() => {
 describe("clinicAdminRepo", () => {
   it("sets a clinic active or inactive", async () => {
     await setClinicActive("c1", false);
-    expect(updateDoc).toHaveBeenCalledWith({ path: "clinics/c1" }, { active: false });
+    expect(updateDoc).toHaveBeenCalledWith(
+      { path: "clinics/c1" },
+      { active: false },
+    );
   });
 
   it("sets a user's allow-list entry active or inactive, by normalized email", async () => {

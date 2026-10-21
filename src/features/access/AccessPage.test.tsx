@@ -21,6 +21,7 @@ const m = vi.hoisted(() => ({
   removeUnassigned: vi.fn(),
   createClinic: vi.fn(),
   setClinicActive: vi.fn(),
+  setClinicAuthorized: vi.fn(),
   setUserActive: vi.fn(),
   deleteClinic: vi.fn(),
   toast: vi.fn(),
@@ -31,6 +32,9 @@ const m = vi.hoisted(() => ({
     createdAt: number;
     ownerEmail?: string;
     active?: boolean;
+    authorized?: boolean;
+    trialEndsAt?: number;
+    selfSignup?: boolean;
   }[],
 }));
 vi.mock("./useClinics", () => ({
@@ -40,6 +44,10 @@ vi.mock("./useClinics", () => ({
   }),
   useCreateClinic: () => ({ mutate: m.createClinic, isPending: false }),
   useSetClinicActive: () => ({ mutate: m.setClinicActive, isPending: false }),
+  useSetClinicAuthorized: () => ({
+    mutate: m.setClinicAuthorized,
+    isPending: false,
+  }),
   useSetUserActive: () => ({ mutate: m.setUserActive, isPending: false }),
   useDeleteClinic: () => ({ mutate: m.deleteClinic, isPending: false }),
 }));
@@ -98,6 +106,7 @@ const asAdmin = () => {
     m.setOwner,
     m.createClinic,
     m.setClinicActive,
+    m.setClinicAuthorized,
     m.setUserActive,
     m.deleteClinic,
     m.toast,
@@ -149,6 +158,7 @@ test("slug auto-fills from name; create needs a valid owner email", () => {
       name: "Sunrise Homoeo",
       ownerEmail: "dr@x.com",
       addedBy: "smartin.cherian@gmail.com",
+      authorized: false,
     },
     expect.anything(),
   );
@@ -410,4 +420,82 @@ test("deleting a clinic needs its slug typed", () => {
   });
   fireEvent.click(del);
   expect(m.deleteClinic).toHaveBeenCalledWith("c1", expect.anything());
+});
+
+const DAY = 86_400_000;
+
+test("shows trial status chips and the self signup chip", () => {
+  asAdmin();
+  const now = Date.now();
+  m.clinics = [
+    { id: "a", name: "Aa", createdAt: 1, trialEndsAt: now - DAY },
+    {
+      id: "b",
+      name: "Bb",
+      createdAt: 1,
+      trialEndsAt: now + 1.5 * DAY,
+      selfSignup: true,
+    },
+    { id: "c", name: "Cc", createdAt: 1, authorized: true },
+    { id: "d", name: "Dd", createdAt: 1 },
+  ];
+  renderAt();
+  expect(screen.getByText("Trial ended")).toBeInTheDocument();
+  expect(screen.getByText("Trial · 2 days left")).toBeInTheDocument();
+  expect(screen.getByText("Authorized")).toBeInTheDocument();
+  expect(screen.getByText("Legacy")).toBeInTheDocument();
+  expect(screen.getByText("Self signup")).toBeInTheDocument();
+});
+
+test("authorizing a clinic asks first, then authorizes", () => {
+  asAdmin();
+  renderAt();
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Authorize" }));
+  expect(m.setClinicAuthorized).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Authorize",
+    }),
+  );
+  expect(m.setClinicAuthorized).toHaveBeenCalledWith(
+    { clinic: expect.objectContaining({ id: "c1" }), authorized: true },
+    expect.anything(),
+  );
+});
+
+test("removing authorization from a legacy clinic warns it turns read-only", () => {
+  asAdmin();
+  m.clinics = [{ id: "c1", name: "Sunrise", createdAt: 1, authorized: true }];
+  renderAt();
+  fireEvent.click(screen.getByRole("button", { name: "Actions for Sunrise" }));
+  fireEvent.click(
+    screen.getByRole("menuitem", { name: "Remove authorization" }),
+  );
+  expect(
+    within(screen.getByRole("dialog")).getByText(
+      /becomes read-only immediately/,
+    ),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Remove authorization",
+    }),
+  );
+  expect(m.setClinicAuthorized).toHaveBeenCalledWith(
+    { clinic: expect.objectContaining({ id: "c1" }), authorized: false },
+    expect.anything(),
+  );
+});
+
+test("the create form can create an authorized clinic", () => {
+  asAdmin();
+  renderAt();
+  fillCreate("Sunrise Homoeo", "dr@x.com");
+  fireEvent.click(screen.getByLabelText("Authorized (no trial)"));
+  fireEvent.click(screen.getByRole("button", { name: "Create clinic" }));
+  expect(m.createClinic).toHaveBeenCalledWith(
+    expect.objectContaining({ authorized: true }),
+    expect.anything(),
+  );
 });

@@ -2,7 +2,9 @@ import { useState } from "react";
 import {
   Box,
   Button,
+  Checkbox,
   Chip,
+  FormControlLabel,
   Dialog,
   DialogActions,
   DialogContent,
@@ -31,11 +33,14 @@ import {
   useCreateClinic,
   useDeleteClinic,
   useSetClinicActive,
+  useSetClinicAuthorized,
   useSetUserActive,
 } from "./useClinics";
 import { useAddUser, useRemoveUser, useSetOwner } from "../../lib/useSeats";
 import { EMAIL_RE, SeatError, type Seat, type SeatId } from "../../lib/seats";
 import type { Clinic } from "../../lib/clinicQueries";
+import { formatDate } from "../../lib/dates";
+import { clinicStatus, type ClinicStatus } from "../../lib/subscription";
 import { isValidSlug, slugify } from "../../lib/clinic";
 import { isSuperadmin, normalizeEmail } from "../../lib/access";
 import QueryStates from "../../components/QueryStates";
@@ -80,6 +85,7 @@ export default function AccessPage() {
   const [clinicName, setClinicName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
+  const [authorizedNew, setAuthorizedNew] = useState(false);
 
   // useAuth starts with no user, so wait for it before deciding to redirect.
   if (loading) return null;
@@ -108,6 +114,7 @@ export default function AccessPage() {
         name,
         ownerEmail: normalizeEmail(ownerEmail),
         addedBy: user?.email ?? "",
+        authorized: authorizedNew,
       },
       {
         onSuccess: () => {
@@ -115,6 +122,7 @@ export default function AccessPage() {
           setSlug("");
           setOwnerEmail("");
           setSlugEdited(false);
+          setAuthorizedNew(false);
           showToast(`${name} created`, "success");
         },
         onError: (err) =>
@@ -186,6 +194,16 @@ export default function AccessPage() {
             error={!!ownerError}
             helperText={ownerError || " "}
           />
+          <FormControlLabel
+            sx={{ flex: "none", mr: 0, whiteSpace: "nowrap" }}
+            control={
+              <Checkbox
+                checked={authorizedNew}
+                onChange={(e) => setAuthorizedNew(e.target.checked)}
+              />
+            }
+            label="Authorized (no trial)"
+          />
           <Button
             type="submit"
             variant="contained"
@@ -248,6 +266,31 @@ export default function AccessPage() {
   );
 }
 
+function statusChip(s: ClinicStatus) {
+  switch (s.kind) {
+    case "authorized":
+      return { label: "Authorized", color: "success" as const };
+    case "trial":
+      return {
+        label: `Trial · ${s.daysLeft} ${s.daysLeft === 1 ? "day" : "days"} left`,
+        color: s.daysLeft <= 5 ? ("warning" as const) : ("default" as const),
+      };
+    case "expired":
+      return { label: "Trial ended", color: "error" as const };
+    default:
+      return { label: "Legacy", color: "default" as const };
+  }
+}
+
+/** `s` is the status the clinic falls back to once authorization is removed. */
+function removeAuthorizationMessage(s: ClinicStatus): string {
+  if (s.kind === "legacy")
+    return "This clinic has no trial, so it becomes read-only immediately.";
+  if (s.kind === "trial")
+    return `It goes back to its free trial (${s.daysLeft} ${s.daysLeft === 1 ? "day" : "days"} left).`;
+  return "It becomes read-only.";
+}
+
 const SEATLESS_TIP = "Run the seat backfill first";
 const HIDE_XS = { display: { xs: "none", sm: "table-cell" } };
 
@@ -281,6 +324,11 @@ function ClinicRow({
   const makeOwner = useSetOwner();
   const setClinicActive = useSetClinicActive();
   const setUserActive = useSetUserActive();
+  const setAuthorized = useSetClinicAuthorized();
+  const [confirmAuth, setConfirmAuth] = useState(false);
+  const [now] = useState(() => Date.now());
+  const status = clinicStatus(clinic, now);
+  const chip = statusChip(status);
   const [expanded, setExpanded] = useState(false);
   const [confirmInactive, setConfirmInactive] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -353,6 +401,20 @@ function ClinicRow({
       },
     );
 
+  const changeAuthorized = (next: boolean) =>
+    setAuthorized.mutate(
+      { clinic, authorized: next },
+      {
+        onSuccess: () =>
+          showToast(
+            `${clinic.name} is ${next ? "authorized" : "no longer authorized"}`,
+            "success",
+          ),
+        onError: () =>
+          showToast("Could not change the clinic. Please try again.", "error"),
+      },
+    );
+
   const toggleUser = (u: AllowedEmail) =>
     setUserActive.mutate(
       { email: u.email, active: !u.active },
@@ -398,7 +460,7 @@ function ClinicRow({
                   whiteSpace: "nowrap",
                 }}
               >
-                {clinic.id}
+                {`${clinic.id} · ${formatDate(clinic.createdAt)}`}
               </Typography>
             </Box>
           </Stack>
@@ -422,6 +484,15 @@ function ClinicRow({
             color={active ? "success" : "warning"}
             variant={active ? "outlined" : "filled"}
           />
+          <Chip
+            size="small"
+            label={chip.label}
+            color={chip.color}
+            sx={{ ml: 0.5 }}
+          />
+          {clinic.selfSignup && (
+            <Chip size="small" label="Self signup" sx={{ ml: 0.5 }} />
+          )}
         </TableCell>
         <TableCell align="right" sx={{ whiteSpace: "nowrap" }}>
           <Button
@@ -438,6 +509,13 @@ function ClinicRow({
                 label: active ? "Make inactive" : "Make active",
                 onClick: () =>
                   active ? setConfirmInactive(true) : toggleClinic(true),
+              },
+              {
+                label:
+                  status.kind === "authorized"
+                    ? "Remove authorization"
+                    : "Authorize",
+                onClick: () => setConfirmAuth(true),
               },
               { label: "Delete clinic", onClick: () => setDeleting(true) },
             ]}
@@ -585,6 +663,29 @@ function ClinicRow({
           toggleClinic(false);
         }}
         onClose={() => setConfirmInactive(false)}
+      />
+      <ConfirmDialog
+        open={confirmAuth}
+        title={
+          status.kind === "authorized"
+            ? `Remove authorization from ${clinic.name}?`
+            : `Authorize ${clinic.name}?`
+        }
+        message={
+          status.kind === "authorized"
+            ? removeAuthorizationMessage(
+                clinicStatus({ trialEndsAt: clinic.trialEndsAt }, now),
+              )
+            : `${clinic.name} will never expire.`
+        }
+        confirmLabel={
+          status.kind === "authorized" ? "Remove authorization" : "Authorize"
+        }
+        onConfirm={() => {
+          setConfirmAuth(false);
+          changeAuthorized(status.kind !== "authorized");
+        }}
+        onClose={() => setConfirmAuth(false)}
       />
       {deleting && (
         <DeleteClinicDialog

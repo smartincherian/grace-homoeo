@@ -39,12 +39,18 @@ export const CLINIC_COLLECTIONS = [
 const PAGE = 400;
 
 /** Turns a whole clinic on or off for its members (superadmin only). */
-export async function setClinicActive(id: string, active: boolean): Promise<void> {
+export async function setClinicActive(
+  id: string,
+  active: boolean,
+): Promise<void> {
   await updateDoc(doc(db, CLINICS, id), { active });
 }
 
 /** Turns one user's access on or off; their seat is kept (superadmin only). */
-export async function setUserActive(email: string, active: boolean): Promise<void> {
+export async function setUserActive(
+  email: string,
+  active: boolean,
+): Promise<void> {
   await updateDoc(doc(db, ALLOWED_EMAILS, normalizeEmail(email)), { active });
 }
 
