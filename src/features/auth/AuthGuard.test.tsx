@@ -143,3 +143,31 @@ it("shows a retry state on a first-load error without signing out", async () => 
   await userEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(await screen.findByText("app")).toBeInTheDocument();
 });
+
+it("shows the inactive-account screen instead of the app, with sign out", async () => {
+  h.getMembership.mockResolvedValueOnce({
+    superadmin: false,
+    clinicId: "c1",
+    owner: false,
+    inactive: "user",
+  });
+  renderGuard(new QueryClient());
+  expect(
+    await screen.findByText("Your access to this clinic has been turned off."),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("app")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  expect(h.signOut).toHaveBeenCalled();
+});
+
+it("shows the inactive-clinic screen for every member, owner included", async () => {
+  h.getMembership.mockResolvedValueOnce({
+    superadmin: false,
+    clinicId: "c1",
+    owner: true,
+    inactive: "clinic",
+  });
+  renderGuard(new QueryClient());
+  expect(await screen.findByText("This clinic is inactive.")).toBeInTheDocument();
+  expect(screen.queryByText("app")).toBeNull();
+});

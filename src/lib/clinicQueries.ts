@@ -11,6 +11,8 @@ export interface Clinic {
   createdAt: number;
   ownerEmail?: string;
   timeZone?: string;
+  /** False when the superadmin turned the clinic off; listClinics always sets it. */
+  active?: boolean;
 }
 
 export async function getClinic(id: string): Promise<Clinic | null> {

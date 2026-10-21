@@ -22,6 +22,8 @@ export type Membership = {
   superadmin: boolean;
   clinicId: string | null;
   owner: boolean;
+  /** Set when the superadmin turned off this user or their whole clinic. */
+  inactive?: "user" | "clinic";
 };
 
 const isDenied = (err: unknown) =>
@@ -43,18 +45,24 @@ export async function getMembership(user: User): Promise<Membership | null> {
     if (!snap.exists()) return null;
     const clinicId = snap.data()?.clinicId;
     if (typeof clinicId !== "string" || !clinicId) return null;
+    const userInactive = snap.data()?.active === false;
     let owner = false;
+    let clinicInactive = false;
     try {
       const clinicSnap = await getDoc(doc(db, CLINICS, clinicId));
       const ownerEmail = clinicSnap.data()?.ownerEmail;
       owner =
         typeof ownerEmail === "string" &&
         normalizeEmail(ownerEmail) === normalizeEmail(user.email);
+      clinicInactive = clinicSnap.data()?.active === false;
     } catch (err) {
       // A denied clinic read just means not owner; anything else is transient.
       if (!isDenied(err)) throw err;
     }
-    return { superadmin: false, clinicId, owner };
+    const m: Membership = { superadmin: false, clinicId, owner };
+    if (userInactive) m.inactive = "user";
+    else if (clinicInactive) m.inactive = "clinic";
+    return m;
   } catch (err) {
     // Rules deny the read for unverified accounts — treat as no access.
     if (isDenied(err)) return null;

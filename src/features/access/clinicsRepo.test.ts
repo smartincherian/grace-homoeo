@@ -43,6 +43,7 @@ describe("clinicsRepo", () => {
       name: "Alpha",
       createdAt: 1,
       ownerEmail: "o@x.com",
+      active: true,
     });
     expect(list[1].ownerEmail).toBeUndefined();
   });

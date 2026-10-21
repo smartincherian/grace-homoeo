@@ -14,6 +14,8 @@ export interface AllowedEmail {
   seat: string;
   addedAt: number;
   addedBy: string;
+  /** False when the superadmin turned this user off. */
+  active: boolean;
 }
 
 /** All allowed emails, alphabetically. */
@@ -28,6 +30,7 @@ export async function listAllowedEmails(): Promise<AllowedEmail[]> {
         seat: data.seat ?? "",
         addedAt: data.addedAt ?? 0,
         addedBy: data.addedBy ?? "",
+        active: data.active !== false,
       };
     })
     .sort((a, b) => a.email.localeCompare(b.email));

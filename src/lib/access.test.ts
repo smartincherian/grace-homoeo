@@ -61,6 +61,33 @@ describe("getMembership", () => {
   const allowed = { exists: () => true, data: () => ({ clinicId: "c1" }) };
   const clinicDoc = (ownerEmail?: string) => ({ data: () => ({ ownerEmail }) });
 
+  it("flags a user the superadmin made inactive", async () => {
+    getDoc
+      .mockResolvedValueOnce({
+        exists: () => true,
+        data: () => ({ clinicId: "c1", active: false }),
+      })
+      .mockResolvedValueOnce(clinicDoc("dr@clinic.com"));
+    expect(await getMembership(user("dr@clinic.com"))).toEqual({
+      superadmin: false,
+      clinicId: "c1",
+      owner: true,
+      inactive: "user",
+    });
+  });
+
+  it("flags an inactive clinic, owner included", async () => {
+    getDoc.mockResolvedValueOnce(allowed).mockResolvedValueOnce({
+      data: () => ({ ownerEmail: "dr@clinic.com", active: false }),
+    });
+    expect(await getMembership(user("dr@clinic.com"))).toEqual({
+      superadmin: false,
+      clinicId: "c1",
+      owner: true,
+      inactive: "clinic",
+    });
+  });
+
   it("is owner when the clinic ownerEmail matches the normalized email", async () => {
     getDoc
       .mockResolvedValueOnce(allowed)

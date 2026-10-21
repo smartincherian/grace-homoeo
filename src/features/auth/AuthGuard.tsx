@@ -55,5 +55,22 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
       </Box>
     );
   }
+  if (user && access.data?.inactive) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 8, px: 2 }}>
+        <Typography variant="h2" sx={{ fontSize: 20, fontWeight: 700, mb: 1 }}>
+          {access.data.inactive === "clinic"
+            ? "This clinic is inactive."
+            : "Your access to this clinic has been turned off."}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 3 }}>
+          Please contact the administrator to turn it back on.
+        </Typography>
+        <Button variant="contained" onClick={() => void signOut(auth)}>
+          Sign out
+        </Button>
+      </Box>
+    );
+  }
   return user && !denied ? <>{children}</> : <Navigate to="/login" replace />;
 }

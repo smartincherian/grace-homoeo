@@ -27,6 +27,7 @@ export async function listClinics(): Promise<Clinic[]> {
         createdAt: data.createdAt ?? 0,
         ownerEmail:
           typeof data.ownerEmail === "string" ? data.ownerEmail : undefined,
+        active: data.active !== false,
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

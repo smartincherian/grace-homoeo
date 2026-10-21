@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClinic, listClinics } from "./clinicsRepo";
+import { deleteClinic, setClinicActive, setUserActive } from "./clinicAdminRepo";
 
 export function useClinics() {
   return useQuery({ queryKey: ["clinics"], queryFn: listClinics });
@@ -20,6 +21,36 @@ export function useCreateClinic() {
       addedBy: string;
     }) => createClinic(id, name, ownerEmail, addedBy),
     onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["clinics"] });
+      void qc.invalidateQueries({ queryKey: ["allowedEmails"] });
+    },
+  });
+}
+
+export function useSetClinicActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
+      setClinicActive(id, active),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["clinics"] }),
+  });
+}
+
+export function useSetUserActive() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ email, active }: { email: string; active: boolean }) =>
+      setUserActive(email, active),
+    onSettled: () => void qc.invalidateQueries({ queryKey: ["allowedEmails"] }),
+  });
+}
+
+/** Deletes a clinic and all its data; `onStep` names the collection being cleared. */
+export function useDeleteClinic(onStep?: (step: string) => void) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteClinic(id, onStep),
+    onSettled: () => {
       void qc.invalidateQueries({ queryKey: ["clinics"] });
       void qc.invalidateQueries({ queryKey: ["allowedEmails"] });
     },
