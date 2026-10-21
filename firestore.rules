@@ -13,17 +13,24 @@ service cloud.firestore {
     function allowed() {
       return signedIn() && verified() && (
         superadmin()
-        || exists(/databases/$(database)/documents/allowedEmails/$(authEmail()))
+        || (exists(/databases/$(database)/documents/allowedEmails/$(authEmail()))
+            && entryActive())
       );
+    }
+    // A user the superadmin made inactive keeps their entry and seat but has no access.
+    function entryActive() {
+      return get(/databases/$(database)/documents/allowedEmails/$(authEmail())).data.get('active', true) == true;
     }
     // The caller's clinic, from their allow-list entry ('' when unassigned).
     function myClinic() {
       return get(/databases/$(database)/documents/allowedEmails/$(authEmail())).data.get('clinicId', '');
     }
-    function member(clinicId) {
-      return superadmin() || (allowed() && myClinic() == clinicId);
-    }
     function clinicData(c) { return get(/databases/$(database)/documents/clinics/$(c)).data; }
+    // An inactive clinic blocks all its members (the owner too); the superadmin keeps access.
+    function clinicActive(c) { return clinicData(c).get('active', true) == true; }
+    function member(clinicId) {
+      return superadmin() || (allowed() && myClinic() == clinicId && clinicActive(clinicId));
+    }
     function owner(c) { return member(c) && clinicData(c).get('ownerEmail', '') == authEmail(); }
     // Who may add/remove a clinic's users: the superadmin or that clinic's owner.
     function manager(c) { return superadmin() || owner(c); }
@@ -120,18 +127,26 @@ service cloud.firestore {
         && request.resource.data.email == email
         && request.resource.data.seat in ['1', '2', '3']
         && seatAfterIs(request.resource.data.clinicId, request.resource.data.seat, email);
-      allow update: if false;
-      allow delete: if superadmin() && resource.data.get('clinicId', '') == '';
+      // Only the superadmin turns a user's access off or on.
+      allow update: if superadmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active'])
+        && request.resource.data.active is bool;
+      allow delete: if superadmin();
       allow delete: if manager(resource.data.clinicId)
         && !seatAfterIs(resource.data.clinicId, resource.data.get('seat', '0'), email);
     }
 
     // Each clinic's data lives under clinics/{clinicId}; members see only their own.
     match /clinics/{clinicId} {
-      allow get: if member(clinicId);
+      // Its own users may read the clinic doc even when inactive, to see why.
+      allow get: if superadmin()
+        || (signedIn() && verified()
+            && exists(/databases/$(database)/documents/allowedEmails/$(authEmail()))
+            && myClinic() == clinicId);
       allow list: if superadmin();
       // ownerEmail, when set, must name a user allow-listed into this clinic.
       allow create, update: if superadmin()
+        && (!('active' in request.resource.data) || request.resource.data.active is bool)
         && (!('ownerEmail' in request.resource.data)
             || entryAfterIs(request.resource.data.ownerEmail, clinicId,
                  getAfter(/databases/$(database)/documents/allowedEmails/$(request.resource.data.ownerEmail)).data.seat));
@@ -146,6 +161,8 @@ service cloud.firestore {
           && request.resource.data.email != SUPER()
           && entryAfterIs(request.resource.data.email, clinicId, seatId);
         allow update: if false;
+        // The superadmin may clear any seat (deleting a whole clinic).
+        allow delete: if superadmin();
         allow delete: if manager(clinicId)
           && resource.data.email != getAfter(/databases/$(database)/documents/clinics/$(clinicId)).data.get('ownerEmail', '')
           && !entryAfterIs(resource.data.email, clinicId, seatId);
@@ -176,7 +193,9 @@ service cloud.firestore {
           && request.resource.data.date == resource.data.date
           && request.resource.data.createdAt == resource.data.createdAt
           && request.resource.data.createdBy == resource.data.createdBy;
-        // Closing needs its history copy written in the same batch.
+        // Closing needs its history copy written in the same batch; the
+        // superadmin may delete outright (deleting a whole clinic).
+        allow delete: if superadmin();
         allow delete: if member(clinicId)
           && existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/appointmentHistory/$(apptId + '_' + string(resource.data.createdAt)));
       }
@@ -187,7 +206,8 @@ service cloud.firestore {
           && validClosed(request.resource.data)
           && id == string(request.resource.data.start) + '_' + string(request.resource.data.createdAt)
           && !existsAfter(/databases/$(database)/documents/clinics/$(clinicId)/appointments/$(string(request.resource.data.start)));
-        allow update, delete: if false;
+        allow update: if false;
+        allow delete: if superadmin();
       }
 
       // Staff, leave and salary data is owner/superadmin only (not in memberSubs).

@@ -703,3 +703,96 @@ describe("bookings", () => {
     });
   });
 });
+
+describe("inactive clinics and users", () => {
+  const setFlag = (path: string, active: boolean) =>
+    env.withSecurityRulesDisabled((ctx) =>
+      updateDoc(doc(ctx.firestore(), path), { active }),
+    );
+
+  it("an inactive clinic blocks its members, owner included", async () => {
+    await setFlag("clinics/c1", false);
+    for (const email of ["a@x.com", "o@x.com"]) {
+      const db = dbFor(email);
+      await assertFails(getDoc(doc(db, "clinics/c1/patients/p1")));
+      await assertFails(setDoc(doc(db, "clinics/c1/patients/p9"), { name: "N" }));
+      await assertFails(getDoc(doc(db, "clinics/c1/seats/1")));
+      // ...but they can still read the clinic doc to learn why.
+      await assertSucceeds(getDoc(doc(db, "clinics/c1")));
+    }
+    await assertSucceeds(getDoc(doc(dbFor(SUPER), "clinics/c1/patients/p1")));
+    // Another clinic is unaffected.
+    await assertSucceeds(getDoc(doc(dbFor("t@x.com"), "clinics/c2/patients/p2")));
+  });
+
+  it("making the clinic active again restores access", async () => {
+    await setFlag("clinics/c1", false);
+    await setFlag("clinics/c1", true);
+    await assertSucceeds(getDoc(doc(dbFor("a@x.com"), "clinics/c1/patients/p1")));
+  });
+
+  it("an inactive user is blocked while the rest of the clinic works", async () => {
+    await setFlag("allowedEmails/a@x.com", false);
+    const a = dbFor("a@x.com");
+    await assertFails(getDoc(doc(a, "clinics/c1/patients/p1")));
+    await assertFails(getDoc(doc(a, "clinics/c1/seats/1")));
+    // The clinic doc (name, owner) stays readable; it holds no clinic data.
+    await assertSucceeds(getDoc(doc(a, "clinics/c1")));
+    // They can still read their own entry, so the app can explain.
+    await assertSucceeds(getDoc(doc(a, "allowedEmails/a@x.com")));
+    await assertSucceeds(getDoc(doc(dbFor("o@x.com"), "clinics/c1/patients/p1")));
+  });
+
+  it("only the superadmin toggles active, and only that field", async () => {
+    const s = dbFor(SUPER);
+    await assertSucceeds(updateDoc(doc(s, "allowedEmails/a@x.com"), { active: false }));
+    await assertFails(updateDoc(doc(s, "allowedEmails/a@x.com"), { active: "no" }));
+    await assertFails(updateDoc(doc(s, "allowedEmails/a@x.com"), { clinicId: "c2" }));
+    await assertSucceeds(updateDoc(doc(s, "clinics/c1"), { active: false }));
+    await assertFails(updateDoc(doc(s, "clinics/c1"), { active: "no" }));
+    const o = dbFor("o@x.com");
+    await assertFails(updateDoc(doc(o, "allowedEmails/a@x.com"), { active: false }));
+    await assertFails(updateDoc(doc(o, "clinics/c1"), { active: false }));
+    await assertFails(updateDoc(doc(o, "allowedEmails/o@x.com"), { active: true }));
+  });
+});
+
+describe("superadmin deleting a whole clinic", () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, "clinics/c1/appointments/1"), { start: 1, createdAt: 1 });
+      await setDoc(doc(db, "clinics/c1/appointments/2"), { start: 2, createdAt: 2 });
+      await setDoc(doc(db, "clinics/c1/appointmentHistory/1_1"), { start: 1 });
+      await setDoc(doc(db, "clinics/c1/staff/s1"), { name: "S" });
+      await setDoc(doc(db, "clinics/c1/settings/branding"), { displayName: "" });
+    });
+  });
+
+  it("the superadmin deletes every part of the clinic", async () => {
+    const s = dbFor(SUPER);
+    for (const p of [
+      "clinics/c1/patients/p1",
+      "clinics/c1/appointments/1",
+      "clinics/c1/appointmentHistory/1_1",
+      "clinics/c1/staff/s1",
+      "clinics/c1/settings/branding",
+      "clinics/c1/seats/1",
+      "clinics/c1/seats/2",
+      "allowedEmails/o@x.com",
+      "allowedEmails/a@x.com",
+      "clinics/c1",
+    ]) {
+      await assertSucceeds(deleteDoc(doc(s, p)));
+    }
+  });
+
+  it("members and owners still can't delete history, appointments outright or the owner's seat", async () => {
+    await assertFails(deleteDoc(doc(dbFor("a@x.com"), "clinics/c1/appointmentHistory/1_1")));
+    // No history doc 2_2, so a member can't just delete appointment 2.
+    await assertFails(deleteDoc(doc(dbFor("a@x.com"), "clinics/c1/appointments/2")));
+    await assertFails(deleteDoc(doc(dbFor("o@x.com"), "clinics/c1/seats/1")));
+    await assertFails(deleteDoc(doc(dbFor("o@x.com"), "clinics/c1")));
+    await assertFails(deleteDoc(doc(dbFor("t@x.com"), "allowedEmails/a@x.com")));
+  });
+});
