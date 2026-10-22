@@ -42,6 +42,14 @@ describe("redactName", () => {
       "the patient has fever; the patient better",
     );
   });
+  it("handles hyphenated, accented, apostrophe and Malayalam names", () => {
+    expect(redactName("Mary complains; mary-ann ok", "Mary-Ann Thomas")).toBe(
+      "the patient complains; the patient ok",
+    );
+    expect(redactName("zoë has fever", "Zoë")).toBe("the patient has fever");
+    expect(redactName("D'Souza is better", "D'Souza")).toBe("the patient is better");
+    expect(redactName("അനു ക്ക് പനി", "അനു")).toBe("the patient ക്ക് പനി");
+  });
   it("does not redact inside other words or short words", () => {
     expect(redactName("continuous pain", "Anu")).toBe("continuous pain");
     expect(redactName("Al is ok", "Al B")).toBe("Al is ok");
@@ -52,13 +60,13 @@ describe("buildCaseRecord", () => {
   it("never includes excluded fields", () => {
     const r = buildCaseRecord(
       base({
-        patient: { name: "Ravi Kumar", dob: Date.UTC(1990, 0, 5), gender: "M", phone: "98400", place: "Kochi", serialNo: 77 } as never,
+        patient: { name: "Ravi Kumar", dob: Date.UTC(1990, 0, 5), gender: "M", phone: "98400", email: "ravi@example.com", place: "Kochi", serialNo: 77 } as never,
         consultations: [
-          { date: Date.UTC(2026, 2, 3), complaint: "Ravi has cough", amount: 500, paymentMode: "UPI", patientName: "Ravi Kumar", serialNo: 77 } as never,
+          { date: Date.UTC(2026, 2, 3), complaint: "Ravi has cough", amount: 500, paymentMode: "UPI", patientName: "Ravi Kumar", serialNo: 77, createdBy: "doc@clinic.com", id: "cons-abc", patientId: "pat-xyz" } as never,
         ],
       }),
     );
-    for (const s of ["98400", "Kochi", "77", "500", "UPI", "Ravi", "Kumar"]) {
+    for (const s of ["98400", "Kochi", "77", "500", "UPI", "Ravi", "Kumar", "doc@clinic.com", "cons-abc", "pat-xyz", "ravi@example.com", "createdBy"]) {
       expect(r.text).not.toContain(s);
     }
     expect(r.text).toContain("the patient has cough");

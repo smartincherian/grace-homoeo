@@ -32,13 +32,16 @@ export function featuresFor(type: ClinicType) {
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 export function redactName(text: string, name: string): string {
-  const full = name.trim().split(/\s+/).filter(Boolean);
-  const parts = full.filter((w) => w.replace(/[^\p{L}]/gu, "").length >= 3);
-  const alts = [...(full.length ? [full.map(escapeRe).join("\\s+")] : []), ...parts.map(escapeRe)];
-  if (parts.length === 0 && full.join(" ").length < 3) return text;
-  if (alts.length === 0) return text;
-  alts.sort((a, b) => b.length - a.length);
-  return text.replace(new RegExp(`\\b(?:${alts.join("|")})\\b`, "gi"), "the patient");
+  const trimmed = name.trim();
+  if (!trimmed) return text;
+  const parts = trimmed
+    .split(/[\s\-'\u2019]+/u)
+    .filter((w) => (w.match(/[\p{L}\p{M}]/gu) ?? []).length >= 3);
+  const full = trimmed.split(/\s+/u).map(escapeRe).join("\\s+");
+  const tokens = trimmed.split(/\s+/u).filter((w) => w.length >= 3);
+  const alts = [full, ...tokens.map(escapeRe), ...parts.map(escapeRe)].sort((x, y) => y.length - x.length);
+  const re = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])(?:${alts.join("|")})(?![\\p{L}\\p{M}\\p{N}])`, "giu");
+  return text.replace(re, "the patient");
 }
 
 function ymd(ms: number): { y: number; m: number; d: number } {
