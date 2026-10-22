@@ -1,5 +1,7 @@
 import { initializeApp, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { KeyManagementServiceClient } from "@google-cloud/kms";
+import { kmsCrypto, KMS_KEY } from "./crypto.js";
 
 export const SUPER = "smartin.cherian@gmail.com";
 
@@ -54,9 +56,13 @@ export function realDeps(): Deps {
       );
     },
   };
-  // Task 4 replaces this stub with the Cloud KMS client.
-  const notConfigured = async (): Promise<string> => {
-    throw new Error("KMS not configured");
+  // Created lazily so importing this module needs no credentials.
+  let client: KeyManagementServiceClient | undefined;
+  const project = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT ?? "";
+  const lazy = (): Deps["kms"] => kmsCrypto((client ??= new KeyManagementServiceClient()), KMS_KEY(project));
+  const kms: Deps["kms"] = {
+    encrypt: (plain, aad) => lazy().encrypt(plain, aad),
+    decrypt: (cipher, aad) => lazy().decrypt(cipher, aad),
   };
-  return { store, kms: { encrypt: notConfigured, decrypt: notConfigured }, fetch, now: Date.now };
+  return { store, kms, fetch, now: Date.now };
 }
