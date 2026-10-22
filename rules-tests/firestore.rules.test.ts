@@ -1043,3 +1043,69 @@ describe("trial & self-signup", () => {
     await assertFails(setDoc(doc(db, "clinics/ghost/seats/1"), { email: "new@x.com" }));
   });
 });
+
+describe("ai summary", () => {
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const db = ctx.firestore();
+      await setDoc(doc(db, "aiSecrets/c1"), { k: "secret" });
+      await setDoc(doc(db, "aiUsage/c1"), { n: 1 });
+      await setDoc(doc(db, "clinics/c1/settings/ai"), { configured: true });
+      await setDoc(doc(db, "clinics/c1/patientSummaries/p1"), { text: "s" });
+      await setDoc(doc(db, "clinics/ex"), {
+        name: "E",
+        ownerEmail: "e@x.com",
+        trialEndsAt: Date.now() - 1,
+        authorized: false,
+      });
+      await setDoc(doc(db, "clinics/ex/seats/1"), { email: "e@x.com" });
+      await setDoc(doc(db, "allowedEmails/e@x.com"), {
+        email: "e@x.com",
+        clinicId: "ex",
+        seat: "1",
+      });
+      await setDoc(doc(db, "clinics/ex/patientSummaries/p1"), { text: "s" });
+    });
+  });
+
+  it.each([SUPER, "o@x.com", "a@x.com"])(
+    "%s cannot read or write aiSecrets / aiUsage",
+    async (email) => {
+      const db = dbFor(email);
+      for (const col of ["aiSecrets", "aiUsage"]) {
+        await assertFails(getDoc(doc(db, `${col}/c1`)));
+        await assertFails(setDoc(doc(db, `${col}/c1`), { x: 1 }));
+      }
+    },
+  );
+
+  it("a member reads settings/ai; nobody writes it", async () => {
+    await assertSucceeds(getDoc(doc(dbFor("a@x.com"), "clinics/c1/settings/ai")));
+    await assertFails(
+      setDoc(doc(dbFor("a@x.com"), "clinics/c1/settings/ai"), { configured: false }),
+    );
+    await assertFails(
+      setDoc(doc(dbFor("o@x.com"), "clinics/c1/settings/ai"), { configured: false }),
+    );
+  });
+
+  it("a member reads, cannot create/update, and can delete a summary", async () => {
+    const a = dbFor("a@x.com");
+    await assertSucceeds(getDoc(doc(a, "clinics/c1/patientSummaries/p1")));
+    await assertFails(setDoc(doc(a, "clinics/c1/patientSummaries/p9"), { text: "n" }));
+    await assertFails(updateDoc(doc(a, "clinics/c1/patientSummaries/p1"), { text: "n" }));
+    await assertSucceeds(deleteDoc(doc(a, "clinics/c1/patientSummaries/p1")));
+  });
+
+  it("another clinic's member cannot read a summary", async () => {
+    await assertFails(getDoc(doc(dbFor("t@x.com"), "clinics/c1/patientSummaries/p1")));
+  });
+
+  it("the superadmin can delete a summary", async () => {
+    await assertSucceeds(deleteDoc(doc(dbFor(SUPER), "clinics/c1/patientSummaries/p1")));
+  });
+
+  it("an expired-trial member cannot delete a summary", async () => {
+    await assertFails(deleteDoc(doc(dbFor("e@x.com"), "clinics/ex/patientSummaries/p1")));
+  });
+});

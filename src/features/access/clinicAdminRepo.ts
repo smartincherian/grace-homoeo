@@ -32,6 +32,7 @@ export const CLINIC_COLLECTIONS = [
   "staff",
   "leaves",
   "salaryPayments",
+  "patientSummaries",
   "settings",
   "seats",
 ] as const;

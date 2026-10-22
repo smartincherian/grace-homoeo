@@ -81,6 +81,7 @@ describe("clinicAdminRepo", () => {
         "leaves",
         "lsmc",
         "orderItems",
+        "patientSummaries",
         "patients",
         "salaryPayments",
         "seats",

@@ -131,6 +131,7 @@ export async function deletePatient(id: string): Promise<void> {
   );
   const refs: DocumentReference[] = [
     ...owned.flatMap((snap) => snap.docs.map((d) => d.ref)),
+    clinicDoc("patientSummaries", id, clinic),
     // Patient last, so a partial failure never leaves visits without a patient.
     clinicDoc(COLLECTION, id, clinic),
   ];

@@ -304,6 +304,13 @@ service cloud.firestore {
           && request.resource.data.adjustment is int;
       }
 
+      // AI patient summaries are written by Cloud Functions only (Admin SDK).
+      match /patientSummaries/{patientId} {
+        allow read: if member(clinicId);
+        allow create, update: if false;
+        allow delete: if superadmin() || (member(clinicId) && canWrite(clinicId));
+      }
+
       // {sub}/{document=**} needs at least one segment, so this does not match
       // the clinic doc itself (a bare {document=**} also matches zero segments
       // and would let members rewrite or delete their own clinic doc).
@@ -311,6 +318,14 @@ service cloud.firestore {
         allow read: if sub in memberSubs() && member(clinicId);
         allow write: if sub in memberSubs() && member(clinicId) && canWrite(clinicId);
       }
+    }
+
+    // AI keys and usage are touched by Cloud Functions only; clients get nothing.
+    match /aiSecrets/{id} {
+      allow read, write: if false;
+    }
+    match /aiUsage/{id} {
+      allow read, write: if false;
     }
 
     match /users/{uid} {

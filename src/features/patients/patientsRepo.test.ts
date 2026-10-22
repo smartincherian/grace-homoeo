@@ -175,6 +175,15 @@ describe("deletePatient", () => {
     });
   });
 
+  it("deletePatient also deletes the patient's summary", async () => {
+    getDocs.mockResolvedValue({ docs: [] });
+    commit.mockResolvedValue(undefined);
+    await deletePatient("p1");
+    expect(batchDelete).toHaveBeenCalledWith({
+      path: "clinics/c1/patientSummaries/p1",
+    });
+  });
+
   it("deletes the patient's consultations, case record and the patient", async () => {
     getDocs
       .mockResolvedValueOnce({ docs: [{ ref: "c1" }, { ref: "c2" }] })
@@ -197,6 +206,7 @@ describe("deletePatient", () => {
       "c2",
       "g1",
       "l1",
+      { path: "clinics/c1/patientSummaries/p1" },
       { path: "clinics/c1/patients/p1" },
     ]);
     expect(commit).toHaveBeenCalledTimes(1);
