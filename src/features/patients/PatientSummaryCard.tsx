@@ -75,7 +75,7 @@ export default function PatientSummaryCard({
           alignItems: "center",
           justifyContent: "space-between",
           gap: 1.5,
-          mb: summary || !configured ? 1.25 : 0,
+          mb: summary || !configured || aiStatus.isError ? 1.25 : 0,
         }}
       >
         <Typography sx={{ fontSize: 18, fontWeight: 800 }}>
