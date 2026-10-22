@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "emulators": "firebase emulators:start --only firestore,auth",
-    "release": "npm run build && firebase deploy --only firestore:rules,hosting",
+    "release": "npm run build && npm --prefix functions run build && firebase deploy --only functions,firestore:rules,hosting",
+    "test:functions": "npm --prefix functions test",
     "test:rules": "firebase emulators:exec --only firestore --project demo-grace \"vitest run --config vitest.rules.config.ts\"",
     "migrate:clinics": "node scripts/migrate-to-clinics.mjs",
     "backfill:seats": "node scripts/backfill-seats.mjs"
