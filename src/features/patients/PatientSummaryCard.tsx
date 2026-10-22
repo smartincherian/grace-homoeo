@@ -40,10 +40,10 @@ export default function PatientSummaryCard({
     clinicStatus(clinic, Date.now()).kind === "expired";
   const aiStatus = useAiStatus(clinicSlug);
   const configured = !!aiStatus.data?.configured;
-  const summaryQuery = usePatientSummary(patientId);
+  const summaryQuery = usePatientSummary(clinicSlug, patientId);
   const summary = summaryQuery.data ?? null;
   const loading = aiStatus.isLoading || summaryQuery.isLoading;
-  const summarize = useSummarizePatient(patientId);
+  const summarize = useSummarizePatient(clinicSlug as string, patientId);
 
   const run = () =>
     summarize.mutate(undefined, {
@@ -81,9 +81,16 @@ export default function PatientSummaryCard({
         <Typography sx={{ fontSize: 18, fontWeight: 800 }}>
           AI summary
         </Typography>
-        {!loading &&
-          configured &&
-          (summary ? button("Re-run") : button("Summarize"))}
+        {!loading && configured && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {expired && (
+              <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                The clinic's trial has ended.
+              </Typography>
+            )}
+            {summary ? button("Re-run") : button("Summarize")}
+          </Box>
+        )}
       </Box>
 
       {summary && (
@@ -115,7 +122,13 @@ export default function PatientSummaryCard({
         </>
       )}
 
-      {!loading && !configured && (
+      {aiStatus.isError && (
+        <Typography sx={{ fontSize: 14, color: "text.secondary" }}>
+          Couldn't load AI summary settings.
+        </Typography>
+      )}
+
+      {!loading && !configured && !aiStatus.isError && (
         <Typography
           sx={{ fontSize: 14, color: "text.secondary", mt: summary ? 1.25 : 0 }}
         >

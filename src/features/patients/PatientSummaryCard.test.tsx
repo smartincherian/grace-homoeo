@@ -9,6 +9,7 @@ const st = vi.hoisted(() => ({
   summary: null as null | Record<string, unknown>,
   pending: false,
   aiLoading: false,
+  aiError: false,
   sumLoading: false,
   owner: false,
   expired: false,
@@ -18,8 +19,9 @@ const st = vi.hoisted(() => ({
 
 vi.mock("../../lib/aiSummary", () => ({
   useAiStatus: () => ({
-    data: st.aiLoading ? undefined : { configured: st.configured },
+    data: st.aiLoading || st.aiError ? undefined : { configured: st.configured },
     isLoading: st.aiLoading,
+    isError: st.aiError,
   }),
   usePatientSummary: () => ({
     data: st.sumLoading ? undefined : st.summary,
@@ -75,6 +77,7 @@ beforeEach(() => {
     summary: null,
     pending: false,
     aiLoading: false,
+    aiError: false,
     sumLoading: false,
     owner: false,
     expired: false,
@@ -166,6 +169,25 @@ describe("PatientSummaryCard", () => {
     renderCard();
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Re-run" })).toBeDisabled();
+  });
+
+  it("shows a hint next to the disabled button when the trial ended", () => {
+    st.expired = true;
+    renderCard();
+    expect(screen.getByRole("button", { name: "Summarize" })).toBeDisabled();
+    expect(screen.getByText("The clinic's trial has ended.")).toBeInTheDocument();
+  });
+
+  it("no trial hint while the trial is running", () => {
+    renderCard();
+    expect(screen.queryByText("The clinic's trial has ended.")).toBeNull();
+  });
+
+  it("says settings could not load, not that AI is off, when the status errored", () => {
+    st.aiError = true;
+    renderCard();
+    expect(screen.getByText("Couldn't load AI summary settings.")).toBeInTheDocument();
+    expect(screen.queryByText(/AI summary is off/)).toBeNull();
   });
 
   it("shows the summary without Re-run if the key was removed", () => {

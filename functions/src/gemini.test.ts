@@ -51,6 +51,11 @@ describe("gemini client", () => {
     expect(calls[0].init.method).toBe("GET");
   });
 
+  it("accepts a single bullet (thin record)", async () => {
+    const { f } = fake(() => okBody(bullets(1)));
+    expect(await generateBullets(f, KEY, "s", "r")).toHaveLength(1);
+  });
+
   it("returns trimmed bullets", async () => {
     const { f } = fake(() => okBody(JSON.stringify({ bullets: ["  a ", "b", " c"] })));
     expect(await generateBullets(f, KEY, "s", "r")).toEqual(["a", "b", "c"]);
@@ -76,9 +81,9 @@ describe("gemini client", () => {
     ["empty candidates", () => new Response(JSON.stringify({ candidates: [] }), { status: 200 })],
     ["blockReason", () => new Response(JSON.stringify({ promptFeedback: { blockReason: "SAFETY" } }), { status: 200 })],
     ["non-JSON", () => okBody("not json")],
-    ["2 bullets", () => okBody(bullets(2))],
+    ["0 bullets", () => okBody(bullets(0))],
     ["9 bullets", () => okBody(bullets(9))],
-    ["301 chars", () => okBody(bullets(3, 301))],
+    ["301 chars", () => okBody(bullets(1, 301))],
     ["empty bullet", () => okBody(JSON.stringify({ bullets: ["a", "b", "  "] }))],
   ];
   for (const [name, res] of bad) {

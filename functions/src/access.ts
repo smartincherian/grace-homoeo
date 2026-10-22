@@ -12,7 +12,7 @@ export interface ClinicInfo {
   ownerEmail: string;
 }
 
-const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+export const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DENIED = "You don't have access to this clinic.";
 
 /** Mirrors the Firestore rules (member, entryActive, clinicActive, owner, trialOk) for callables. */

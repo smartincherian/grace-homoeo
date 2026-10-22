@@ -4,6 +4,7 @@ import { onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
 import { realDeps, type Deps } from "./deps.js";
 import * as h from "./handlers.js";
+import { safeClinicId, safePatientId } from "./logIds.js";
 
 setGlobalOptions({ region: "asia-south1", maxInstances: 5 });
 
@@ -19,8 +20,8 @@ async function run<T>(
   fn: () => Promise<T>,
 ): Promise<T> {
   const ids = {
-    clinicId: typeof data?.clinicId === "string" ? data.clinicId : undefined,
-    patientId: typeof data?.patientId === "string" ? data.patientId : undefined,
+    clinicId: safeClinicId(data?.clinicId),
+    patientId: safePatientId(data?.patientId),
   };
   try {
     const res = await fn();

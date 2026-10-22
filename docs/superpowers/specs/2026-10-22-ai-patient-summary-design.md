@@ -98,7 +98,7 @@ For `write`, `trialOk` applies (authorized, or no `trialEndsAt`, or
 - Encrypt with `additionalAuthenticatedData = clinicId`, so a ciphertext copied
   to another clinic's doc fails to decrypt.
 - Stored at top-level `aiSecrets/{clinicId}`:
-  `{ provider: "gemini", ciphertext (base64), kmsKeyVersion, updatedAt, updatedBy }`.
+  `{ provider: "gemini", ciphertext (base64), updatedAt, updatedBy }`.
   Rules: `allow read, write: if false;`. Only the Admin SDK touches it.
 - The plaintext key lives only in function memory for one request. It is never
   logged, returned or put in an error. Gemini calls send it in the
@@ -123,7 +123,7 @@ confirm this.
   using plain `fetch` (no SDK needed). `generationConfig`: `temperature 0.2`,
   `maxOutputTokens ~600`, `responseMimeType: "application/json"`, and
   `responseSchema` `{ bullets: string[] }`. Timeout 30 s (AbortController).
-- The result is validated with zod: 3–8 bullets, each 1–300 chars, trimmed. If it
+- The result is validated with zod: 1–8 bullets, each 1–300 chars, trimmed. If it
   fails, return "The summary couldn't be generated, try again" and write
   nothing.
 - Error mapping: 400/401/403 from Gemini → "The clinic's Gemini key was

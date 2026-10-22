@@ -28,7 +28,7 @@ export interface SummaryDoc {
 
 const GENERIC = "The summary couldn't be generated, try again.";
 const BAD_KEY = "That doesn't look like a Gemini API key.";
-const PATIENT_ID = /^[A-Za-z0-9_-]{1,128}$/;
+export const PATIENT_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 type Data = Record<string, unknown> | undefined | null;
 const field = (data: Data, k: string): unknown => (data && typeof data === "object" ? data[k] : undefined);

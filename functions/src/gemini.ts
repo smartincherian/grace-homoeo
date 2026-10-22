@@ -7,7 +7,7 @@ const TIMEOUT_MS = 30_000;
 const GENERIC = "The summary couldn't be generated, try again.";
 
 const outputSchema = z.object({
-  bullets: z.array(z.string().trim().min(1).max(300)).min(3).max(8),
+  bullets: z.array(z.string().trim().min(1).max(300)).min(1).max(8),
 });
 
 export function mapGeminiStatus(status: number, context: "save" | "summarize"): HttpsError {

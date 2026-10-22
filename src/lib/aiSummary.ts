@@ -9,7 +9,7 @@ import {
 import { getDoc } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { z } from "zod";
-import { clinicDoc, getActiveClinic } from "./clinic";
+import { clinicDoc } from "./clinic";
 import { functions } from "./firebase";
 import { notifyWriteDenied } from "./writeDenied";
 
@@ -40,12 +40,16 @@ export type PatientSummary = z.infer<typeof patientSummarySchema>;
 const GENERIC = "Something went wrong, try again.";
 
 export function aiErrorMessage(err: unknown): string {
-  if (
-    err instanceof Error &&
-    typeof (err as { code?: unknown }).code === "string" &&
-    err.message
-  ) {
-    return err.message;
+  if (err instanceof Error) {
+    const code = (err as { code?: unknown }).code;
+    // A bare code as the message ("internal") means a network/CORS failure.
+    if (
+      typeof code === "string" &&
+      err.message &&
+      err.message !== code.replace(/^functions\//, "")
+    ) {
+      return err.message;
+    }
   }
   return GENERIC;
 }
@@ -106,35 +110,42 @@ export function useRemoveAiKey(
 }
 
 export function usePatientSummary(
+  clinicId: string | undefined,
   patientId: string | undefined,
 ): UseQueryResult<PatientSummary | null> {
-  const clinic = getActiveClinic();
   return useQuery({
-    queryKey: ["patientSummary", clinic, patientId],
+    queryKey: ["patientSummary", clinicId, patientId],
     queryFn: async () => {
       const snap = await getDoc(
-        clinicDoc("patientSummaries", patientId as string, clinic),
+        clinicDoc("patientSummaries", patientId as string, clinicId as string),
       );
       return snap.exists() ? patientSummarySchema.parse(snap.data()) : null;
     },
-    enabled: !!patientId,
+    enabled: !!clinicId && !!patientId,
   });
 }
 
 export function useSummarizePatient(
+  clinicId: string,
   patientId: string,
 ): UseMutationResult<PatientSummary, Error, void> {
   const qc = useQueryClient();
-  const clinic = getActiveClinic();
   return useMutation<PatientSummary, Error, void>({
     mutationFn: async () => {
       const res = await httpsCallable(
         functions,
         "summarizePatient",
-      )({ clinicId: clinic, patientId });
+      )({ clinicId, patientId });
       return patientSummarySchema.parse(res.data);
     },
-    onSuccess: (s) => qc.setQueryData(["patientSummary", clinic, patientId], s),
-    onError: notifyIfTrialEnded,
+    onSuccess: (s) => qc.setQueryData(["patientSummary", clinicId, patientId], s),
+    onError: (err) => {
+      notifyIfTrialEnded(err);
+      const reason = (err as { details?: { reason?: string } } | null)?.details
+        ?.reason;
+      if (reason === "no-key" || reason === "key-rejected") {
+        void qc.invalidateQueries({ queryKey: ["aiStatus", clinicId] });
+      }
+    },
   });
 }

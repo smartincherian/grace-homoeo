@@ -24,6 +24,7 @@ import {
   aiStatusSchema,
   useAiStatus,
   useRemoveAiKey,
+  usePatientSummary,
   useSaveAiKey,
   useSummarizePatient,
 } from "./aiSummary";
@@ -120,7 +121,7 @@ describe("aiSummary", () => {
   it("useSummarizePatient calls summarizePatient with { clinicId, patientId } and sets summary data", async () => {
     callable.mockResolvedValue({ data: summary });
     const { wrapper, qc } = wrap();
-    const { result } = renderHook(() => useSummarizePatient("p1"), { wrapper });
+    const { result } = renderHook(() => useSummarizePatient("c1", "p1"), { wrapper });
     await act(() => result.current.mutateAsync());
     expect(httpsCallable).toHaveBeenCalledWith({ fake: true }, "summarizePatient");
     expect(callable).toHaveBeenCalledWith({ clinicId: "c1", patientId: "p1" });
@@ -129,7 +130,7 @@ describe("aiSummary", () => {
 
   it("trial-ended error triggers notifyWriteDenied; permission-denied does not", async () => {
     const { wrapper } = wrap();
-    const { result } = renderHook(() => useSummarizePatient("p1"), { wrapper });
+    const { result } = renderHook(() => useSummarizePatient("c1", "p1"), { wrapper });
     callable.mockRejectedValueOnce(
       Object.assign(new Error("Trial ended"), {
         code: "functions/failed-precondition",
@@ -144,6 +145,51 @@ describe("aiSummary", () => {
     );
     await act(() => result.current.mutateAsync().catch(() => undefined));
     expect(notifyWriteDenied).toHaveBeenCalledTimes(1);
+  });
+
+  it("usePatientSummary reads the summary doc and stays idle without a clinic", async () => {
+    getDoc.mockResolvedValue({ exists: () => true, data: () => summary });
+    const { wrapper } = wrap();
+    const { result } = renderHook(() => usePatientSummary("c1", "p1"), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(summary);
+    getDoc.mockClear();
+    const idle = renderHook(() => usePatientSummary(undefined, "p1"), { wrapper });
+    expect(idle.result.current.fetchStatus).toBe("idle");
+    expect(getDoc).not.toHaveBeenCalled();
+  });
+
+  it("hooks do not need an active clinic", () => {
+    setActiveClinic("");
+    const { wrapper } = wrap();
+    expect(() => renderHook(() => usePatientSummary("c1", "p1"), { wrapper })).not.toThrow();
+    expect(() => renderHook(() => useSummarizePatient("c1", "p1"), { wrapper })).not.toThrow();
+  });
+
+  it.each(["no-key", "key-rejected"])("%s error invalidates the AI status", async (reason) => {
+    const { wrapper, qc } = wrap();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useSummarizePatient("c1", "p1"), { wrapper });
+    callable.mockRejectedValueOnce(
+      Object.assign(new Error("x"), { code: "functions/failed-precondition", details: { reason } }),
+    );
+    await act(() => result.current.mutateAsync().catch(() => undefined));
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["aiStatus", "c1"] });
+  });
+
+  it("other errors do not invalidate the AI status", async () => {
+    const { wrapper, qc } = wrap();
+    const spy = vi.spyOn(qc, "invalidateQueries");
+    const { result } = renderHook(() => useSummarizePatient("c1", "p1"), { wrapper });
+    callable.mockRejectedValueOnce(Object.assign(new Error("x"), { code: "functions/internal" }));
+    await act(() => result.current.mutateAsync().catch(() => undefined));
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("aiErrorMessage hides a bare error code", () => {
+    expect(aiErrorMessage(Object.assign(new Error("internal"), { code: "functions/internal" }))).toBe(
+      "Something went wrong, try again.",
+    );
   });
 
   it("aiErrorMessage returns the callable message", () => {

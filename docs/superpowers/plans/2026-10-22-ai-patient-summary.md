@@ -17,7 +17,7 @@
 - KMS encryption uses `additionalAuthenticatedData = Buffer.from(clinicId)`.
 - Never sent to Gemini: `name, nameLower, phone, place, serialNo, amount, paymentMode`, any IDs, emails.
 - Caps: latest 30 consultations, 50 LSMC rows, ~40,000 prompt characters (drop the oldest consultations first).
-- Output: 3–8 bullets, each 1–300 chars after trim. Gemini `temperature 0.2`, `maxOutputTokens 600`, JSON with schema `{ bullets: string[] }`, 30 s timeout.
+- Output: 1–8 bullets, each 1–300 chars after trim. Gemini `temperature 0.2`, `maxOutputTokens 600`, JSON with schema `{ bullets: string[] }`, 30 s timeout.
 - Rate limit per clinic: 30/hour, 200/day. The same patient can't be re-run within 20 s.
 - Superadmin email `smartin.cherian@gmail.com`: exempt from trial and owner checks, may act on any clinic.
 - Error contract (exact messages):
@@ -186,7 +186,7 @@ CLAUDE.md, package.json (release script)
   export async function generateBullets(f: typeof fetch, key: string, system: string, record: string): Promise<string[]>;
   export function mapGeminiStatus(status: number, context: "save" | "summarize"): HttpsError;
   ```
-  Both calls send the key **only** in the `x-goog-api-key` header and use a 30 s `AbortSignal.timeout`. The request body uses `systemInstruction`, `contents: [{ role: "user", parts: [{ text: record }] }]`, and the generationConfig from the Global Constraints. The response text is `candidates[0].content.parts[0].text`, which is JSON-parsed and zod-validated (3–8 bullets, each trimmed, 1–300 chars).
+  Both calls send the key **only** in the `x-goog-api-key` header and use a 30 s `AbortSignal.timeout`. The request body uses `systemInstruction`, `contents: [{ role: "user", parts: [{ text: record }] }]`, and the generationConfig from the Global Constraints. The response text is `candidates[0].content.parts[0].text`, which is JSON-parsed and zod-validated (1–8 bullets, each trimmed, 1–300 chars).
 
 - [ ] **Step 1: Write failing tests** with a fake `fetch` that records calls:
   - `sends key in header, never in URL`: the URL doesn't contain the key and `headers["x-goog-api-key"] === key`.
