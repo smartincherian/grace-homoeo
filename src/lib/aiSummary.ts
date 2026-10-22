@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   useMutation,
   useQuery,
@@ -71,7 +72,11 @@ export function useSaveAiKey(
   clinicId: string,
 ): UseMutationResult<AiStatus, Error, string> {
   const qc = useQueryClient();
-  return useMutation<AiStatus, Error, string>({
+  const m = useMutation<AiStatus, Error, string>({
+    // gcTime 0 drops the mutation from the cache once unobserved; the effect
+    // below resets it on settle so the key never lingers in `variables`.
+    // Read the outcome from the callbacks passed to `mutate`.
+    gcTime: 0,
     mutationFn: async (apiKey: string) => {
       const res = await httpsCallable(functions, "saveAiKey")({ clinicId, apiKey });
       return aiStatusSchema.parse(res.data);
@@ -79,6 +84,11 @@ export function useSaveAiKey(
     onSuccess: (s) => qc.setQueryData(["aiStatus", clinicId], s),
     onError: notifyIfTrialEnded,
   });
+  const { isSuccess, isError, reset } = m;
+  useEffect(() => {
+    if (isSuccess || isError) reset();
+  }, [isSuccess, isError, reset]);
+  return m;
 }
 
 export function useRemoveAiKey(

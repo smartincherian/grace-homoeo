@@ -23,6 +23,7 @@ import {
   aiErrorMessage,
   aiStatusSchema,
   useAiStatus,
+  useRemoveAiKey,
   useSaveAiKey,
   useSummarizePatient,
 } from "./aiSummary";
@@ -88,6 +89,32 @@ describe("aiSummary", () => {
     expect(httpsCallable).toHaveBeenCalledWith({ fake: true }, "saveAiKey");
     expect(callable).toHaveBeenCalledWith({ clinicId: "c1", apiKey: "sekret" });
     expect(qc.getQueryData(["aiStatus", "c1"])).toEqual(status);
+  });
+
+  it("useSaveAiKey does not keep the key in mutation state after settle", async () => {
+    const { wrapper, qc } = wrap();
+    const { result } = renderHook(() => useSaveAiKey("c1"), { wrapper });
+    const keys = () =>
+      qc.getMutationCache().getAll().filter((m) => m.state.variables === "sekret");
+    callable.mockResolvedValueOnce({ data: status });
+    await act(() => result.current.mutateAsync("sekret"));
+    await waitFor(() => expect(result.current.variables).toBeUndefined());
+    await waitFor(() => expect(keys()).toHaveLength(0));
+    callable.mockRejectedValueOnce(Object.assign(new Error("bad"), { code: "functions/x" }));
+    await act(() => result.current.mutateAsync("sekret").catch(() => undefined));
+    await waitFor(() => expect(result.current.variables).toBeUndefined());
+    await waitFor(() => expect(keys()).toHaveLength(0));
+  });
+
+  it("useRemoveAiKey calls removeAiKey with { clinicId } and sets status", async () => {
+    const off = { ...status, configured: false, last4: "" };
+    callable.mockResolvedValue({ data: off });
+    const { wrapper, qc } = wrap();
+    const { result } = renderHook(() => useRemoveAiKey("c1"), { wrapper });
+    await act(() => result.current.mutateAsync());
+    expect(httpsCallable).toHaveBeenCalledWith({ fake: true }, "removeAiKey");
+    expect(callable).toHaveBeenCalledWith({ clinicId: "c1" });
+    expect(qc.getQueryData(["aiStatus", "c1"])).toEqual(off);
   });
 
   it("useSummarizePatient calls summarizePatient with { clinicId, patientId } and sets summary data", async () => {
