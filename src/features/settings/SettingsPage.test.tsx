@@ -31,6 +31,9 @@ vi.mock("../../lib/schedule", async (orig) => ({
   useSchedule: () => ({ data: undefined, isError: false }),
   useSaveSchedule: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
+vi.mock("./AiSummarySection", () => ({
+  default: () => null,
+}));
 vi.mock("../auth/useAuth", () => ({
   useAuth: () => ({ user: { email: "Owner@X.com" }, loading: false }),
 }));

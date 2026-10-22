@@ -23,6 +23,7 @@ import { BRAND_PRESETS, ensureContrast } from "../../theme/brand";
 import { CARD_SX, GRADIENT, TOKENS } from "../../theme/theme";
 import { resizeLogo } from "./resizeLogo";
 import ClinicHoursSection from "./ClinicHoursSection";
+import AiSummarySection from "./AiSummarySection";
 
 const NAME_MAX = 60;
 const CONTACT_MAX = 120;
@@ -314,6 +315,10 @@ export default function SettingsPage() {
       </Section>
 
       <ClinicHoursSection clinicId={clinicSlug} />
+
+      <Section title="AI patient summary">
+        <AiSummarySection clinicId={clinicSlug} />
+      </Section>
 
       <Box
         sx={{
