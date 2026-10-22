@@ -1097,6 +1097,16 @@ describe("ai summary", () => {
     await assertSucceeds(deleteDoc(doc(a, "clinics/c1/patientSummaries/p1")));
   });
 
+  it("the superadmin can delete settings/ai but cannot set it; the owner cannot delete it", async () => {
+    await assertFails(setDoc(doc(dbFor(SUPER), "clinics/c1/settings/ai"), { configured: false }));
+    await assertFails(deleteDoc(doc(dbFor("o@x.com"), "clinics/c1/settings/ai")));
+    await assertSucceeds(deleteDoc(doc(dbFor(SUPER), "clinics/c1/settings/ai")));
+  });
+
+  it("another clinic's member cannot list summaries", async () => {
+    await assertFails(getDocs(collection(dbFor("t@x.com"), "clinics/c1/patientSummaries")));
+  });
+
   it("another clinic's member cannot read a summary", async () => {
     await assertFails(getDoc(doc(dbFor("t@x.com"), "clinics/c1/patientSummaries/p1")));
   });

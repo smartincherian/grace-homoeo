@@ -247,6 +247,8 @@ service cloud.firestore {
           && ((docId == 'branding' && validBranding(request.resource.data))
               || (docId == 'schedule' && validSchedule(request.resource.data)));
         allow delete: if manager(clinicId) && canWrite(clinicId) && (docId == 'branding' || docId == 'schedule');
+        // The superadmin may clear any settings doc (deleting a whole clinic, incl. settings/ai).
+        allow delete: if superadmin();
       }
 
       // Bookings: id is the slot start (epoch ms), so a slot holds one appointment.
