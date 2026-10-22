@@ -68,6 +68,8 @@ vi.mock("../consultations/useConsultations", () => ({
   }),
 }));
 
+vi.mock("./PatientSummaryCard", () => ({ default: () => null }));
+
 import PatientDetailPage from "./PatientDetailPage";
 import { EMPTY_GENERALS } from "../consultations/caseRecordSchema";
 

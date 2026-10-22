@@ -14,6 +14,7 @@ import {
   usePatientGenerals,
   usePatientLsmc,
 } from "../consultations/useCaseRecord";
+import PatientSummaryCard from "./PatientSummaryCard";
 import QueryStates from "../../components/QueryStates";
 import AvatarTile from "../../components/AvatarTile";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -176,6 +177,12 @@ export default function PatientDetailPage() {
         }}
       >
         <Box sx={{ minWidth: 0 }}>
+          <PatientSummaryCard
+            patientId={id ?? ""}
+            latestVisitAt={
+              visits.length ? Math.max(...visits.map((v) => v.createdAt)) : null
+            }
+          />
           <SectionTitle
             title="Consultation history"
             note={`${visits.length} visit${visits.length === 1 ? "" : "s"} · newest first`}
