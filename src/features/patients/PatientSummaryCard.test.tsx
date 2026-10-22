@@ -8,6 +8,8 @@ const st = vi.hoisted(() => ({
   configured: true,
   summary: null as null | Record<string, unknown>,
   pending: false,
+  aiLoading: false,
+  sumLoading: false,
   owner: false,
   expired: false,
   mutate: vi.fn(),
@@ -15,8 +17,14 @@ const st = vi.hoisted(() => ({
 }));
 
 vi.mock("../../lib/aiSummary", () => ({
-  useAiStatus: () => ({ data: { configured: st.configured } }),
-  usePatientSummary: () => ({ data: st.summary }),
+  useAiStatus: () => ({
+    data: st.aiLoading ? undefined : { configured: st.configured },
+    isLoading: st.aiLoading,
+  }),
+  usePatientSummary: () => ({
+    data: st.sumLoading ? undefined : st.summary,
+    isLoading: st.sumLoading,
+  }),
   useSummarizePatient: () => ({ mutate: st.mutate, isPending: st.pending }),
   aiErrorMessage: (e: Error) => `msg:${e.message}`,
 }));
@@ -66,6 +74,8 @@ beforeEach(() => {
     configured: true,
     summary: null,
     pending: false,
+    aiLoading: false,
+    sumLoading: false,
     owner: false,
     expired: false,
   });
@@ -165,5 +175,20 @@ describe("PatientSummaryCard", () => {
     expect(screen.getAllByRole("listitem")).toHaveLength(2);
     expect(screen.queryByRole("button", { name: "Re-run" })).toBeNull();
     expect(screen.getByText(/AI summary is off/)).toBeInTheDocument();
+  });
+
+  it("shows neither the no-key text nor a button while the AI status loads", () => {
+    st.aiLoading = true;
+    st.configured = false;
+    renderCard();
+    expect(screen.queryByText(/AI summary is off/)).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("shows no Summarize button while the summary loads", () => {
+    st.sumLoading = true;
+    renderCard();
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByText(/AI summary is off/)).toBeNull();
   });
 });

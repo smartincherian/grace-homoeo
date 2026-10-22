@@ -38,8 +38,11 @@ export default function PatientSummaryCard({
     !!clinic &&
     !membership?.superadmin &&
     clinicStatus(clinic, Date.now()).kind === "expired";
-  const configured = !!useAiStatus(clinicSlug).data?.configured;
-  const summary = usePatientSummary(patientId).data ?? null;
+  const aiStatus = useAiStatus(clinicSlug);
+  const configured = !!aiStatus.data?.configured;
+  const summaryQuery = usePatientSummary(patientId);
+  const summary = summaryQuery.data ?? null;
+  const loading = aiStatus.isLoading || summaryQuery.isLoading;
   const summarize = useSummarizePatient(patientId);
 
   const run = () =>
@@ -78,7 +81,9 @@ export default function PatientSummaryCard({
         <Typography sx={{ fontSize: 18, fontWeight: 800 }}>
           AI summary
         </Typography>
-        {configured && (summary ? button("Re-run") : button("Summarize"))}
+        {!loading &&
+          configured &&
+          (summary ? button("Re-run") : button("Summarize"))}
       </Box>
 
       {summary && (
@@ -110,7 +115,7 @@ export default function PatientSummaryCard({
         </>
       )}
 
-      {!configured && (
+      {!loading && !configured && (
         <Typography
           sx={{ fontSize: 14, color: "text.secondary", mt: summary ? 1.25 : 0 }}
         >

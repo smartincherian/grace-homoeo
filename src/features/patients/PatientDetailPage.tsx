@@ -15,6 +15,7 @@ import {
   usePatientLsmc,
 } from "../consultations/useCaseRecord";
 import PatientSummaryCard from "./PatientSummaryCard";
+import { latestVisitAt } from "./latestVisitAt";
 import QueryStates from "../../components/QueryStates";
 import AvatarTile from "../../components/AvatarTile";
 import ConfirmDialog from "../../components/ConfirmDialog";
@@ -179,9 +180,7 @@ export default function PatientDetailPage() {
         <Box sx={{ minWidth: 0 }}>
           <PatientSummaryCard
             patientId={id ?? ""}
-            latestVisitAt={
-              visits.length ? Math.max(...visits.map((v) => v.createdAt)) : null
-            }
+            latestVisitAt={latestVisitAt(visits)}
           />
           <SectionTitle
             title="Consultation history"
